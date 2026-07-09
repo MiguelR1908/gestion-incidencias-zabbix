@@ -19,21 +19,21 @@ urlpatterns = [
     path("ubicaciones/crear/", views.ubicacion_crear, name="ubicacion_crear"),
     path("ubicaciones/<int:ubicacion_id>/editar/", views.ubicacion_editar, name="ubicacion_editar"),
     path("ubicaciones/<int:ubicacion_id>/estado/", views.ubicacion_cambiar_estado, name="ubicacion_cambiar_estado"),
-
-
     # Nodos
     path("nodos/", views.nodos_lista, name="nodos_lista"),
     path("nodos/crear/", views.nodo_crear, name="nodo_crear"),
     path("nodos/<int:nodo_id>/editar/", views.nodo_editar, name="nodo_editar"),
     path("nodos/<int:nodo_id>/estado/", views.nodo_cambiar_estado, name="nodo_cambiar_estado"),
-
     # Componentes de red
     path("componentes/", views.componentes_lista, name="componentes_lista"),
     path("componentes/crear/", views.componente_crear, name="componente_crear"),
     path("componentes/<int:componente_id>/editar/", views.componente_editar, name="componente_editar"),
     path("componentes/<int:componente_id>/estado/", views.componente_cambiar_estado, name="componente_cambiar_estado"),
-    
-
+    # Configuración Zabbix
+    path("zabbix/configuracion/", views.configuracion_zabbix_lista, name="configuracion_zabbix_lista"),
+    path("zabbix/configuracion/crear/", views.configuracion_zabbix_crear, name="configuracion_zabbix_crear"),
+    path("zabbix/configuracion/<int:configuracion_id>/editar/", views.configuracion_zabbix_editar, name="configuracion_zabbix_editar"),
+    path("zabbix/configuracion/<int:configuracion_id>/probar/", views.configuracion_zabbix_probar, name="configuracion_zabbix_probar"),
 
 
     path("sla-indicadores/", views.sla_indicadores_page, name="sla_indicadores"),

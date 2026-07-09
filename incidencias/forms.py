@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 
-from .models import PerfilUsuario, RolUsuario, Ubicacion, Nodo, ComponenteRed
+from .models import PerfilUsuario, RolUsuario, Ubicacion, Nodo, ComponenteRed, ConfiguracionZabbix
 
 
 class UsuarioForm(forms.ModelForm):
@@ -495,3 +495,52 @@ class ComponenteRedForm(forms.ModelForm):
             )
 
         return cleaned_data
+    
+class ConfiguracionZabbixForm(forms.ModelForm):
+    class Meta:
+        model = ConfiguracionZabbix
+        fields = [
+            "nombre",
+            "url_api",
+            "usuario",
+            "password",
+            "token_api",
+            "usar_token",
+            "activo",
+        ]
+
+        labels = {
+            "nombre": "Nombre de la configuración",
+            "url_api": "URL API Zabbix",
+            "usuario": "Usuario",
+            "password": "Contraseña",
+            "token_api": "Token API",
+            "usar_token": "Usar token API",
+            "activo": "Configuración activa",
+        }
+
+        widgets = {
+            "nombre": forms.TextInput(attrs={
+                "placeholder": "Ejemplo: Servidor Zabbix Principal"
+            }),
+            "url_api": forms.URLInput(attrs={
+                "placeholder": "Ejemplo: http://192.168.1.10/zabbix/api_jsonrpc.php"
+            }),
+            "usuario": forms.TextInput(attrs={
+                "placeholder": "Usuario de Zabbix"
+            }),
+            "password": forms.PasswordInput(attrs={
+                "placeholder": "Contraseña de Zabbix",
+                "autocomplete": "new-password",
+            }, render_value=True),
+            "token_api": forms.Textarea(attrs={
+                "rows": 3,
+                "placeholder": "Token API de Zabbix si aplica"
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field in self.fields.values():
+            field.widget.attrs.update({"class": "form-control"})

@@ -4,7 +4,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .models import Ubicacion, Nodo, ComponenteRed
+from .models import Ubicacion, Nodo, ComponenteRed, ConfiguracionZabbix
+from django.utils import timezone
+
 
 @login_required
 def acceso_denegado(request):
@@ -722,3 +724,123 @@ def infraestructura_inventario(request):
     }
 
     return render(request, "incidencias/infraestructura/inventario.html", context)
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def configuracion_zabbix_lista(request):
+    """
+    Lista de configuraciones Zabbix.
+    PBI-024.
+    """
+
+    configuraciones = ConfiguracionZabbix.objects.all().order_by("nombre")
+
+    return render(request, "incidencias/zabbix/configuracion_lista.html", {
+        "configuraciones": configuraciones,
+    })
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def configuracion_zabbix_crear(request):
+    """
+    Registrar configuración Zabbix.
+    PBI-024.
+    """
+
+    from .forms import ConfiguracionZabbixForm
+
+    if request.method == "POST":
+        form = ConfiguracionZabbixForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Configuración Zabbix registrada correctamente.")
+            return redirect("incidencias:configuracion_zabbix_lista")
+    else:
+        form = ConfiguracionZabbixForm()
+
+    return render(request, "incidencias/zabbix/configuracion_formulario.html", {
+        "form": form,
+        "titulo": "Registrar configuración Zabbix",
+        "accion": "Guardar configuración",
+    })
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def configuracion_zabbix_editar(request, configuracion_id):
+    """
+    Editar configuración Zabbix.
+    PBI-024.
+    """
+
+    from .forms import ConfiguracionZabbixForm
+
+    configuracion = get_object_or_404(ConfiguracionZabbix, id=configuracion_id)
+
+    if request.method == "POST":
+        form = ConfiguracionZabbixForm(request.POST, instance=configuracion)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Configuración Zabbix actualizada correctamente.")
+            return redirect("incidencias:configuracion_zabbix_lista")
+    else:
+        form = ConfiguracionZabbixForm(instance=configuracion)
+
+    return render(request, "incidencias/zabbix/configuracion_formulario.html", {
+        "form": form,
+        "titulo": "Editar configuración Zabbix",
+        "accion": "Guardar cambios",
+        "configuracion": configuracion,
+    })
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def configuracion_zabbix_probar(request, configuracion_id):
+    """
+    Probar conexión con Zabbix.
+    PBI-025.
+    """
+
+    from .zabbix_api import ZabbixClient, ZabbixAPIError
+
+    configuracion = get_object_or_404(ConfiguracionZabbix, id=configuracion_id)
+
+    try:
+        cliente = ZabbixClient(
+            url_api=configuracion.url_api,
+            usuario=configuracion.usuario,
+            password=configuracion.password,
+            token_api=configuracion.token_api,
+            usar_token=configuracion.usar_token,
+        )
+
+        resultado = cliente.probar_conexion()
+
+        configuracion.conexion_exitosa = True
+        configuracion.ultima_prueba_conexion = timezone.now()
+        configuracion.mensaje_ultima_prueba = resultado["mensaje"]
+        configuracion.save()
+
+        messages.success(request, resultado["mensaje"])
+
+    except ZabbixAPIError as error:
+        configuracion.conexion_exitosa = False
+        configuracion.ultima_prueba_conexion = timezone.now()
+        configuracion.mensaje_ultima_prueba = str(error)
+        configuracion.save()
+
+        messages.error(request, f"No se pudo conectar con Zabbix: {error}")
+
+    except Exception as error:
+        configuracion.conexion_exitosa = False
+        configuracion.ultima_prueba_conexion = timezone.now()
+        configuracion.mensaje_ultima_prueba = str(error)
+        configuracion.save()
+
+        messages.error(request, f"Error inesperado al probar conexión: {error}")
+
+    return redirect("incidencias:configuracion_zabbix_lista")

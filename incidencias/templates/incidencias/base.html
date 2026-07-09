@@ -107,6 +107,11 @@
                     <span class="menu-icon">⚙</span>
                     <span>Configuración</span>
                 </a>
+                <a href="{% url 'incidencias:configuracion_zabbix_lista' %}"
+                class="{% if request.resolver_match.url_name == 'configuracion_zabbix_lista' or request.resolver_match.url_name == 'configuracion_zabbix_crear' or request.resolver_match.url_name == 'configuracion_zabbix_editar' %}active{% endif %}">
+                    <span class="menu-icon">⚙</span>
+                    <span>Config. Zabbix</span>
+                </a>
             </nav>
         </div>
 

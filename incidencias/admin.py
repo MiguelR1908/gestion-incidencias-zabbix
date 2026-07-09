@@ -16,6 +16,7 @@ from .models import (
     ComentarioIncidencia,
     EvidenciaIncidencia,
     LogIntegracionZabbix,
+    ConfiguracionZabbix,
 )
 
 
@@ -454,4 +455,27 @@ class LogIntegracionZabbixAdmin(admin.ModelAdmin):
         "duracion_segundos",
         "creado_en",
         "actualizado_en",
+    )
+
+@admin.register(ConfiguracionZabbix)
+class ConfiguracionZabbixAdmin(admin.ModelAdmin):
+    list_display = (
+        "nombre",
+        "url_api",
+        "usar_token",
+        "conexion_exitosa",
+        "ultima_prueba_conexion",
+        "activo",
+    )
+
+    list_filter = (
+        "usar_token",
+        "conexion_exitosa",
+        "activo",
+    )
+
+    search_fields = (
+        "nombre",
+        "url_api",
+        "usuario",
     )

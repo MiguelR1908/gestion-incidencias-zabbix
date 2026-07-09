@@ -1,0 +1,106 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}{{ titulo }} | Fiber Z NOC{% endblock %}
+
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block page_subtitle %}
+Complete los parámetros de conexión a la API de Zabbix.
+{% endblock %}
+
+{% block content %}
+
+<section class="card">
+    <div class="card-header">
+        <div>
+            <h3>{{ titulo }}</h3>
+            <p>Esta configuración será utilizada para consultar eventos, hosts y alertas desde Zabbix.</p>
+        </div>
+
+        <a href="{% url 'incidencias:configuracion_zabbix_lista' %}" class="btn btn-secondary">
+            Volver
+        </a>
+    </div>
+
+    <form method="post" class="form-grid">
+        {% csrf_token %}
+
+        <div class="form-section-title">
+            Datos generales
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.nombre.id_for_label }}">Nombre</label>
+            {{ form.nombre }}
+            {% for error in form.nombre.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.url_api.id_for_label }}">URL API Zabbix</label>
+            {{ form.url_api }}
+            {% for error in form.url_api.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-section-title">
+            Autenticación
+        </div>
+
+        <div class="form-checks">
+            <label class="check-item">
+                {{ form.usar_token }}
+                <span>Usar token API</span>
+            </label>
+
+            <label class="check-item">
+                {{ form.activo }}
+                <span>Configuración activa</span>
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.usuario.id_for_label }}">Usuario</label>
+            {{ form.usuario }}
+            {% for error in form.usuario.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.password.id_for_label }}">Contraseña</label>
+            {{ form.password }}
+            {% for error in form.password.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.token_api.id_for_label }}">Token API</label>
+            {{ form.token_api }}
+            {% for error in form.token_api.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                {{ accion }}
+            </button>
+
+            <a href="{% url 'incidencias:configuracion_zabbix_lista' %}" class="btn btn-secondary">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</section>
+
+{% endblock %}
