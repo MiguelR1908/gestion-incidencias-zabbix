@@ -36,7 +36,7 @@ urlpatterns = [
     path("zabbix/configuracion/<int:configuracion_id>/probar/", views.configuracion_zabbix_probar, name="configuracion_zabbix_probar"),
     path("zabbix/hosts/", views.zabbix_hosts_lista, name="zabbix_hosts_lista"),
     path("zabbix/alertas/", views.zabbix_alertas_activas, name="zabbix_alertas_activas"),
-
+    path("zabbix/alertas/sincronizar/", views.zabbix_alertas_sincronizar, name="zabbix_alertas_sincronizar"),
 
     path("sla-indicadores/", views.sla_indicadores_page, name="sla_indicadores"),
     path("reportes/", views.reportes_page, name="reportes"),

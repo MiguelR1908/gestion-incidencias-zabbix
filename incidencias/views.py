@@ -4,9 +4,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .models import Ubicacion, Nodo, ComponenteRed, ConfiguracionZabbix, ConfiguracionZabbix, LogIntegracionZabbix
+from .models import Ubicacion, Nodo, ComponenteRed, ConfiguracionZabbix, ConfiguracionZabbix, LogIntegracionZabbix, AlertaZabbix
 from django.utils import timezone
-
+from datetime import datetime
 
 @login_required
 def acceso_denegado(request):
@@ -865,7 +865,39 @@ def zabbix_hosts_lista(request):
     error = None
 
     fecha_inicio_log = timezone.now()
+    proceso_log = obtener_valor_choice(
+        LogIntegracionZabbix,
+        "proceso",
+        [
+            "CONSULTA_ALERTAS",
+            "SINCRONIZACION_ZABBIX",
+            "SINCRONIZACION",
+            "ALERTAS_ZABBIX",
+            "IMPORTACION_ALERTAS",
+            "HOSTS",
+        ]
+    )
 
+    estado_exitoso = obtener_valor_choice(
+        LogIntegracionZabbix,
+        "estado",
+        [
+            "EXITOSO",
+            "EXITO",
+            "OK",
+            "COMPLETADO",
+        ]
+    )
+
+    estado_error = obtener_valor_choice(
+        LogIntegracionZabbix,
+        "estado",
+        [
+            "ERROR",
+            "FALLIDO",
+            "FAILED",
+        ]
+    )
     if not configuracion:
         error = "No existe una configuración Zabbix activa y validada."
 
@@ -1031,3 +1063,303 @@ def zabbix_alertas_activas(request):
         "problemas": problemas,
         "error": error,
     })
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def zabbix_alertas_sincronizar(request):
+    """
+    Sincroniza alertas activas desde Zabbix hacia la base de datos.
+    PBI-028, PBI-029, PBI-030 y PBI-031.
+    """
+
+    from .zabbix_api import ZabbixClient, ZabbixAPIError
+
+    if request.method != "POST":
+        return redirect("incidencias:zabbix_alertas_activas")
+
+    configuracion = ConfiguracionZabbix.objects.filter(
+        activo=True,
+        conexion_exitosa=True
+    ).first()
+
+    fecha_inicio_log = timezone.now()
+
+    proceso_log = obtener_valor_choice(
+        LogIntegracionZabbix,
+        "proceso",
+        [
+            "CONSULTA_ALERTAS",
+            "SINCRONIZACION_ZABBIX",
+            "SINCRONIZACION",
+            "ALERTAS_ZABBIX",
+            "IMPORTACION_ALERTAS",
+            "HOSTS",
+        ]
+    )
+
+    estado_exitoso = obtener_valor_choice(
+        LogIntegracionZabbix,
+        "estado",
+        [
+            "EXITOSO",
+            "EXITO",
+            "OK",
+            "COMPLETADO",
+        ]
+    )
+
+    estado_error = obtener_valor_choice(
+        LogIntegracionZabbix,
+        "estado",
+        [
+            "ERROR",
+            "FALLIDO",
+            "FAILED",
+        ]
+    )
+
+    total_alertas = 0
+    total_creadas = 0
+    total_duplicadas = 0
+    total_sin_componente = 0
+    total_errores = 0
+
+    if not configuracion:
+        mensaje = "No existe una configuración Zabbix activa y validada."
+
+        LogIntegracionZabbix.objects.create(
+            proceso=proceso_log,
+            estado=estado_error,
+            mensaje=mensaje,
+            total_alertas=0,
+            total_procesadas=0,
+            total_errores=1,
+            fecha_inicio=fecha_inicio_log,
+            fecha_fin=timezone.now()
+        )
+
+        messages.error(request, mensaje)
+        return redirect("incidencias:zabbix_alertas_activas")
+
+    try:
+        cliente = ZabbixClient(
+            url_api=configuracion.url_api,
+            usuario=configuracion.usuario,
+            password=configuracion.password,
+            token_api=configuracion.token_api,
+            usar_token=configuracion.usar_token,
+        )
+
+        problemas = cliente.obtener_problemas_activos()
+        total_alertas = len(problemas)
+
+        for problema in problemas:
+            try:
+                event_id = problema.get("eventid")
+                trigger_id = problema.get("objectid")
+                nombre_alerta = problema.get("name", "Alerta Zabbix")
+                severidad_zabbix = str(problema.get("severity", "0"))
+                acknowledged = str(problema.get("acknowledged", "0")) == "1"
+                clock = problema.get("clock")
+                hosts = problema.get("hosts", [])
+                tags = problema.get("tags", [])
+
+                if not event_id:
+                    total_errores += 1
+                    continue
+
+                host_id = None
+
+                if hosts:
+                    host_id = hosts[0].get("hostid")
+
+                if not host_id:
+                    total_sin_componente += 1
+                    continue
+
+                componente = ComponenteRed.objects.filter(
+                    host_id_zabbix=host_id,
+                    activo=True
+                ).first()
+
+                if not componente:
+                    total_sin_componente += 1
+                    continue
+
+                if AlertaZabbix.objects.filter(event_id=event_id).exists():
+                    total_duplicadas += 1
+                    continue
+
+                if clock:
+                    fecha_evento = datetime.fromtimestamp(
+                        int(clock),
+                        tz=timezone.get_current_timezone()
+                    )
+                else:
+                    fecha_evento = timezone.now()
+
+                severidad = obtener_valor_choice(
+                    AlertaZabbix,
+                    "severidad",
+                    {
+                        "0": [
+                            "NO_CLASIFICADA",
+                            "NOT_CLASSIFIED",
+                            "INFORMACION",
+                            "INFORMATION",
+                            "INFO",
+                            "BAJA",
+                        ],
+                        "1": [
+                            "INFORMACION",
+                            "INFORMATION",
+                            "INFO",
+                            "BAJA",
+                        ],
+                        "2": [
+                            "ADVERTENCIA",
+                            "WARNING",
+                            "MEDIA",
+                        ],
+                        "3": [
+                            "PROMEDIO",
+                            "AVERAGE",
+                            "MEDIA",
+                        ],
+                        "4": [
+                            "ALTA",
+                            "HIGH",
+                        ],
+                        "5": [
+                            "DESASTRE",
+                            "DISASTER",
+                            "CRITICA",
+                            "CRITICAL",
+                        ],
+                    }.get(severidad_zabbix, ["NO_CLASIFICADA"])
+                )
+
+                estado_zabbix = obtener_valor_choice(
+                    AlertaZabbix,
+                    "estado_zabbix",
+                    [
+                        "PROBLEM",
+                        "ACTIVO",
+                        "ABIERTA",
+                        "OPEN",
+                        "ACTIVE",
+                    ]
+                )
+
+                AlertaZabbix.objects.create(
+                    componente_red=componente,
+                    event_id=event_id,
+                    trigger_id=trigger_id,
+                    problem_id=event_id,
+                    host_id=host_id,
+                    nombre_alerta=nombre_alerta,
+                    descripcion=nombre_alerta,
+                    severidad=severidad,
+                    estado_zabbix=estado_zabbix,
+                    fecha_evento=fecha_evento,
+                    acknowledged=acknowledged,
+                    procesada=False,
+                    datos_json=problema,
+                    tags_json=tags,
+                )
+
+                total_creadas += 1
+
+            except Exception:
+                total_errores += 1
+
+        mensaje = (
+            f"Sincronización finalizada. "
+            f"Alertas consultadas: {total_alertas}. "
+            f"Creadas: {total_creadas}. "
+            f"Duplicadas: {total_duplicadas}. "
+            f"Sin componente asociado: {total_sin_componente}. "
+            f"Errores: {total_errores}."
+        )
+
+        estado_log = estado_exitoso
+
+        if total_errores > 0:
+            estado_log = estado_error
+
+        LogIntegracionZabbix.objects.create(
+            proceso=proceso_log,
+            estado=estado_log,
+            mensaje=mensaje,
+            total_alertas=total_alertas,
+            total_procesadas=total_creadas,
+            total_errores=total_errores,
+            fecha_inicio=fecha_inicio_log,
+            fecha_fin=timezone.now(),
+            detalle_json={
+                "total_alertas": total_alertas,
+                "total_creadas": total_creadas,
+                "total_duplicadas": total_duplicadas,
+                "total_sin_componente": total_sin_componente,
+                "total_errores": total_errores,
+            }
+        )
+
+        if total_creadas > 0:
+            messages.success(request, mensaje)
+        else:
+            messages.warning(request, mensaje)
+
+    except ZabbixAPIError as error:
+        mensaje = f"Error al consultar Zabbix: {error}"
+
+        LogIntegracionZabbix.objects.create(
+            proceso=proceso_log,
+            estado=estado_error,
+            mensaje=mensaje,
+            total_alertas=0,
+            total_procesadas=0,
+            total_errores=1,
+            fecha_inicio=fecha_inicio_log,
+            fecha_fin=timezone.now()
+        )
+
+        messages.error(request, mensaje)
+
+    except Exception as error:
+        mensaje = f"Error inesperado en sincronización: {error}"
+
+        LogIntegracionZabbix.objects.create(
+            proceso=proceso_log,
+            estado=estado_error,
+            mensaje=mensaje,
+            total_alertas=0,
+            total_procesadas=0,
+            total_errores=1,
+            fecha_inicio=fecha_inicio_log,
+            fecha_fin=timezone.now()
+        )
+
+        messages.error(request, mensaje)
+
+    return redirect("incidencias:zabbix_alertas_activas")
+
+
+def obtener_valor_choice(modelo, campo, preferidos):
+    """
+    Devuelve un valor válido para un campo con choices.
+    Sirve para evitar errores si los valores del modelo tienen nombres distintos.
+    """
+
+    field = modelo._meta.get_field(campo)
+    choices = getattr(field, "choices", None)
+
+    if not choices:
+        return preferidos[0]
+
+    valores_validos = [valor for valor, etiqueta in choices]
+
+    for preferido in preferidos:
+        if preferido in valores_validos:
+            return preferido
+
+    return valores_validos[0]

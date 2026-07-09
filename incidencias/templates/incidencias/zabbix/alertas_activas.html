@@ -19,9 +19,18 @@ Consulta de problemas activos obtenidos desde Zabbix mediante API.
             </p>
         </div>
 
-        <a href="{% url 'incidencias:zabbix_alertas_activas' %}" class="btn btn-primary">
-            Actualizar
-        </a>
+        <div class="action-buttons">
+            <a href="{% url 'incidencias:zabbix_alertas_activas' %}" class="btn btn-secondary">
+                Actualizar
+            </a>
+
+            <form method="post" action="{% url 'incidencias:zabbix_alertas_sincronizar' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">
+                    Sincronizar alertas
+                </button>
+            </form>
+        </div>
     </div>
 
     {% if configuracion %}
