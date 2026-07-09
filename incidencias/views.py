@@ -937,3 +937,97 @@ def zabbix_hosts_lista(request):
         "hosts": hosts,
         "error": error,
     })
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def zabbix_alertas_activas(request):
+    """
+    Consulta alertas/problemas activos desde Zabbix.
+    PBI-027.
+    """
+
+    from .zabbix_api import ZabbixClient, ZabbixAPIError
+
+    configuracion = ConfiguracionZabbix.objects.filter(
+        activo=True,
+        conexion_exitosa=True
+    ).first()
+
+    problemas = []
+    error = None
+
+    fecha_inicio_log = timezone.now()
+
+    if not configuracion:
+        error = "No existe una configuración Zabbix activa y validada."
+
+        LogIntegracionZabbix.objects.create(
+            proceso="CONSULTA_ALERTAS",
+            estado="ERROR",
+            mensaje=error,
+            total_alertas=0,
+            total_procesadas=0,
+            total_errores=1,
+            fecha_inicio=fecha_inicio_log,
+            fecha_fin=timezone.now()
+        )
+
+    else:
+        try:
+            cliente = ZabbixClient(
+                url_api=configuracion.url_api,
+                usuario=configuracion.usuario,
+                password=configuracion.password,
+                token_api=configuracion.token_api,
+                usar_token=configuracion.usar_token,
+            )
+
+            problemas = cliente.obtener_problemas_activos()
+
+            LogIntegracionZabbix.objects.create(
+                proceso="CONSULTA_ALERTAS",
+                estado="EXITOSO",
+                mensaje="Consulta de alertas activas ejecutada correctamente.",
+                total_alertas=len(problemas),
+                total_procesadas=len(problemas),
+                total_errores=0,
+                fecha_inicio=fecha_inicio_log,
+                fecha_fin=timezone.now(),
+                detalle_json={
+                    "total_problemas": len(problemas)
+                }
+            )
+
+        except ZabbixAPIError as e:
+            error = str(e)
+
+            LogIntegracionZabbix.objects.create(
+                proceso="CONSULTA_ALERTAS",
+                estado="ERROR",
+                mensaje=error,
+                total_alertas=0,
+                total_procesadas=0,
+                total_errores=1,
+                fecha_inicio=fecha_inicio_log,
+                fecha_fin=timezone.now()
+            )
+
+        except Exception as e:
+            error = str(e)
+
+            LogIntegracionZabbix.objects.create(
+                proceso="CONSULTA_ALERTAS",
+                estado="ERROR",
+                mensaje=error,
+                total_alertas=0,
+                total_procesadas=0,
+                total_errores=1,
+                fecha_inicio=fecha_inicio_log,
+                fecha_fin=timezone.now()
+            )
+
+    return render(request, "incidencias/zabbix/alertas_activas.html", {
+        "configuracion": configuracion,
+        "problemas": problemas,
+        "error": error,
+    })

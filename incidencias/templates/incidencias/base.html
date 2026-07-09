@@ -129,6 +129,11 @@
                     <span class="menu-icon">☍</span>
                     <span>Hosts Zabbix</span>
                 </a>
+                <a href="{% url 'incidencias:zabbix_alertas_activas' %}"
+                class="{% if request.resolver_match.url_name == 'zabbix_alertas_activas' %}active{% endif %}">
+                    <span class="menu-icon">⚠</span>
+                    <span>Alertas Zabbix</span>
+                </a>
             </nav>
         </div>
 

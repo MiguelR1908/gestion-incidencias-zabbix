@@ -110,3 +110,75 @@ class ZabbixClient:
         )
 
         return hosts
+    
+    def obtener_problemas_activos(self):
+        """
+        Consulta problemas activos desde Zabbix.
+        Primero obtiene los problemas con problem.get.
+        Luego obtiene los hosts asociados usando trigger.get.
+        """
+
+        self.login()
+
+        problemas = self._request(
+            "problem.get",
+            {
+                "output": [
+                    "eventid",
+                    "objectid",
+                    "name",
+                    "severity",
+                    "clock",
+                    "acknowledged"
+                ],
+                "selectTags": "extend",
+                "recent": False,
+                "sortfield": "eventid",
+                "sortorder": "DESC"
+            },
+            auth=True
+        )
+
+        if not problemas:
+            return []
+
+        trigger_ids = []
+
+        for problema in problemas:
+            objectid = problema.get("objectid")
+
+            if objectid:
+                trigger_ids.append(objectid)
+
+        triggers = self._request(
+            "trigger.get",
+            {
+                "output": [
+                    "triggerid",
+                    "description"
+                ],
+                "triggerids": trigger_ids,
+                "selectHosts": [
+                    "hostid",
+                    "host",
+                    "name"
+                ]
+            },
+            auth=True
+        )
+
+        mapa_triggers = {}
+
+        for trigger in triggers:
+            mapa_triggers[trigger.get("triggerid")] = trigger
+
+        for problema in problemas:
+            trigger_id = problema.get("objectid")
+            trigger = mapa_triggers.get(trigger_id)
+
+            if trigger:
+                problema["hosts"] = trigger.get("hosts", [])
+            else:
+                problema["hosts"] = []
+
+        return problemas

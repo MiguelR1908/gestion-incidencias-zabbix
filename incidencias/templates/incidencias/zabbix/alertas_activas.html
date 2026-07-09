@@ -1,0 +1,123 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}Alertas Zabbix | Fiber Z NOC{% endblock %}
+
+{% block page_title %}Alertas Activas Zabbix{% endblock %}
+
+{% block page_subtitle %}
+Consulta de problemas activos obtenidos desde Zabbix mediante API.
+{% endblock %}
+
+{% block content %}
+
+<section class="card">
+    <div class="card-header">
+        <div>
+            <h3>Problemas activos obtenidos desde Zabbix</h3>
+            <p>
+                Esta pantalla consulta alertas activas usando el método problem.get de la API de Zabbix.
+            </p>
+        </div>
+
+        <a href="{% url 'incidencias:zabbix_alertas_activas' %}" class="btn btn-primary">
+            Actualizar
+        </a>
+    </div>
+
+    {% if configuracion %}
+        <p>
+            Configuración usada:
+            <strong>{{ configuracion.nombre }}</strong>
+        </p>
+    {% endif %}
+
+    {% if error %}
+        <div class="alert alert-danger">
+            {{ error }}
+        </div>
+    {% endif %}
+</section>
+
+<section class="card">
+    <div class="card-header">
+        <div>
+            <h3>Alertas activas</h3>
+            <p>Total encontrado: {{ problemas|length }}</p>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Event ID</th>
+                    <th>Host</th>
+                    <th>Alerta</th>
+                    <th>Severidad</th>
+                    <th>Ack</th>
+                    <th>Fecha evento</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for problema in problemas %}
+                    <tr>
+                        <td>{{ problema.eventid }}</td>
+
+                        <td>
+                            {% if problema.hosts %}
+                                <strong>{{ problema.hosts.0.name }}</strong>
+                                <br>
+                                <small>Host ID: {{ problema.hosts.0.hostid }}</small>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <strong>{{ problema.name }}</strong>
+                            <br>
+                            <small>Trigger ID: {{ problema.objectid }}</small>
+                        </td>
+
+                        <td>
+                            {% if problema.severity == "5" %}
+                                <span class="badge badge-danger">Desastre</span>
+                            {% elif problema.severity == "4" %}
+                                <span class="badge badge-danger">Alta</span>
+                            {% elif problema.severity == "3" %}
+                                <span class="badge badge-warning">Promedio</span>
+                            {% elif problema.severity == "2" %}
+                                <span class="badge badge-info">Advertencia</span>
+                            {% elif problema.severity == "1" %}
+                                <span class="badge badge-success">Información</span>
+                            {% else %}
+                                <span class="badge badge-secondary">No clasificada</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if problema.acknowledged == "1" %}
+                                <span class="badge badge-success">Reconocida</span>
+                            {% else %}
+                                <span class="badge badge-warning">No reconocida</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ problema.clock }}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6">
+                            No se encontraron alertas activas en Zabbix.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% endblock %}
