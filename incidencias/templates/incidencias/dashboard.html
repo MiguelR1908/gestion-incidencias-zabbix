@@ -1,0 +1,92 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}Dashboard | Fiber Z NOC{% endblock %}
+
+{% block page_title %}Dashboard Operativo NOC{% endblock %}
+
+{% block page_subtitle %}
+Vista general de infraestructura, incidencias y alertas sincronizadas.
+{% endblock %}
+
+{% block content %}
+
+<section class="grid-metrics">
+    <div class="metric-card">
+        <span>Nodos registrados</span>
+        <strong>{{ total_nodos|default:"0" }}</strong>
+        <small>Infraestructura activa del servicio</small>
+    </div>
+
+    <div class="metric-card">
+        <span>Componentes de red</span>
+        <strong>{{ total_componentes|default:"0" }}</strong>
+        <small>Equipos asociados a nodos</small>
+    </div>
+
+    <div class="metric-card">
+        <span>Incidencias abiertas</span>
+        <strong>{{ incidencias_abiertas|default:"0" }}</strong>
+        <small>Eventos pendientes de atención</small>
+    </div>
+
+    <div class="metric-card">
+        <span>Alertas Zabbix</span>
+        <strong>{{ alertas_zabbix|default:"0" }}</strong>
+        <small>Alertas sincronizadas</small>
+    </div>
+</section>
+
+<section class="card">
+    <div class="card-header">
+        <h3>Estado operativo del sistema</h3>
+        <span class="badge badge-success">Operativo</span>
+    </div>
+
+    <p>
+        El sistema web permite centralizar la gestión de incidencias del Centro de Operaciones de Red,
+        integrando la detección automática de eventos mediante Zabbix con el proceso operativo de registro,
+        asignación, seguimiento, documentación y cierre de incidencias.
+    </p>
+</section>
+
+<section class="card">
+    <div class="card-header">
+        <h3>Avance del Sprint actual</h3>
+        <span class="badge badge-info">Sprint 1</span>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>PBI</th>
+                    <th>Historia</th>
+                    <th>Estado</th>
+                    <th>Prioridad</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>PBI-001</td>
+                    <td>Inicio de sesión con credenciales válidas</td>
+                    <td><span class="badge badge-success">Completado</span></td>
+                    <td>Muy Alta</td>
+                </tr>
+                <tr>
+                    <td>PBI-002</td>
+                    <td>Cierre de sesión seguro</td>
+                    <td><span class="badge badge-success">Completado</span></td>
+                    <td>Alta</td>
+                </tr>
+                <tr>
+                    <td>PBI-003</td>
+                    <td>Registro de usuarios autorizados</td>
+                    <td><span class="badge badge-warning">En progreso</span></td>
+                    <td>Muy Alta</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% endblock %}

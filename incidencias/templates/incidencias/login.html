@@ -1,0 +1,138 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <title>Iniciar sesión | Fiber Z NOC</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Estilos globales -->
+    <link rel="stylesheet" href="{% static 'incidencias/css/styles.css' %}">
+</head>
+<body>
+
+<div class="login-page">
+
+    <div class="login-shell">
+
+        <!-- =========================
+             PANEL IZQUIERDO
+             ========================= -->
+        <section class="login-hero">
+
+            <div>
+                <div class="brand">
+                    <div class="brand-logo-img brand-logo-login">
+                        <img src="{% static 'incidencias/images/logo.png' %}" alt="Fiber Z">
+                    </div>
+
+                    <div class="brand-text">
+                        <h2>Fiber Z NOC</h2>
+                        <span>Internet sin límites | NOC</span>
+                    </div>
+                </div>
+
+                <h1>
+                    Gestión inteligente de incidencias de red.
+                </h1>
+
+                <p>
+                    Plataforma web orientada al monitoreo, registro, asignación,
+                    seguimiento y cierre de incidencias operativas del Centro de
+                    Operaciones de Red de Fiber Z Telecom.
+                </p>
+            </div>
+
+            <div class="login-highlights">
+                <div class="login-highlight">
+                    Monitoreo integrado con Zabbix
+                </div>
+
+                <div class="login-highlight">
+                    Trazabilidad completa de incidencias
+                </div>
+
+                <div class="login-highlight">
+                    Control de SLA e indicadores operativos
+                </div>
+            </div>
+
+        </section>
+
+        <!-- =========================
+             FORMULARIO LOGIN
+             ========================= -->
+        <section class="login-form-area">
+
+            <div class="login-card">
+
+                <div class="login-header">
+                    <div class="brand-logo-img login-logo">
+                        <img src="{% static 'incidencias/images/logo.png' %}" alt="Fiber Z">
+                    </div>
+
+                    <div>
+                        <h2>Iniciar sesión</h2>
+                        <p class="subtitle">
+                            Ingresa tus credenciales para acceder al sistema.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Mensajes de error -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" autocomplete="off">
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        <label for="username">Usuario</label>
+                        <input
+                            type="text"
+                            name="username"
+                            id="username"
+                            placeholder="Ejemplo: noc"
+                            required
+                            autofocus
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Contraseña</label>
+                        <input
+                            type="password"
+                            name="password"
+                            id="password"
+                            placeholder="Ingrese su contraseña"
+                            required
+                        >
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        Ingresar al sistema
+                    </button>
+                </form>
+
+                <div class="login-footer">
+                    <span>Sistema Web Integrado con Zabbix</span>
+                    <strong>Fiber Z Telecom</strong>
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+</div>
+
+</body>
+</html>

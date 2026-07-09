@@ -1,0 +1,143 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}Usuarios | Fiber Z NOC{% endblock %}
+
+{% block page_title %}Gestión de Usuarios{% endblock %}
+
+{% block page_subtitle %}
+Administración de usuarios, roles, disponibilidad y estado de acceso al sistema.
+{% endblock %}
+
+{% block content %}
+
+<section class="card">
+    <div class="card-header">
+        <div>
+            <h3>Usuarios registrados</h3>
+            <p>Listado general de usuarios autorizados para acceder al sistema.</p>
+        </div>
+
+        <a href="{% url 'incidencias:usuario_crear' %}" class="btn btn-primary">
+            + Nuevo usuario
+        </a>
+    </div>
+
+    <form method="get" class="search-box">
+        <input
+            type="text"
+            name="q"
+            value="{{ query }}"
+            placeholder="Buscar por usuario, nombre, correo, rol, cargo o área..."
+        >
+
+        <button type="submit" class="btn btn-secondary">
+            Buscar
+        </button>
+
+        {% if query %}
+            <a href="{% url 'incidencias:usuarios_lista' %}" class="btn btn-danger">
+                Limpiar
+            </a>
+        {% endif %}
+    </form>
+</section>
+
+<section class="card">
+    <div class="table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Área</th>
+                    <th>Disponible</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for usuario in usuarios %}
+                    <tr>
+                        <td>
+                            <strong>{{ usuario.username }}</strong>
+                        </td>
+
+                        <td>
+                            {{ usuario.get_full_name|default:"-" }}
+                        </td>
+
+                        <td>
+                            {{ usuario.email|default:"-" }}
+                        </td>
+
+                        <td>
+                            {% if usuario.perfil %}
+                                <span class="badge badge-info">
+                                    {{ usuario.perfil.get_rol_display }}
+                                </span>
+                            {% else %}
+                                <span class="badge badge-warning">
+                                    Sin perfil
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if usuario.perfil %}
+                                {{ usuario.perfil.area|default:"-" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if usuario.perfil and usuario.perfil.disponible %}
+                                <span class="badge badge-success">Sí</span>
+                            {% else %}
+                                <span class="badge badge-warning">No</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if usuario.is_active %}
+                                <span class="badge badge-success">Activo</span>
+                            {% else %}
+                                <span class="badge badge-danger">Inactivo</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{% url 'incidencias:usuario_editar' usuario.id %}" class="btn btn-secondary">
+                                    Editar
+                                </a>
+
+                                {% if usuario != request.user %}
+                                    <a href="{% url 'incidencias:usuario_cambiar_estado' usuario.id %}"
+                                       class="btn {% if usuario.is_active %}btn-danger{% else %}btn-primary{% endif %}">
+                                        {% if usuario.is_active %}
+                                            Desactivar
+                                        {% else %}
+                                            Activar
+                                        {% endif %}
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="8">
+                            No se encontraron usuarios registrados.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% endblock %}

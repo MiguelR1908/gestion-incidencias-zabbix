@@ -1,0 +1,156 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}Componentes | Fiber Z NOC{% endblock %}
+
+{% block page_title %}Gestión de Componentes de Red{% endblock %}
+
+{% block page_subtitle %}
+Administración de routers, radios AP, switches, UPS y demás equipos asociados a los nodos.
+{% endblock %}
+
+{% block content %}
+
+<section class="card">
+    <div class="card-header">
+        <div>
+            <h3>Componentes registrados</h3>
+            <p>Inventario técnico de componentes asociados a la infraestructura de red.</p>
+        </div>
+
+        <a href="{% url 'incidencias:componente_crear' %}" class="btn btn-primary">
+            + Nuevo componente
+        </a>
+    </div>
+
+    <form method="get" class="search-box">
+        <input
+            type="text"
+            name="q"
+            value="{{ query }}"
+            placeholder="Buscar por código, nombre, nodo, IP, fabricante, modelo, Zabbix o estado..."
+        >
+
+        <button type="submit" class="btn btn-secondary">
+            Buscar
+        </button>
+
+        {% if query %}
+            <a href="{% url 'incidencias:componentes_lista' %}" class="btn btn-danger">
+                Limpiar
+            </a>
+        {% endif %}
+    </form>
+</section>
+
+<section class="card">
+    <div class="table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Nodo</th>
+                    <th>Tipo</th>
+                    <th>Función</th>
+                    <th>IP</th>
+                    <th>Zabbix</th>
+                    <th>Estado</th>
+                    <th>Criticidad</th>
+                    <th>Impacto</th>
+                    <th>Activo</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for componente in componentes %}
+                    <tr>
+                        <td><strong>{{ componente.codigo }}</strong></td>
+
+                        <td>{{ componente.nombre }}</td>
+
+                        <td>
+                            {% if componente.nodo %}
+                                {{ componente.nodo.codigo }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        <td>{{ componente.get_tipo_display }}</td>
+
+                        <td>{{ componente.get_funcion_display }}</td>
+
+                        <td>{{ componente.ip_gestion|default:"-" }}</td>
+
+                        <td>
+                            {% if componente.es_monitoreado_zabbix %}
+                                <span class="badge badge-success">Sí</span>
+                                <small>{{ componente.host_id_zabbix|default:"-" }}</small>
+                            {% else %}
+                                <span class="badge badge-warning">No</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if componente.estado_operativo == "OPERATIVO" %}
+                                <span class="badge badge-success">{{ componente.get_estado_operativo_display }}</span>
+                            {% elif componente.estado_operativo == "MANTENIMIENTO" %}
+                                <span class="badge badge-warning">{{ componente.get_estado_operativo_display }}</span>
+                            {% else %}
+                                <span class="badge badge-danger">{{ componente.get_estado_operativo_display }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if componente.criticidad == "CRITICA" %}
+                                <span class="badge badge-danger">{{ componente.get_criticidad_display }}</span>
+                            {% elif componente.criticidad == "ALTA" %}
+                                <span class="badge badge-warning">{{ componente.get_criticidad_display }}</span>
+                            {% elif componente.criticidad == "MEDIA" %}
+                                <span class="badge badge-info">{{ componente.get_criticidad_display }}</span>
+                            {% else %}
+                                <span class="badge badge-success">{{ componente.get_criticidad_display }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ componente.get_impacto_por_caida_display }}</td>
+
+                        <td>
+                            {% if componente.activo %}
+                                <span class="badge badge-success">Sí</span>
+                            {% else %}
+                                <span class="badge badge-danger">No</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{% url 'incidencias:componente_editar' componente.id %}" class="btn btn-secondary">
+                                    Editar
+                                </a>
+
+                                <a href="{% url 'incidencias:componente_cambiar_estado' componente.id %}"
+                                   class="btn {% if componente.activo %}btn-danger{% else %}btn-primary{% endif %}">
+                                    {% if componente.activo %}
+                                        Desactivar
+                                    {% else %}
+                                        Activar
+                                    {% endif %}
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="12">
+                            No se encontraron componentes registrados.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% endblock %}

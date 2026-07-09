@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.sqlite3
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+staticfiles/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# Variables de entorno
+.env
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# MySQL dumps / backups
+*.sql
+*.dump
+
+# Archivos temporales
+*.tmp
+*.bak
+*.old
+
+# Evidencias / archivos subidos
+evidencias_incidencias/

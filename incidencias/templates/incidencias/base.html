@@ -1,0 +1,191 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <title>{% block title %}Fiber Z NOC{% endblock %}</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Estilos globales -->
+    <link rel="stylesheet" href="{% static 'incidencias/css/styles.css' %}">
+</head>
+<body>
+
+<div class="app-layout">
+
+    <!-- =========================
+         SIDEBAR
+         ========================= -->
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-logo-img">
+                <img src="{% static 'incidencias/images/logo.png' %}" alt="Fiber Z">
+            </div>
+
+            <div class="brand-text">
+                <h2>Fiber Z NOC</h2>
+                <span>Internet sin límites</span>
+            </div>
+        </div>
+
+        <!-- Operación -->
+        <div class="menu-section">
+            <div class="menu-title">Operación NOC</div>
+
+            <nav class="menu">
+                <a href="{% url 'incidencias:dashboard' %}" class="active">
+                    <span class="menu-icon">▣</span>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="#">
+                    <span class="menu-icon">⚠</span>
+                    <span>Incidencias</span>
+                </a>
+
+                <a href="#">
+                    <span class="menu-icon">◉</span>
+                    <span>Alertas Zabbix</span>
+                </a>
+
+                <a href="#">
+                    <span class="menu-icon">✓</span>
+                    <span>Asignaciones</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Infraestructura -->
+        <div class="menu-section">
+            <div class="menu-title">Infraestructura</div>
+
+            <nav class="menu">
+                <a href="{% url 'incidencias:infraestructura_inventario' %}"
+                class="{% if request.resolver_match.url_name == 'infraestructura_inventario' %}active{% endif %}">
+                    <span class="menu-icon">▦</span>
+                    <span>Inventario</span>
+                </a>
+                <a href="{% url 'incidencias:ubicaciones_lista' %}"
+                class="{% if request.resolver_match.url_name == 'ubicaciones_lista' or request.resolver_match.url_name == 'ubicacion_crear' or request.resolver_match.url_name == 'ubicacion_editar' %}active{% endif %}">
+                    <span class="menu-icon">⌂</span>
+                    <span>Ubicaciones</span>
+                </a>
+
+                <a href="{% url 'incidencias:nodos_lista' %}"
+                class="{% if request.resolver_match.url_name == 'nodos_lista' or request.resolver_match.url_name == 'nodo_crear' or request.resolver_match.url_name == 'nodo_editar' %}active{% endif %}">
+                    <span class="menu-icon">◆</span>
+                    <span>Nodos</span>
+                </a>
+
+                <a href="{% url 'incidencias:componentes_lista' %}"
+                class="{% if request.resolver_match.url_name == 'componentes_lista' or request.resolver_match.url_name == 'componente_crear' or request.resolver_match.url_name == 'componente_editar' %}active{% endif %}">
+                    <span class="menu-icon">◇</span>
+                    <span>Componentes</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Gestión -->
+        <div class="menu-section">
+            <div class="menu-title">Gestión</div>
+
+            <nav class="menu">
+                <a href="#">
+                    <span class="menu-icon">◌</span>
+                    <span>SLA e Indicadores</span>
+                </a>
+
+                <a href="#">
+                    <span class="menu-icon">▤</span>
+                    <span>Reportes</span>
+                </a>
+
+                <a href="#">
+                    <span class="menu-icon">⚙</span>
+                    <span>Configuración</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Administración -->
+        <div class="menu-section">
+            <div class="menu-title">Sistema</div>
+
+            <nav class="menu">
+                <a href="{% url 'incidencias:usuarios_lista' %}"
+                    class="{% if request.resolver_match.url_name == 'usuarios_lista' or request.resolver_match.url_name == 'usuario_crear' or request.resolver_match.url_name == 'usuario_editar' %}active{% endif %}">
+                    <span class="menu-icon">◉</span>
+                    <span>Usuarios</span>
+                </a>
+                <a href="/admin/" target="_blank">
+                    <span class="menu-icon">⛭</span>
+                    <span>Admin Django</span>
+                </a>
+
+                <a href="{% url 'incidencias:logout' %}">
+                    <span class="menu-icon">⎋</span>
+                    <span>Cerrar sesión</span>
+                </a>
+            </nav>
+        </div>
+
+    </aside>
+
+    <!-- =========================
+         CONTENIDO PRINCIPAL
+         ========================= -->
+    <main class="main-content">
+
+        <!-- Topbar -->
+        <header class="topbar">
+
+            <div class="page-heading">
+                <h1>{% block page_title %}Dashboard Operativo NOC{% endblock %}</h1>
+                <p>
+                    {% block page_subtitle %}
+                    Sistema Web Integrado con Zabbix para la Gestión de Incidencias
+                    {% endblock %}
+                </p>
+            </div>
+
+            <div class="user-box">
+
+                <div class="user-meta">
+                    <strong>
+                        {{ request.user.get_full_name|default:request.user.username }}
+                    </strong>
+                    <span>{{ request.user.username }}</span>
+                </div>
+
+                <div class="user-avatar">
+                    {{ request.user.username|first|upper }}
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- Mensajes del sistema -->
+        {% if messages %}
+            <div class="messages-container">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Contenido dinámico -->
+        {% block content %}
+        {% endblock %}
+
+    </main>
+
+</div>
+
+</body>
+</html>

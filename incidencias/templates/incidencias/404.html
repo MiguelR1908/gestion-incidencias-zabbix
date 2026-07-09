@@ -1,0 +1,59 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <title>Página no encontrada | Fiber Z NOC</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="{% static 'incidencias/css/styles.css' %}">
+</head>
+<body>
+
+<div class="error-page">
+
+    <div class="error-card">
+
+        <div class="brand error-brand">
+            <div class="brand-logo">FZ</div>
+
+            <div class="brand-text">
+                <h2>Fiber Z NOC</h2>
+                <span>Internet sin límites</span>
+            </div>
+        </div>
+
+        <div class="error-code">404</div>
+
+        <h1>Ruta no encontrada</h1>
+
+        <p>
+            La dirección solicitada no existe o no se encuentra disponible dentro del sistema.
+        </p>
+
+        {% if ruta_invalida %}
+            <div class="error-route">
+                Ruta solicitada: <strong>/{{ ruta_invalida }}</strong>
+            </div>
+        {% endif %}
+
+        <div class="error-actions">
+            {% if request.user.is_authenticated %}
+                <a href="{% url 'incidencias:dashboard' %}" class="btn btn-primary">
+                    Volver al dashboard
+                </a>
+            {% else %}
+                <a href="{% url 'incidencias:login' %}" class="btn btn-primary">
+                    Ir al login
+                </a>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

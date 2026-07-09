@@ -1,0 +1,212 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}{{ titulo }} | Fiber Z NOC{% endblock %}
+
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block page_subtitle %}
+Complete los datos técnicos y operativos del componente de red.
+{% endblock %}
+
+{% block content %}
+
+<section class="card">
+
+    <div class="card-header">
+        <div>
+            <h3>{{ titulo }}</h3>
+            <p>Registro del equipo asociado a un nodo de la infraestructura de red.</p>
+        </div>
+
+        <a href="{% url 'incidencias:componentes_lista' %}" class="btn btn-secondary">
+            Volver
+        </a>
+    </div>
+
+    <form method="post" class="form-grid">
+        {% csrf_token %}
+
+        <div class="form-section-title">
+            Identificación del componente
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.nodo.id_for_label }}">Nodo asociado</label>
+            {{ form.nodo }}
+            {% for error in form.nodo.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.codigo.id_for_label }}">Código</label>
+            {{ form.codigo }}
+            {% for error in form.codigo.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.nombre.id_for_label }}">Nombre</label>
+            {{ form.nombre }}
+            {% for error in form.nombre.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.tipo.id_for_label }}">Tipo de componente</label>
+            {{ form.tipo }}
+            {% for error in form.tipo.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-section-title">
+            Clasificación operativa
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.funcion.id_for_label }}">Función</label>
+            {{ form.funcion }}
+            {% for error in form.funcion.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.impacto_por_caida.id_for_label }}">Impacto por caída</label>
+            {{ form.impacto_por_caida }}
+            {% for error in form.impacto_por_caida.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.estado_operativo.id_for_label }}">Estado operativo</label>
+            {{ form.estado_operativo }}
+            {% for error in form.estado_operativo.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.criticidad.id_for_label }}">Criticidad</label>
+            {{ form.criticidad }}
+            {% for error in form.criticidad.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-section-title">
+            Información técnica
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.ip_gestion.id_for_label }}">IP de gestión</label>
+            {{ form.ip_gestion }}
+            {% for error in form.ip_gestion.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.mac_address.id_for_label }}">Dirección MAC</label>
+            {{ form.mac_address }}
+            {% for error in form.mac_address.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.fabricante.id_for_label }}">Fabricante</label>
+            {{ form.fabricante }}
+            {% for error in form.fabricante.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.modelo.id_for_label }}">Modelo</label>
+            {{ form.modelo }}
+            {% for error in form.modelo.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.numero_serie.id_for_label }}">Número de serie</label>
+            {{ form.numero_serie }}
+            {% for error in form.numero_serie.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.clientes_estimados.id_for_label }}">Clientes estimados</label>
+            {{ form.clientes_estimados }}
+            {% for error in form.clientes_estimados.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-section-title">
+            Integración con Zabbix
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.host_id_zabbix.id_for_label }}">Host ID Zabbix</label>
+            {{ form.host_id_zabbix }}
+            {% for error in form.host_id_zabbix.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-checks">
+            <label class="check-item">
+                {{ form.es_monitoreado_zabbix }}
+                <span>Monitoreado por Zabbix</span>
+            </label>
+
+            <label class="check-item">
+                {{ form.activo }}
+                <span>Componente activo</span>
+            </label>
+        </div>
+
+        <div class="form-section-title">
+            Datos técnicos adicionales
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.datos_tecnicos_json.id_for_label }}">Datos técnicos adicionales</label>
+            {{ form.datos_tecnicos_json }}
+            {% for error in form.datos_tecnicos_json.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+            <small class="help-text">
+                Formato opcional JSON. Ejemplo: {"puerto": "ether1", "enlace": "principal"}
+            </small>
+        </div>
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                {{ accion }}
+            </button>
+
+            <a href="{% url 'incidencias:componentes_lista' %}" class="btn btn-secondary">
+                Cancelar
+            </a>
+        </div>
+
+    </form>
+
+</section>
+
+{% endblock %}

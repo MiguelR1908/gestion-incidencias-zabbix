@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <title>Acceso denegado | Fiber Z NOC</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="{% static 'incidencias/css/styles.css' %}">
+</head>
+<body>
+
+<div class="error-page">
+
+    <div class="error-card">
+
+        <div class="brand error-brand">
+            <div class="brand-logo-img">
+                <img src="{% static 'incidencias/images/logo.png' %}" alt="Fiber Z">
+            </div>
+
+            <div class="brand-text">
+                <h2>Fiber Z NOC</h2>
+                <span>Internet sin límites</span>
+            </div>
+        </div>
+
+        <div class="error-code">403</div>
+
+        <h1>Acceso denegado</h1>
+
+        <p>
+            No cuentas con los permisos necesarios para acceder a esta sección del sistema.
+        </p>
+
+        <div class="error-route">
+            Esta acción está restringida según el rol asignado a tu usuario.
+        </div>
+
+        <div class="error-actions">
+            <a href="{% url 'incidencias:dashboard' %}" class="btn btn-primary">
+                Volver al dashboard
+            </a>
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

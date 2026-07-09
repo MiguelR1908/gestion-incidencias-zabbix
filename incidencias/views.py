@@ -1,0 +1,724 @@
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.models import User
+from django.db.models import Q
+from django.contrib.auth.decorators import login_required, user_passes_test
+from .models import Ubicacion, Nodo, ComponenteRed
+
+@login_required
+def acceso_denegado(request):
+    return render(request, "incidencias/403.html", status=403)
+
+def pagina_no_encontrada(request, ruta_invalida=None):
+    """
+    Vista personalizada para rutas no encontradas.
+    """
+
+    context = {
+        "ruta_invalida": ruta_invalida,
+    }
+
+    return render(request, "incidencias/404.html", context, status=404)
+
+
+def login_view(request):
+    """
+    Vista para iniciar sesión en el sistema.
+    Corresponde al PBI-001: Iniciar sesión.
+    """
+
+    if request.user.is_authenticated:
+        return redirect("incidencias:dashboard")
+
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        usuario_existente = User.objects.filter(username=username).first()
+
+        if usuario_existente and not usuario_existente.is_active:
+            messages.error(
+                request,
+                "El usuario se encuentra inactivo. Comuníquese con el administrador del sistema."
+            )
+            return render(request, "incidencias/login.html")
+
+        user = authenticate(
+            request,
+            username=username,
+            password=password
+        )
+
+        if user is not None:
+            login(request, user)
+            return redirect("incidencias:dashboard")
+        else:
+            messages.error(request, "Usuario o contraseña incorrectos.")
+
+    return render(request, "incidencias/login.html")
+
+
+@login_required
+def logout_view(request):
+    logout(request)
+    return redirect("incidencias:login")
+
+
+@login_required
+def dashboard(request):
+    from .models import Nodo, ComponenteRed, Incidencia, AlertaZabbix, EstadoIncidencia
+
+    total_nodos = Nodo.objects.count()
+    total_componentes = ComponenteRed.objects.count()
+    alertas_zabbix = AlertaZabbix.objects.count()
+
+    incidencias_abiertas = Incidencia.objects.exclude(
+        estado__in=[
+            EstadoIncidencia.CERRADA,
+            EstadoIncidencia.CANCELADA,
+        ]
+    ).count()
+
+    context = {
+        "total_nodos": total_nodos,
+        "total_componentes": total_componentes,
+        "incidencias_abiertas": incidencias_abiertas,
+        "alertas_zabbix": alertas_zabbix,
+    }
+
+    return render(request, "incidencias/dashboard.html", context)
+
+def es_administrador(user):
+    """
+    Verifica si el usuario tiene permisos de administración del sistema.
+    Permite acceso a:
+    - Superusuarios de Django.
+    - Usuarios con perfil ADMINISTRADOR.
+    """
+
+    if not user.is_authenticated:
+        return False
+
+    # Superusuario de Django: acceso total
+    if user.is_superuser:
+        return True
+
+    perfil = getattr(user, "perfil_incidencias", None)
+
+    if not perfil:
+        return False
+
+    return perfil.rol == "ADMINISTRADOR"
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+
+def usuarios_lista(request):
+    """
+    Lista de usuarios del sistema.
+    PBI-007 y PBI-008.
+    """
+
+    query = request.GET.get("q", "")
+
+    usuarios = User.objects.select_related("perfil_incidencias").all().order_by("username")
+
+    if query:
+        usuarios = usuarios.filter(
+            Q(username__icontains=query) |
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(email__icontains=query) |
+            Q(perfil_incidencias__rol__icontains=query) |
+            Q(perfil_incidencias__cargo__icontains=query) |
+            Q(perfil_incidencias__area__icontains=query)
+        )
+
+    context = {
+        "usuarios": usuarios,
+        "query": query,
+    }
+
+    return render(request, "incidencias/usuarios/lista.html", context)
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def usuario_crear(request):
+    """
+    Registro de usuarios.
+    PBI-003 y PBI-006.
+    """
+
+    from .forms import UsuarioForm
+
+    if request.method == "POST":
+        form = UsuarioForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Usuario registrado correctamente.")
+            return redirect("incidencias:usuarios_lista")
+    else:
+        form = UsuarioForm()
+
+    context = {
+        "form": form,
+        "titulo": "Registrar usuario",
+        "accion": "Crear usuario",
+    }
+
+    return render(request, "incidencias/usuarios/formulario.html", context)
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def usuario_editar(request, user_id):
+    """
+    Modificación de usuarios.
+    PBI-004 y PBI-006.
+    """
+
+    from django.shortcuts import get_object_or_404
+    from .forms import UsuarioForm
+
+    usuario = get_object_or_404(User, id=user_id)
+
+    # IMPORTANTE:
+    # En tu modelo la relación no se llama "perfil", sino "perfil_incidencias".
+    perfil = getattr(usuario, "perfil_incidencias", None)
+
+    if request.method == "POST":
+        form = UsuarioForm(request.POST, instance=usuario, perfil=perfil)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Usuario actualizado correctamente.")
+            return redirect("incidencias:usuarios_lista")
+    else:
+        form = UsuarioForm(instance=usuario, perfil=perfil)
+
+    context = {
+        "form": form,
+        "titulo": "Editar usuario",
+        "accion": "Guardar cambios",
+        "usuario_obj": usuario,
+    }
+
+    return render(request, "incidencias/usuarios/formulario.html", context)
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+
+def usuario_cambiar_estado(request, user_id):
+    """
+    Activar o desactivar usuarios.
+    PBI-005.
+    """
+
+    from django.shortcuts import get_object_or_404
+
+    usuario = get_object_or_404(User, id=user_id)
+
+    if usuario == request.user:
+        messages.error(request, "No puedes desactivar tu propio usuario.")
+        return redirect("incidencias:usuarios_lista")
+
+    usuario.is_active = not usuario.is_active
+    usuario.save()
+
+    # IMPORTANTE:
+    # En tu modelo la relación no se llama "perfil", sino "perfil_incidencias".
+    perfil = getattr(usuario, "perfil_incidencias", None)
+
+    if perfil:
+        perfil.activo = usuario.is_active
+        perfil.save()
+
+    if usuario.is_active:
+        messages.success(request, "Usuario activado correctamente.")
+    else:
+        messages.warning(request, "Usuario desactivado correctamente.")
+
+    return redirect("incidencias:usuarios_lista")
+
+
+@login_required
+def incidencias_page(request):
+    return render(request, "incidencias/modulo.html", {
+        "titulo": "Gestión de Incidencias",
+        "subtitulo": "Registro, seguimiento, atención y cierre de incidencias operativas.",
+        "pbi": "EP04 - Gestión de incidencias",
+    })
+
+
+@login_required
+def alertas_zabbix_page(request):
+    return render(request, "incidencias/modulo.html", {
+        "titulo": "Alertas Zabbix",
+        "subtitulo": "Alertas sincronizadas desde la plataforma de monitoreo Zabbix.",
+        "pbi": "EP03 - Integración con Zabbix",
+    })
+
+
+@login_required
+def asignaciones_page(request):
+    return render(request, "incidencias/modulo.html", {
+        "titulo": "Asignaciones",
+        "subtitulo": "Asignación y reasignación de incidencias al personal técnico.",
+        "pbi": "EP05 - Gestión de atención de incidencias",
+    })
+
+
+@login_required
+def ubicaciones_page(request):
+    return render(request, "incidencias/modulo.html", {
+        "titulo": "Ubicaciones",
+        "subtitulo": "Administración de las ubicaciones donde opera la infraestructura de red.",
+        "pbi": "EP02 - Gestión de infraestructura de red",
+    })
+
+
+@login_required
+def nodos_page(request):
+    return render(request, "incidencias/modulo.html", {
+        "titulo": "Nodos",
+        "subtitulo": "Administración de nodos principales de la red de Fiber Z Telecom.",
+        "pbi": "EP02 - Gestión de infraestructura de red",
+    })
+
+
+@login_required
+def componentes_page(request):
+    return render(request, "incidencias/modulo.html", {
+        "titulo": "Componentes de Red",
+        "subtitulo": "Gestión de routers, radios AP, switches, UPS y demás equipos asociados a nodos.",
+        "pbi": "EP02 - Gestión de infraestructura de red",
+    })
+
+
+@login_required
+def sla_indicadores_page(request):
+    return render(request, "incidencias/modulo.html", {
+        "titulo": "SLA e Indicadores",
+        "subtitulo": "Control de tiempos de registro, asignación, atención, resolución y cumplimiento de SLA.",
+        "pbi": "EP08 - Gestión de SLA e indicadores",
+    })
+
+
+@login_required
+def reportes_page(request):
+    return render(request, "incidencias/modulo.html", {
+        "titulo": "Reportes",
+        "subtitulo": "Reportes operativos, históricos y estadísticos de incidencias.",
+        "pbi": "EP10 - Reportes y estadísticas",
+    })
+
+
+@login_required
+def configuracion_page(request):
+    return render(request, "incidencias/modulo.html", {
+        "titulo": "Configuración",
+        "subtitulo": "Parámetros generales, catálogos y opciones administrativas del sistema.",
+        "pbi": "EP11 - Administración y configuración del sistema",
+    })
+
+
+def pagina_no_encontrada(request, ruta_invalida=None):
+    return render(request, "incidencias/404.html", {
+        "ruta_invalida": ruta_invalida,
+    }, status=404)
+
+@login_required
+def ubicaciones_lista(request):
+    """
+    Lista de ubicaciones.
+    PBI-017 y PBI-021.
+    """
+
+    query = request.GET.get("q", "")
+
+    ubicaciones = Ubicacion.objects.all().order_by("nombre")
+
+    if query:
+        ubicaciones = ubicaciones.filter(
+            Q(nombre__icontains=query) |
+            Q(departamento__icontains=query) |
+            Q(provincia__icontains=query) |
+            Q(distrito__icontains=query) |
+            Q(direccion_referencia__icontains=query)
+        )
+
+    context = {
+        "ubicaciones": ubicaciones,
+        "query": query,
+    }
+
+    return render(request, "incidencias/ubicaciones/lista.html", context)
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def ubicacion_crear(request):
+    """
+    Registrar ubicación.
+    PBI-009.
+    """
+
+    from .forms import UbicacionForm
+
+    if request.method == "POST":
+        form = UbicacionForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Ubicación registrada correctamente.")
+            return redirect("incidencias:ubicaciones_lista")
+    else:
+        form = UbicacionForm()
+
+    context = {
+        "form": form,
+        "titulo": "Registrar ubicación",
+        "accion": "Crear ubicación",
+    }
+
+    return render(request, "incidencias/ubicaciones/formulario.html", context)
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def ubicacion_editar(request, ubicacion_id):
+    """
+    Modificar ubicación.
+    PBI-010.
+    """
+
+    from .forms import UbicacionForm
+
+    ubicacion = get_object_or_404(Ubicacion, id=ubicacion_id)
+
+    if request.method == "POST":
+        form = UbicacionForm(request.POST, instance=ubicacion)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Ubicación actualizada correctamente.")
+            return redirect("incidencias:ubicaciones_lista")
+    else:
+        form = UbicacionForm(instance=ubicacion)
+
+    context = {
+        "form": form,
+        "titulo": "Editar ubicación",
+        "accion": "Guardar cambios",
+        "ubicacion": ubicacion,
+    }
+
+    return render(request, "incidencias/ubicaciones/formulario.html", context)
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def ubicacion_cambiar_estado(request, ubicacion_id):
+    """
+    Activar o desactivar ubicación.
+    PBI-021.
+    """
+
+    ubicacion = get_object_or_404(Ubicacion, id=ubicacion_id)
+
+    ubicacion.activo = not ubicacion.activo
+    ubicacion.save()
+
+    if ubicacion.activo:
+        messages.success(request, "Ubicación activada correctamente.")
+    else:
+        messages.warning(request, "Ubicación desactivada correctamente.")
+
+    return redirect("incidencias:ubicaciones_lista")
+
+@login_required
+def nodos_lista(request):
+    """
+    Lista de nodos.
+    PBI-017, PBI-018 y PBI-021.
+    """
+
+    query = request.GET.get("q", "")
+
+    nodos = Nodo.objects.select_related("ubicacion").all().order_by("codigo")
+
+    if query:
+        nodos = nodos.filter(
+            Q(codigo__icontains=query) |
+            Q(nombre__icontains=query) |
+            Q(ubicacion__nombre__icontains=query) |
+            Q(ubicacion__departamento__icontains=query) |
+            Q(ubicacion__provincia__icontains=query) |
+            Q(ubicacion__distrito__icontains=query) |
+            Q(estado__icontains=query) |
+            Q(criticidad__icontains=query) |
+            Q(direccion_referencia__icontains=query)
+        )
+
+    context = {
+        "nodos": nodos,
+        "query": query,
+    }
+
+    return render(request, "incidencias/nodos/lista.html", context)
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def nodo_crear(request):
+    """
+    Registrar nodo.
+    PBI-011.
+    """
+
+    from .forms import NodoForm
+
+    if request.method == "POST":
+        form = NodoForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Nodo registrado correctamente.")
+            return redirect("incidencias:nodos_lista")
+    else:
+        form = NodoForm()
+
+    context = {
+        "form": form,
+        "titulo": "Registrar nodo",
+        "accion": "Crear nodo",
+    }
+
+    return render(request, "incidencias/nodos/formulario.html", context)
+
+
+@login_required                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def nodo_editar(request, nodo_id):
+    """
+    Modificar nodo.
+    PBI-012.
+    """
+
+    from .forms import NodoForm
+
+    nodo = get_object_or_404(Nodo, id=nodo_id)
+
+    if request.method == "POST":
+        form = NodoForm(request.POST, instance=nodo)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Nodo actualizado correctamente.")
+            return redirect("incidencias:nodos_lista")
+    else:
+        form = NodoForm(instance=nodo)
+
+    context = {
+        "form": form,
+        "titulo": "Editar nodo",
+        "accion": "Guardar cambios",
+        "nodo": nodo,
+    }
+
+    return render(request, "incidencias/nodos/formulario.html", context)
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def nodo_cambiar_estado(request, nodo_id):
+    """
+    Activar o desactivar nodo.
+    PBI-021.
+    """
+
+    nodo = get_object_or_404(Nodo, id=nodo_id)
+
+    nodo.activo = not nodo.activo
+    nodo.save()
+
+    if nodo.activo:
+        messages.success(request, "Nodo activado correctamente.")
+    else:
+        messages.warning(request, "Nodo desactivado correctamente.")
+
+    return redirect("incidencias:nodos_lista")
+
+
+@login_required
+def componentes_lista(request):
+    """
+    Lista de componentes de red.
+    PBI-017, PBI-018, PBI-019, PBI-020, PBI-022 y PBI-023.
+    """
+
+    query = request.GET.get("q", "")
+
+    componentes = ComponenteRed.objects.select_related(
+        "nodo",
+        "nodo__ubicacion"
+    ).all().order_by("nodo__codigo", "codigo")
+
+    if query:
+        componentes = componentes.filter(
+            Q(codigo__icontains=query) |
+            Q(nombre__icontains=query) |
+            Q(nodo__codigo__icontains=query) |
+            Q(nodo__nombre__icontains=query) |
+            Q(nodo__ubicacion__nombre__icontains=query) |
+            Q(tipo__icontains=query) |
+            Q(funcion__icontains=query) |
+            Q(ip_gestion__icontains=query) |
+            Q(mac_address__icontains=query) |
+            Q(fabricante__icontains=query) |
+            Q(modelo__icontains=query) |
+            Q(host_id_zabbix__icontains=query) |
+            Q(estado_operativo__icontains=query) |
+            Q(criticidad__icontains=query)
+        )
+
+    context = {
+        "componentes": componentes,
+        "query": query,
+    }
+
+    return render(request, "incidencias/componentes/lista.html", context)
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def componente_crear(request):
+    """
+    Registrar componente de red.
+    PBI-013, PBI-015 y PBI-016.
+    """
+
+    from .forms import ComponenteRedForm
+
+    if request.method == "POST":
+        form = ComponenteRedForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Componente de red registrado correctamente.")
+            return redirect("incidencias:componentes_lista")
+    else:
+        form = ComponenteRedForm()
+
+    context = {
+        "form": form,
+        "titulo": "Registrar componente de red",
+        "accion": "Crear componente",
+    }
+
+    return render(request, "incidencias/componentes/formulario.html", context)
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def componente_editar(request, componente_id):
+    """
+    Modificar componente de red.
+    PBI-014, PBI-015 y PBI-016.
+    """
+
+    from .forms import ComponenteRedForm
+
+    componente = get_object_or_404(ComponenteRed, id=componente_id)
+
+    if request.method == "POST":
+        form = ComponenteRedForm(request.POST, instance=componente)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Componente de red actualizado correctamente.")
+            return redirect("incidencias:componentes_lista")
+    else:
+        form = ComponenteRedForm(instance=componente)
+
+    context = {
+        "form": form,
+        "titulo": "Editar componente de red",
+        "accion": "Guardar cambios",
+        "componente": componente,
+    }
+
+    return render(request, "incidencias/componentes/formulario.html", context)
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def componente_cambiar_estado(request, componente_id):
+    """
+    Activar o desactivar componente de red.
+    PBI-021.
+    """
+
+    componente = get_object_or_404(ComponenteRed, id=componente_id)
+
+    componente.activo = not componente.activo
+    componente.save()
+
+    if componente.activo:
+        messages.success(request, "Componente de red activado correctamente.")
+    else:
+        messages.warning(request, "Componente de red desactivado correctamente.")
+
+    return redirect("incidencias:componentes_lista")
+
+@login_required
+def infraestructura_inventario(request):
+    """
+    Inventario completo de infraestructura.
+    PBI-017, PBI-020 y PBI-022.
+    """
+
+    query = request.GET.get("q", "")
+
+    ubicaciones = Ubicacion.objects.prefetch_related(
+        "nodos__componentes_red"
+    ).all().order_by("nombre")
+
+    if query:
+        ubicaciones = ubicaciones.filter(
+            Q(nombre__icontains=query) |
+            Q(departamento__icontains=query) |
+            Q(provincia__icontains=query) |
+            Q(distrito__icontains=query) |
+            Q(nodos__codigo__icontains=query) |
+            Q(nodos__nombre__icontains=query) |
+            Q(nodos__componentes_red__codigo__icontains=query) |
+            Q(nodos__componentes_red__nombre__icontains=query) |
+            Q(nodos__componentes_red__ip_gestion__icontains=query) |
+            Q(nodos__componentes_red__fabricante__icontains=query) |
+            Q(nodos__componentes_red__modelo__icontains=query)
+        ).distinct()
+
+    total_ubicaciones = Ubicacion.objects.count()
+    total_nodos = Nodo.objects.count()
+    total_componentes = ComponenteRed.objects.count()
+    componentes_activos = ComponenteRed.objects.filter(activo=True).count()
+    componentes_caidos = ComponenteRed.objects.filter(estado_operativo="CAIDO").count()
+    componentes_mantenimiento = ComponenteRed.objects.filter(estado_operativo="MANTENIMIENTO").count()
+
+    context = {
+        "ubicaciones": ubicaciones,
+        "query": query,
+        "total_ubicaciones": total_ubicaciones,
+        "total_nodos": total_nodos,
+        "total_componentes": total_componentes,
+        "componentes_activos": componentes_activos,
+        "componentes_caidos": componentes_caidos,
+        "componentes_mantenimiento": componentes_mantenimiento,
+    }
+
+    return render(request, "incidencias/infraestructura/inventario.html", context)
