@@ -93,24 +93,41 @@
             <div class="menu-title">Gestión</div>
 
             <nav class="menu">
-                <a href="#">
+                <a href="{% url 'incidencias:sla_indicadores' %}"
+                class="{% if request.resolver_match.url_name == 'sla_indicadores' %}active{% endif %}">
                     <span class="menu-icon">◌</span>
                     <span>SLA e Indicadores</span>
                 </a>
 
-                <a href="#">
+                <a href="{% url 'incidencias:reportes' %}"
+                class="{% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
                     <span class="menu-icon">▤</span>
                     <span>Reportes</span>
                 </a>
 
-                <a href="#">
+                <a href="{% url 'incidencias:configuracion' %}"
+                class="{% if request.resolver_match.url_name == 'configuracion' %}active{% endif %}">
                     <span class="menu-icon">⚙</span>
                     <span>Configuración</span>
                 </a>
+            </nav>
+        </div>
+
+        <!-- Integración Zabbix -->
+        <div class="menu-section">
+            <div class="menu-title">Integración Zabbix</div>
+
+            <nav class="menu">
                 <a href="{% url 'incidencias:configuracion_zabbix_lista' %}"
                 class="{% if request.resolver_match.url_name == 'configuracion_zabbix_lista' or request.resolver_match.url_name == 'configuracion_zabbix_crear' or request.resolver_match.url_name == 'configuracion_zabbix_editar' %}active{% endif %}">
                     <span class="menu-icon">⚙</span>
                     <span>Config. Zabbix</span>
+                </a>
+
+                <a href="{% url 'incidencias:zabbix_hosts_lista' %}"
+                class="{% if request.resolver_match.url_name == 'zabbix_hosts_lista' %}active{% endif %}">
+                    <span class="menu-icon">☍</span>
+                    <span>Hosts Zabbix</span>
                 </a>
             </nav>
         </div>

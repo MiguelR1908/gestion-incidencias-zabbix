@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .models import Ubicacion, Nodo, ComponenteRed, ConfiguracionZabbix
+from .models import Ubicacion, Nodo, ComponenteRed, ConfiguracionZabbix, ConfiguracionZabbix, LogIntegracionZabbix
 from django.utils import timezone
 
 
@@ -844,3 +844,96 @@ def configuracion_zabbix_probar(request, configuracion_id):
         messages.error(request, f"Error inesperado al probar conexión: {error}")
 
     return redirect("incidencias:configuracion_zabbix_lista")
+
+
+@login_required
+@user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
+def zabbix_hosts_lista(request):
+    """
+    Consulta hosts desde Zabbix.
+    PBI-026.
+    """
+
+    from .zabbix_api import ZabbixClient, ZabbixAPIError
+
+    configuracion = ConfiguracionZabbix.objects.filter(
+        activo=True,
+        conexion_exitosa=True
+    ).first()
+
+    hosts = []
+    error = None
+
+    fecha_inicio_log = timezone.now()
+
+    if not configuracion:
+        error = "No existe una configuración Zabbix activa y validada."
+
+        LogIntegracionZabbix.objects.create(
+            proceso="SINCRONIZACION_HOSTS",
+            estado="ERROR",
+            mensaje=error,
+            total_errores=1,
+            fecha_inicio=fecha_inicio_log,
+            fecha_fin=timezone.now()
+        )
+
+    else:
+        try:
+            cliente = ZabbixClient(
+                url_api=configuracion.url_api,
+                usuario=configuracion.usuario,
+                password=configuracion.password,
+                token_api=configuracion.token_api,
+                usar_token=configuracion.usar_token,
+            )
+
+            hosts = cliente.obtener_hosts()
+
+            LogIntegracionZabbix.objects.create(
+                proceso="SINCRONIZACION_HOSTS",
+                estado="EXITOSO",
+                mensaje="Consulta de hosts ejecutada correctamente.",
+                total_alertas=0,
+                total_procesadas=len(hosts),
+                total_errores=0,
+                fecha_inicio=fecha_inicio_log,
+                fecha_fin=timezone.now(),
+                detalle_json={
+                    "total_hosts": len(hosts)
+                }
+            )
+
+        except ZabbixAPIError as e:
+            error = str(e)
+
+            LogIntegracionZabbix.objects.create(
+                proceso="SINCRONIZACION_HOSTS",
+                estado="ERROR",
+                mensaje=error,
+                total_alertas=0,
+                total_procesadas=0,
+                total_errores=1,
+                fecha_inicio=fecha_inicio_log,
+                fecha_fin=timezone.now()
+            )
+
+        except Exception as e:
+            error = str(e)
+
+            LogIntegracionZabbix.objects.create(
+                proceso="SINCRONIZACION_HOSTS",
+                estado="ERROR",
+                mensaje=error,
+                total_alertas=0,
+                total_procesadas=0,
+                total_errores=1,
+                fecha_inicio=fecha_inicio_log,
+                fecha_fin=timezone.now()
+            )
+
+    return render(request, "incidencias/zabbix/hosts_lista.html", {
+        "configuracion": configuracion,
+        "hosts": hosts,
+        "error": error,
+    })

@@ -79,3 +79,34 @@ class ZabbixClient:
             "version": version,
             "mensaje": f"Conexión exitosa con Zabbix. Versión API: {version}"
         }
+
+    def obtener_hosts(self):
+        """
+        Consulta hosts registrados en Zabbix.
+        Valida que el token o credenciales tengan permisos reales.
+        """
+
+        self.login()
+
+        hosts = self._request(
+            "host.get",
+            {
+                "output": [
+                    "hostid",
+                    "host",
+                    "name",
+                    "status"
+                ],
+                "selectInterfaces": [
+                    "ip",
+                    "dns",
+                    "type",
+                    "main",
+                    "useip"
+                ],
+                "sortfield": "name"
+            },
+            auth=True
+        )
+
+        return hosts

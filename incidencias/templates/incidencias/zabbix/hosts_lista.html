@@ -1,0 +1,89 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}Hosts Zabbix | Fiber Z NOC{% endblock %}
+
+{% block page_title %}Hosts Zabbix{% endblock %}
+
+{% block page_subtitle %}
+Consulta de hosts registrados en Zabbix mediante API.
+{% endblock %}
+
+{% block content %}
+
+<section class="card">
+    <div class="card-header">
+        <div>
+            <h3>Hosts obtenidos desde Zabbix</h3>
+            <p>
+                Esta pantalla valida que el sistema pueda consultar información real desde Zabbix.
+            </p>
+        </div>
+
+        <a href="{% url 'incidencias:zabbix_hosts_lista' %}" class="btn btn-primary">
+            Actualizar
+        </a>
+    </div>
+
+    {% if configuracion %}
+        <p>
+            Configuración usada:
+            <strong>{{ configuracion.nombre }}</strong>
+        </p>
+    {% endif %}
+
+    {% if error %}
+        <div class="alert alert-danger">
+            {{ error }}
+        </div>
+    {% endif %}
+</section>
+
+<section class="card">
+    <div class="table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Host ID</th>
+                    <th>Host técnico</th>
+                    <th>Nombre visible</th>
+                    <th>IP principal</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for host in hosts %}
+                    <tr>
+                        <td>{{ host.hostid }}</td>
+                        <td><strong>{{ host.host }}</strong></td>
+                        <td>{{ host.name }}</td>
+
+                        <td>
+                            {% if host.interfaces %}
+                                {{ host.interfaces.0.ip|default:"-" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if host.status == "0" %}
+                                <span class="badge badge-success">Monitoreado</span>
+                            {% else %}
+                                <span class="badge badge-danger">Deshabilitado</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5">
+                            No se encontraron hosts en Zabbix.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% endblock %}

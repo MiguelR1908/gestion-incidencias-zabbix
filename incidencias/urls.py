@@ -34,7 +34,7 @@ urlpatterns = [
     path("zabbix/configuracion/crear/", views.configuracion_zabbix_crear, name="configuracion_zabbix_crear"),
     path("zabbix/configuracion/<int:configuracion_id>/editar/", views.configuracion_zabbix_editar, name="configuracion_zabbix_editar"),
     path("zabbix/configuracion/<int:configuracion_id>/probar/", views.configuracion_zabbix_probar, name="configuracion_zabbix_probar"),
-
+    path("zabbix/hosts/", views.zabbix_hosts_lista, name="zabbix_hosts_lista"),
 
     path("sla-indicadores/", views.sla_indicadores_page, name="sla_indicadores"),
     path("reportes/", views.reportes_page, name="reportes"),
