@@ -6,6 +6,8 @@ app_name = 'incidencias'
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
 
+    path("incidencias/", views.incidencias_page, name="incidencias"),
+    path("asignaciones/", views.asignaciones_page, name="asignaciones"),
     #Usuarios
     path("usuarios/", views.usuarios_lista, name="usuarios_lista"),
     path("usuarios/crear/", views.usuario_crear, name="usuario_crear"),
@@ -38,10 +40,11 @@ urlpatterns = [
     path("zabbix/alertas/", views.zabbix_alertas_activas, name="zabbix_alertas_activas"),
     path("zabbix/alertas/sincronizar/", views.zabbix_alertas_sincronizar, name="zabbix_alertas_sincronizar"),
 
+    path("alertas-sistema/", views.alertas_sistema_lista, name="alertas_sistema_lista"),
+
     path("sla-indicadores/", views.sla_indicadores_page, name="sla_indicadores"),
     path("reportes/", views.reportes_page, name="reportes"),
     path("configuracion/", views.configuracion_page, name="configuracion"),
-
 
     #SYSTEM
     path('login/', views.login_view, name='login'),

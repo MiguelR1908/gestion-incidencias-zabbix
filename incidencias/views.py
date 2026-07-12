@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .models import Ubicacion, Nodo, ComponenteRed, ConfiguracionZabbix, ConfiguracionZabbix, LogIntegracionZabbix, AlertaZabbix
+from .models import Ubicacion, Nodo, ComponenteRed, ConfiguracionZabbix, ConfiguracionZabbix, LogIntegracionZabbix, AlertaZabbix, Incidencia, AsignacionIncidencia
 from django.utils import timezone
 from datetime import datetime
 
@@ -89,7 +89,46 @@ def dashboard(request):
         "alertas_zabbix": alertas_zabbix,
     }
 
-    return render(request, "incidencias/dashboard.html", context)
+    return render(request, "incidencias/dashboard/dashboard.html", context)
+
+@login_required
+def incidencias_page(request):
+    """
+    Módulo de gestión de incidencias.
+    """
+
+    return render(
+        request,
+        "incidencias/incidencias/lista.html",
+        {
+            "titulo": "Gestión de Incidencias",
+            "subtitulo": (
+                "Registro, seguimiento, atención y cierre "
+                "de incidencias operativas."
+            ),
+            "pbi": "EP04 - Gestión de incidencias",
+        }
+    )
+
+
+@login_required
+def asignaciones_page(request):
+    """
+    Módulo de asignaciones de incidencias.
+    """
+
+    return render(
+        request,
+        "incidencias/asignaciones/lista.html",
+        {
+            "titulo": "Asignaciones",
+            "subtitulo": (
+                "Asignación y reasignación de incidencias "
+                "al personal técnico."
+            ),
+            "pbi": "EP05 - Gestión de atención de incidencias",
+        }
+    )
 
 def es_administrador(user):
     """
@@ -247,13 +286,6 @@ def usuario_cambiar_estado(request, user_id):
     return redirect("incidencias:usuarios_lista")
 
 
-@login_required
-def incidencias_page(request):
-    return render(request, "incidencias/modulo.html", {
-        "titulo": "Gestión de Incidencias",
-        "subtitulo": "Registro, seguimiento, atención y cierre de incidencias operativas.",
-        "pbi": "EP04 - Gestión de incidencias",
-    })
 
 
 @login_required
@@ -265,13 +297,6 @@ def alertas_zabbix_page(request):
     })
 
 
-@login_required
-def asignaciones_page(request):
-    return render(request, "incidencias/modulo.html", {
-        "titulo": "Asignaciones",
-        "subtitulo": "Asignación y reasignación de incidencias al personal técnico.",
-        "pbi": "EP05 - Gestión de atención de incidencias",
-    })
 
 
 @login_required
@@ -1363,3 +1388,47 @@ def obtener_valor_choice(modelo, campo, preferidos):
             return preferido
 
     return valores_validos[0]
+
+@login_required
+def alertas_sistema_lista(request):
+    """
+    Lista alertas Zabbix sincronizadas y almacenadas en la base de datos.
+    Punto de partida para evaluar y crear incidencias.
+    """
+
+    query = request.GET.get("q", "")
+
+    alertas = AlertaZabbix.objects.select_related(
+        "componente_red",
+        "componente_red__nodo",
+    ).all().order_by("-fecha_evento")
+
+    if query:
+        alertas = alertas.filter(
+            Q(event_id__icontains=query) |
+            Q(trigger_id__icontains=query) |
+            Q(host_id__icontains=query) |
+            Q(nombre_alerta__icontains=query) |
+            Q(componente_red__codigo__icontains=query) |
+            Q(componente_red__nombre__icontains=query) |
+            Q(componente_red__nodo__codigo__icontains=query) |
+            Q(componente_red__nodo__nombre__icontains=query)
+        ).distinct()
+
+    total_alertas = alertas.count()
+    total_pendientes = alertas.filter(procesada=False).count()
+    total_procesadas = alertas.filter(procesada=True).count()
+
+    context = {
+        "alertas": alertas,
+        "query": query,
+        "total_alertas": total_alertas,
+        "total_pendientes": total_pendientes,
+        "total_procesadas": total_procesadas,
+    }
+
+    return render(
+        request,
+        "incidencias/alertas/lista.html",
+        context
+    )
