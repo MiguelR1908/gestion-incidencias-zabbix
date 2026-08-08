@@ -82,35 +82,48 @@ class ZabbixClient:
 
     def obtener_hosts(self):
         """
-        Consulta hosts registrados en Zabbix.
-        Valida que el token o credenciales tengan permisos reales.
+        Obtiene los hosts registrados en Zabbix junto con sus
+        interfaces, grupos, templates y tags.
         """
 
         self.login()
 
-        hosts = self._request(
+        return self._request(
             "host.get",
             {
                 "output": [
                     "hostid",
                     "host",
                     "name",
-                    "status"
+                    "status",
                 ],
                 "selectInterfaces": [
-                    "ip",
-                    "dns",
+                    "interfaceid",
                     "type",
                     "main",
-                    "useip"
+                    "useip",
+                    "ip",
+                    "dns",
+                    "port",
+                    "available",
+                    "error",
                 ],
-                "sortfield": "name"
+                "selectHostGroups": [
+                    "groupid",
+                    "name",
+                ],
+                "selectParentTemplates": [
+                    "templateid",
+                    "host",
+                    "name",
+                ],
+                "selectTags": "extend",
+                "sortfield": "name",
+                "sortorder": "ASC",
             },
-            auth=True
+            auth=True,
         )
 
-        return hosts
-    
     def obtener_problemas_activos(self):
         """
         Consulta problemas activos desde Zabbix.

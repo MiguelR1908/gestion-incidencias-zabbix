@@ -5,23 +5,56 @@
 {% block page_title %}Hosts Zabbix{% endblock %}
 
 {% block page_subtitle %}
-Consulta de hosts registrados en Zabbix mediante API.
+Consulta y sincronización de hosts registrados en Zabbix mediante API.
 {% endblock %}
 
 {% block content %}
 
 <section class="card">
+
     <div class="card-header">
+
         <div>
             <h3>Hosts obtenidos desde Zabbix</h3>
+
             <p>
-                Esta pantalla valida que el sistema pueda consultar información real desde Zabbix.
+                Consulta los hosts registrados en Zabbix y sincronízalos
+                con el inventario local del sistema.
             </p>
         </div>
 
-        <a href="{% url 'incidencias:zabbix_hosts_lista' %}" class="btn btn-primary">
-            Actualizar
-        </a>
+        <!-- Acciones de la pantalla -->
+        <div style="display: flex; gap: 10px; align-items: center;">
+
+            <!-- Solo vuelve a consultar los hosts de Zabbix -->
+            <a
+                href="{% url 'incidencias:zabbix_hosts_lista' %}"
+                class="btn btn-secondary"
+            >
+                ↻ Actualizar lista
+            </a>
+
+            <!-- Crea o actualiza los componentes del inventario -->
+            <form
+                method="post"
+                action="{% url 'incidencias:zabbix_hosts_sincronizar' %}"
+                style="margin: 0;"
+                onsubmit="return confirm(
+                    '¿Deseas sincronizar los hosts de Zabbix con el inventario local?'
+                );"
+            >
+                {% csrf_token %}
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    ⇄ Sincronizar hosts
+                </button>
+            </form>
+
+        </div>
+
     </div>
 
     {% if configuracion %}
@@ -36,11 +69,16 @@ Consulta de hosts registrados en Zabbix mediante API.
             {{ error }}
         </div>
     {% endif %}
+
 </section>
 
+
 <section class="card">
+
     <div class="table-wrapper">
+
         <table class="table">
+
             <thead>
                 <tr>
                     <th>Host ID</th>
@@ -52,11 +90,22 @@ Consulta de hosts registrados en Zabbix mediante API.
             </thead>
 
             <tbody>
+
                 {% for host in hosts %}
+
                     <tr>
-                        <td>{{ host.hostid }}</td>
-                        <td><strong>{{ host.host }}</strong></td>
-                        <td>{{ host.name }}</td>
+
+                        <td>
+                            {{ host.hostid }}
+                        </td>
+
+                        <td>
+                            <strong>{{ host.host }}</strong>
+                        </td>
+
+                        <td>
+                            {{ host.name }}
+                        </td>
 
                         <td>
                             {% if host.interfaces %}
@@ -68,22 +117,34 @@ Consulta de hosts registrados en Zabbix mediante API.
 
                         <td>
                             {% if host.status == "0" %}
-                                <span class="badge badge-success">Monitoreado</span>
+                                <span class="badge badge-success">
+                                    Monitoreado
+                                </span>
                             {% else %}
-                                <span class="badge badge-danger">Deshabilitado</span>
+                                <span class="badge badge-danger">
+                                    Deshabilitado
+                                </span>
                             {% endif %}
                         </td>
+
                     </tr>
+
                 {% empty %}
+
                     <tr>
                         <td colspan="5">
                             No se encontraron hosts en Zabbix.
                         </td>
                     </tr>
+
                 {% endfor %}
+
             </tbody>
+
         </table>
+
     </div>
+
 </section>
 
 {% endblock %}

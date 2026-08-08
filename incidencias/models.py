@@ -548,6 +548,9 @@ class SLAIncidencia(ModeloCatalogo):
     def __str__(self):
         return f"{self.get_severidad_display()} - {self.nombre}"
 
+# =====================================================
+# 7. CONFIGURACION ZABBIX
+# =====================================================
 class ConfiguracionZabbix(ModeloCatalogo):
     nombre = models.CharField(
         max_length=100,

@@ -1,85 +1,933 @@
 {% extends "incidencias/base.html" %}
+{% load tz %}
 
 {% block title %}Incidencias | Fiber Z NOC{% endblock %}
 
 {% block page_title %}Gestión de Incidencias{% endblock %}
 
 {% block page_subtitle %}
-Registro, seguimiento, atención y cierre de incidencias operativas.
+Registro, seguimiento, asignación y cierre de incidencias operativas.
 {% endblock %}
 
 {% block content %}
 
-<section class="card">
-    <div class="card-header">
-        <div>
-            <h3>Incidencias registradas</h3>
-            <p>Total: {{ total_incidencias }}</p>
-        </div>
-    </div>
+<div id="incidents-page">
 
-    <div class="table-wrapper">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Título</th>
-                    <th>Nodo</th>
-                    <th>Severidad</th>
-                    <th>Prioridad</th>
-                    <th>Estado</th>
-                    <th>Técnico</th>
-                    <th>Fecha</th>
-                </tr>
-            </thead>
+    <!-- =====================================================
+         RESUMEN DE INCIDENCIAS
+         ===================================================== -->
 
-            <tbody>
-                {% for incidencia in incidencias %}
-                    <tr>
-                        <td>
-                            <strong>{{ incidencia.codigo }}</strong>
-                        </td>
+    <section class="incident-summary-grid">
 
-                        <td>{{ incidencia.titulo }}</td>
+        <article class="incident-summary-card incident-summary-total">
+            <div class="incident-summary-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M4 4h16v16H4z"></path>
+                    <path d="M8 9h8M8 13h8M8 17h5"></path>
+                </svg>
+            </div>
 
-                        <td>
-                            {{ incidencia.nodo_afectado.codigo }}
-                        </td>
+            <div>
+                <span class="incident-summary-label">
+                    Total
+                </span>
 
-                        <td>
-                            {{ incidencia.get_severidad_display }}
-                        </td>
+                <strong class="incident-summary-value">
+                    {{ total_general|default:"0" }}
+                </strong>
 
-                        <td>
-                            {{ incidencia.get_prioridad_display }}
-                        </td>
+                <small class="incident-summary-note">
+                    Incidencias registradas
+                </small>
+            </div>
+        </article>
 
-                        <td>
-                            {{ incidencia.get_estado_display }}
-                        </td>
+        <article class="incident-summary-card incident-summary-detected">
+            <div class="incident-summary-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 3 2.8 20h18.4L12 3Z"></path>
+                    <path d="M12 9v5M12 17h.01"></path>
+                </svg>
+            </div>
 
-                        <td>
-                            {% if incidencia.tecnico_asignado %}
-                                {{ incidencia.tecnico_asignado.get_full_name|default:incidencia.tecnico_asignado.username }}
-                            {% else %}
-                                Sin asignar
+            <div>
+                <span class="incident-summary-label">
+                    Detectadas
+                </span>
+
+                <strong class="incident-summary-value">
+                    {{ incidencias_detectadas|default:"0" }}
+                </strong>
+
+                <small class="incident-summary-note">
+                    Pendientes de asignación
+                </small>
+            </div>
+        </article>
+
+        <article class="incident-summary-card incident-summary-progress">
+            <div class="incident-summary-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2a10 10 0 1 0 10 10"></path>
+                    <path d="M12 6v6l4 2"></path>
+                </svg>
+            </div>
+
+            <div>
+                <span class="incident-summary-label">
+                    En proceso
+                </span>
+
+                <strong class="incident-summary-value">
+                    {{ incidencias_en_proceso|default:"0" }}
+                </strong>
+
+                <small class="incident-summary-note">
+                    Atención en curso
+                </small>
+            </div>
+        </article>
+
+        <article class="incident-summary-card incident-summary-critical">
+            <div class="incident-summary-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z"></path>
+                </svg>
+            </div>
+
+            <div>
+                <span class="incident-summary-label">
+                    Altas / críticas
+                </span>
+
+                <strong class="incident-summary-value">
+                    {{ incidencias_altas|default:"0" }}
+                </strong>
+
+                <small class="incident-summary-note">
+                    Requieren prioridad
+                </small>
+            </div>
+        </article>
+
+        <article class="incident-summary-card incident-summary-closed">
+            <div class="incident-summary-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M20 6 9 17l-5-5"></path>
+                </svg>
+            </div>
+
+            <div>
+                <span class="incident-summary-label">
+                    Cerradas
+                </span>
+
+                <strong class="incident-summary-value">
+                    {{ incidencias_cerradas|default:"0" }}
+                </strong>
+
+                <small class="incident-summary-note">
+                    Atención finalizada
+                </small>
+            </div>
+        </article>
+
+    </section>
+
+
+    <!-- =====================================================
+         PANEL DE BÚSQUEDA Y FILTROS
+         ===================================================== -->
+
+    <section class="card incident-panel">
+
+        <header class="incident-panel-header">
+
+            <div>
+                <h3>Panel de incidencias</h3>
+
+                <p>
+                    Consulta, filtra y gestiona las incidencias
+                    operativas del NOC.
+                </p>
+            </div>
+
+            <div class="incident-toolbar-actions">
+
+                <!-- Indicador de recarga automática de la pantalla -->
+                <div
+                    class="incident-auto-refresh"
+                    title="La pantalla se actualiza automáticamente"
+                >
+                    <span class="incident-refresh-dot"></span>
+
+                    <span>
+                        Actualización en
+                        <strong id="incident-refresh-countdown">60</strong>
+                        s
+                    </span>
+                </div>
+
+
+                <!-- Registrar incidencia manual -->
+                <a
+                    href="#"
+                    class="btn btn-primary"
+                    title="Registrar una incidencia manual"
+                >
+                    <span aria-hidden="true">＋</span>
+                    Nueva incidencia
+                </a>
+
+
+                <!-- Solo recarga cantidades y tabla desde la base de datos -->
+                <a
+                    href="{{ request.get_full_path }}"
+                    class="btn btn-secondary"
+                    title="Actualizar cantidades y listado"
+                >
+                    <span aria-hidden="true">↻</span>
+                    Actualizar vista
+                </a>
+
+
+                <!-- Consulta Zabbix inmediatamente -->
+                <form
+                    id="incident-sync-form"
+                    method="post"
+                    action="{% url 'incidencias:incidencias_sincronizar' %}"
+                    class="incident-sync-form"
+                >
+                    {% csrf_token %}
+
+                    <!-- Permite regresar a la misma página conservando filtros -->
+                    <input
+                        type="hidden"
+                        name="next"
+                        value="{{ request.get_full_path }}"
+                    >
+
+                    <button
+                        id="incident-sync-button"
+                        type="submit"
+                        class="btn btn-success"
+                        title="Consultar Zabbix y generar incidencias ahora"
+                    >
+                        <span aria-hidden="true">⟳</span>
+                        <span class="incident-sync-button-text">
+                            Sincronizar ahora
+                        </span>
+                    </button>
+                </form>
+
+
+                <!-- Exportación futura -->
+                <a
+                    href="#"
+                    class="btn btn-warning"
+                    title="Exportar las incidencias filtradas"
+                >
+                    <span aria-hidden="true">⇩</span>
+                    Exportar
+                </a>
+
+            </div>
+
+        </header>
+
+
+        <form method="get" class="incident-filter-form">
+
+            <div class="incident-filter-grid">
+
+                <div class="incident-filter-group incident-filter-search">
+
+                    <label for="id_busqueda">
+                        Buscar
+                    </label>
+
+                    <div class="incident-input-icon">
+
+                        <span aria-hidden="true">
+                            ⌕
+                        </span>
+
+                        <input
+                            id="id_busqueda"
+                            type="search"
+                            name="q"
+                            value="{{ query }}"
+                            placeholder="Código, título, nodo o técnico..."
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <div class="incident-filter-group">
+
+                    <label for="id_estado">
+                        Estado
+                    </label>
+
+                    <select id="id_estado" name="estado">
+
+                        <option value="">
+                            Todos los estados
+                        </option>
+
+                        <option
+                            value="DETECTADA"
+                            {% if estado_seleccionado == "DETECTADA" %}
+                                selected
                             {% endif %}
-                        </td>
+                        >
+                            Detectada
+                        </option>
 
-                        <td>
-                            {{ incidencia.fecha_registro|date:"d/m/Y H:i" }}
-                        </td>
-                    </tr>
-                {% empty %}
+                        <option
+                            value="EN_PROCESO"
+                            {% if estado_seleccionado == "EN_PROCESO" %}
+                                selected
+                            {% endif %}
+                        >
+                            En proceso
+                        </option>
+
+                        <option
+                            value="ESCALADA"
+                            {% if estado_seleccionado == "ESCALADA" %}
+                                selected
+                            {% endif %}
+                        >
+                            Escalada
+                        </option>
+
+                        <option
+                            value="RESUELTA"
+                            {% if estado_seleccionado == "RESUELTA" %}
+                                selected
+                            {% endif %}
+                        >
+                            Resuelta
+                        </option>
+
+                        <option
+                            value="CERRADA"
+                            {% if estado_seleccionado == "CERRADA" %}
+                                selected
+                            {% endif %}
+                        >
+                            Cerrada
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="incident-filter-group">
+
+                    <label for="id_severidad">
+                        Severidad
+                    </label>
+
+                    <select id="id_severidad" name="severidad">
+
+                        <option value="">
+                            Todas las severidades
+                        </option>
+
+                        <option
+                            value="CRITICA"
+                            {% if severidad_seleccionada == "CRITICA" %}
+                                selected
+                            {% endif %}
+                        >
+                            Crítica
+                        </option>
+
+                        <option
+                            value="ALTA"
+                            {% if severidad_seleccionada == "ALTA" %}
+                                selected
+                            {% endif %}
+                        >
+                            Alta
+                        </option>
+
+                        <option
+                            value="MEDIA"
+                            {% if severidad_seleccionada == "MEDIA" %}
+                                selected
+                            {% endif %}
+                        >
+                            Media
+                        </option>
+
+                        <option
+                            value="BAJA"
+                            {% if severidad_seleccionada == "BAJA" %}
+                                selected
+                            {% endif %}
+                        >
+                            Baja
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="incident-filter-group">
+
+                    <label for="id_nodo">
+                        Nodo
+                    </label>
+
+                    <select id="id_nodo" name="nodo">
+
+                        <option value="">
+                            Todos los nodos
+                        </option>
+
+                        {% for nodo in nodos %}
+
+                            <option
+                                value="{{ nodo.id }}"
+                                {% if nodo_seleccionado == nodo.id|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ nodo.codigo }} — {{ nodo.nombre }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <div class="incident-filter-actions">
+
+                    <button
+                        type="submit"
+                        class="btn btn-secondary"
+                    >
+                        <span aria-hidden="true">⌕</span>
+                        Filtrar
+                    </button>
+
+                    <a
+                        href="{% url 'incidencias:incidencias' %}"
+                        class="btn btn-danger"
+                    >
+                        <span aria-hidden="true">×</span>
+                        Limpiar
+                    </a>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </section>
+
+
+    <!-- =====================================================
+         TABLA DE INCIDENCIAS
+         ===================================================== -->
+
+    <section class="card incident-list-card">
+
+        <header class="incident-list-header">
+
+            <div>
+                <h3>Incidencias registradas</h3>
+
+                <p>
+                    Total encontrado:
+                    <strong>{{ total_incidencias }}</strong>
+                </p>
+            </div>
+
+            {% if query or estado_seleccionado or severidad_seleccionada or nodo_seleccionado %}
+
+                <span class="incident-filter-active">
+                    Filtros aplicados
+                </span>
+
+            {% endif %}
+
+        </header>
+
+
+        <div class="incident-table-wrapper">
+
+            <table class="table incident-table">
+
+                <thead>
                     <tr>
-                        <td colspan="8">
-                            No existen incidencias registradas todavía.
-                        </td>
+                        <th class="column-code">
+                            Código
+                        </th>
+
+                        <th class="column-incident">
+                            Incidencia
+                        </th>
+
+                        <th class="column-node">
+                            Nodo
+                        </th>
+
+                        <th class="column-severity">
+                            Severidad
+                        </th>
+
+                        <th class="column-priority">
+                            Prioridad
+                        </th>
+
+                        <th class="column-status">
+                            Estado
+                        </th>
+
+                        <th class="column-technician">
+                            Técnico
+                        </th>
+
+                        <th class="column-date">
+                            Fecha detección
+                        </th>
+
+                        <th class="column-actions">
+                            Acciones
+                        </th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</section>
+                </thead>
+
+
+                <tbody>
+
+                    {% for incidencia in incidencias %}
+
+                        <tr class="incident-row incident-row-{{ incidencia.severidad|lower }}">
+
+                            <td class="incident-code-cell">
+
+                                <strong>
+                                    {{ incidencia.codigo }}
+                                </strong>
+
+                                {% if incidencia.alerta_zabbix %}
+                                    <small>
+                                        Origen: Zabbix
+                                    </small>
+                                {% else %}
+                                    <small>
+                                        Origen: Manual
+                                    </small>
+                                {% endif %}
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="incident-title-cell">
+
+                                    <strong>
+                                        {{ incidencia.titulo }}
+                                    </strong>
+
+                                    <small>
+                                        {% if incidencia.descripcion %}
+                                            {{ incidencia.descripcion|truncatechars:100 }}
+                                        {% else %}
+                                            Sin descripción adicional.
+                                        {% endif %}
+                                    </small>
+
+                                </div>
+
+                            </td>
+
+
+                            <td>
+
+                                {% if incidencia.nodo_afectado %}
+
+                                    <div class="incident-node-cell">
+
+                                        <strong>
+                                            {{ incidencia.nodo_afectado.codigo }}
+                                        </strong>
+
+                                        <small>
+                                            {{ incidencia.nodo_afectado.nombre }}
+                                        </small>
+
+                                    </div>
+
+                                {% else %}
+
+                                    <span class="incident-empty-value">
+                                        Sin nodo
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td>
+
+                                {% if incidencia.severidad == "CRITICA" %}
+
+                                    <span class="incident-badge incident-badge-critical">
+                                        Crítica
+                                    </span>
+
+                                {% elif incidencia.severidad == "ALTA" %}
+
+                                    <span class="incident-badge incident-badge-high">
+                                        Alta
+                                    </span>
+
+                                {% elif incidencia.severidad == "MEDIA" %}
+
+                                    <span class="incident-badge incident-badge-medium">
+                                        Media
+                                    </span>
+
+                                {% elif incidencia.severidad == "BAJA" %}
+
+                                    <span class="incident-badge incident-badge-low">
+                                        Baja
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="incident-badge incident-badge-neutral">
+                                        {{ incidencia.get_severidad_display }}
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td>
+
+                                {% if incidencia.prioridad == "CRITICA" %}
+
+                                    <span class="incident-badge incident-badge-critical">
+                                        Crítica
+                                    </span>
+
+                                {% elif incidencia.prioridad == "ALTA" %}
+
+                                    <span class="incident-badge incident-badge-high">
+                                        Alta
+                                    </span>
+
+                                {% elif incidencia.prioridad == "MEDIA" %}
+
+                                    <span class="incident-badge incident-badge-medium">
+                                        Media
+                                    </span>
+
+                                {% elif incidencia.prioridad == "BAJA" %}
+
+                                    <span class="incident-badge incident-badge-low">
+                                        Baja
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="incident-badge incident-badge-neutral">
+                                        {{ incidencia.get_prioridad_display }}
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td>
+
+                                {% if incidencia.estado == "DETECTADA" %}
+
+                                    <span class="incident-badge incident-status-detected">
+                                        Detectada
+                                    </span>
+
+                                {% elif incidencia.estado == "EN_PROCESO" %}
+
+                                    <span class="incident-badge incident-status-progress">
+                                        En proceso
+                                    </span>
+
+                                {% elif incidencia.estado == "ESCALADA" %}
+
+                                    <span class="incident-badge incident-status-escalated">
+                                        Escalada
+                                    </span>
+
+                                {% elif incidencia.estado == "RESUELTA" %}
+
+                                    <span class="incident-badge incident-status-resolved">
+                                        Resuelta
+                                    </span>
+
+                                {% elif incidencia.estado == "CERRADA" %}
+
+                                    <span class="incident-badge incident-status-closed">
+                                        Cerrada
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="incident-badge incident-badge-neutral">
+                                        {{ incidencia.get_estado_display }}
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td>
+
+                                {% if incidencia.tecnico_asignado %}
+
+                                    <div class="incident-user-cell">
+
+                                        <span class="incident-user-avatar">
+                                            {{ incidencia.tecnico_asignado.username|first|upper }}
+                                        </span>
+
+                                        <span>
+                                            {% if incidencia.tecnico_asignado.get_full_name %}
+                                                {{ incidencia.tecnico_asignado.get_full_name }}
+                                            {% else %}
+                                                {{ incidencia.tecnico_asignado.username }}
+                                            {% endif %}
+                                        </span>
+
+                                    </div>
+
+                                {% else %}
+
+                                    <span class="incident-empty-value">
+                                        Sin asignar
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="incident-date-cell">
+
+                                    <strong>
+                                        {{ incidencia.fecha_deteccion|localtime|date:"d/m/Y" }}
+                                    </strong>
+
+                                    <small>
+                                        {{ incidencia.fecha_deteccion|localtime|date:"H:i:s" }}
+                                    </small>
+
+                                </div>
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="incident-actions">
+
+                                    <a
+                                        href="#"
+                                        class="incident-action-btn incident-action-view"
+                                        title="Ver detalle de la incidencia"
+                                        aria-label="Ver detalle de {{ incidencia.codigo }}"
+                                    >
+                                        <svg
+                                            class="incident-action-icon"
+                                            viewBox="0 0 24 24"
+                                            aria-hidden="true"
+                                        >
+                                            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                                            <circle cx="12" cy="12" r="2.5"></circle>
+                                        </svg>
+
+                                        <span>Ver</span>
+                                    </a>
+
+
+                                    {% if incidencia.estado == "DETECTADA" %}
+
+                                        <a
+                                            href="#"
+                                            class="incident-action-btn incident-action-assign"
+                                            title="Asignar incidencia a un técnico"
+                                            aria-label="Asignar {{ incidencia.codigo }}"
+                                        >
+                                            <svg
+                                                class="incident-action-icon"
+                                                viewBox="0 0 24 24"
+                                                aria-hidden="true"
+                                            >
+                                                <circle cx="9" cy="8" r="4"></circle>
+                                                <path d="M2.5 21c.7-4 3-6 6.5-6 2.1 0 3.8.7 5 2"></path>
+                                                <path d="M18 13v8M14 17h8"></path>
+                                            </svg>
+
+                                            <span>Asignar</span>
+                                        </a>
+
+                                    {% else %}
+
+                                        <span
+                                            class="incident-action-btn incident-action-disabled"
+                                            title="La incidencia ya no está pendiente"
+                                        >
+                                            <svg
+                                                class="incident-action-icon"
+                                                viewBox="0 0 24 24"
+                                                aria-hidden="true"
+                                            >
+                                                <path d="m5 12 4 4L19 6"></path>
+                                            </svg>
+
+                                            <span>Asignada</span>
+                                        </span>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    {% empty %}
+
+                        <tr>
+                            <td colspan="9">
+
+                                <div class="incident-empty-state">
+
+                                    <div class="incident-empty-icon">
+                                        !
+                                    </div>
+
+                                    <strong>
+                                        No existen incidencias
+                                    </strong>
+
+                                    <span>
+                                        No se encontraron registros con los filtros seleccionados.
+                                    </span>
+
+                                </div>
+
+                            </td>
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        /*
+         * =====================================================
+         * RECARGA AUTOMÁTICA DE LA PANTALLA
+         * =====================================================
+         */
+
+        const intervaloSegundos = 60;
+
+        const contador = document.getElementById(
+            "incident-refresh-countdown"
+        );
+
+        let segundosRestantes = intervaloSegundos;
+
+        const temporizador = window.setInterval(function () {
+            segundosRestantes -= 1;
+
+            if (contador) {
+                contador.textContent = segundosRestantes;
+            }
+
+            if (segundosRestantes <= 0) {
+                window.clearInterval(temporizador);
+
+                /*
+                 * Recarga la misma URL y conserva filtros como:
+                 *
+                 * ?estado=DETECTADA&nodo=4
+                 */
+                window.location.reload();
+            }
+        }, 1000);
+
+
+        /*
+         * =====================================================
+         * SINCRONIZACIÓN MANUAL CON ZABBIX
+         * =====================================================
+         */
+
+        const formularioSincronizacion = document.getElementById(
+            "incident-sync-form"
+        );
+
+        const botonSincronizacion = document.getElementById(
+            "incident-sync-button"
+        );
+
+        if (formularioSincronizacion && botonSincronizacion) {
+            formularioSincronizacion.addEventListener(
+                "submit",
+                function () {
+                    /*
+                     * Impide que el usuario presione el botón varias veces
+                     * mientras se está consultando Zabbix.
+                     */
+                    botonSincronizacion.disabled = true;
+
+                    botonSincronizacion.innerHTML = `
+                        <span
+                            class="incident-sync-spinner"
+                            aria-hidden="true"
+                        ></span>
+
+                        <span>
+                            Sincronizando...
+                        </span>
+                    `;
+                }
+            );
+        }
+    });
+</script>
 
 {% endblock %}

@@ -7,6 +7,9 @@ urlpatterns = [
     path('', views.dashboard, name='dashboard'),
 
     path("incidencias/", views.incidencias_page, name="incidencias"),
+    path("incidencias/sincronizar/",views.incidencias_sincronizar,name="incidencias_sincronizar",),
+
+    
     path("asignaciones/", views.asignaciones_page, name="asignaciones"),
     #Usuarios
     path("usuarios/", views.usuarios_lista, name="usuarios_lista"),
@@ -39,7 +42,10 @@ urlpatterns = [
     path("zabbix/hosts/", views.zabbix_hosts_lista, name="zabbix_hosts_lista"),
     path("zabbix/alertas/", views.zabbix_alertas_activas, name="zabbix_alertas_activas"),
     path("zabbix/alertas/sincronizar/", views.zabbix_alertas_sincronizar, name="zabbix_alertas_sincronizar"),
+    path("zabbix/hosts/sincronizar/", views.zabbix_hosts_sincronizar, name="zabbix_hosts_sincronizar"),
 
+
+    
     path("alertas-sistema/", views.alertas_sistema_lista, name="alertas_sistema_lista"),
 
     path("sla-indicadores/", views.sla_indicadores_page, name="sla_indicadores"),
