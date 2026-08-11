@@ -1,0 +1,91 @@
+<div class="incident-detail-actions">
+
+    {% if incidencia.estado == "DETECTADA" %}
+
+        <span class="detail-badge detail-badge--detected">
+            Detectada
+        </span>
+
+        <a
+            href="{% url 'incidencias:incidencia_asignar' incidencia.id %}"
+            class="btn btn-primary"
+        >
+            Asignar técnico
+        </a>
+
+
+    {% elif incidencia.estado == "ASIGNADA" %}
+
+        <span class="detail-badge detail-badge--assigned">
+            Asignada
+        </span>
+
+        <form
+            method="post"
+            action="{% url 'incidencias:incidencia_iniciar_atencion' incidencia.id %}"
+            class="incident-inline-action"
+        >
+            {% csrf_token %}
+
+            <button
+                type="submit"
+                class="btn btn-primary"
+            >
+                Iniciar atención
+            </button>
+
+        </form>
+
+
+    {% elif incidencia.estado == "EN_ATENCION" %}
+
+        <span class="detail-badge detail-badge--progress">
+            En atención
+        </span>
+
+        <a
+            href="{% url 'incidencias:incidencia_resolver' incidencia.id %}"
+            class="btn btn-primary"
+        >
+            Resolver incidencia
+        </a>
+
+
+    {% elif incidencia.estado == "RESUELTA" %}
+
+        <span class="detail-badge detail-badge--resolved">
+            Resuelta
+        </span>
+
+        <form
+            method="post"
+            action="{% url 'incidencias:incidencia_cerrar' incidencia.id %}"
+            class="incident-inline-action"
+        >
+            {% csrf_token %}
+
+            <button
+                type="submit"
+                class="btn btn-primary"
+            >
+                Cerrar incidencia
+            </button>
+
+        </form>
+
+
+    {% elif incidencia.estado == "CERRADA" %}
+
+        <span class="detail-badge detail-badge--closed">
+            Cerrada
+        </span>
+
+    {% else %}
+
+        <span class="detail-badge">
+            {{ incidencia.get_estado_display }}
+        </span>
+
+    {% endif %}
+
+</div>

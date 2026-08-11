@@ -1,0 +1,1865 @@
+{% extends "incidencias/base.html" %}
+{% load tz %}
+
+
+{% block title %}
+Detalle de incidencia | Fiber Z NOC
+
+{% endblock %}
+
+
+{% block page_title %}
+Detalle de incidencia
+{% endblock %}
+
+
+{% block page_subtitle %}
+Información operativa, seguimiento y bitácora de la incidencia.
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+    /* ==========================================================
+       PÁGINA DE DETALLE
+       ========================================================== */
+
+    #incident-detail-page {
+        --detail-bg: rgba(8, 25, 72, 0.74);
+        --detail-bg-soft: rgba(12, 34, 88, 0.68);
+        --detail-border: rgba(96, 165, 250, 0.22);
+        --detail-border-soft: rgba(148, 163, 184, 0.16);
+        --detail-text: #f8fafc;
+        --detail-muted: #94a3b8;
+        --detail-blue: #60a5fa;
+        --detail-green: #4ade80;
+        --detail-yellow: #facc15;
+        --detail-orange: #fb923c;
+        --detail-red: #f87171;
+        --detail-purple: #c084fc;
+
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+    }
+
+
+    /* ==========================================================
+       TARJETAS
+       ========================================================== */
+
+    .detail-panel {
+        overflow: hidden;
+
+        border: 1px solid var(--detail-border);
+        border-radius: 18px;
+
+        background:
+            linear-gradient(
+                145deg,
+                rgba(18, 48, 115, 0.88),
+                rgba(5, 19, 58, 0.92)
+            );
+
+        box-shadow:
+            0 18px 45px rgba(0, 0, 0, 0.16);
+    }
+
+    .detail-panel-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+
+        padding: 20px 22px;
+
+        border-bottom: 1px solid var(--detail-border-soft);
+    }
+
+    .detail-panel-header h2,
+    .detail-panel-header h3 {
+        margin: 0;
+        color: var(--detail-text);
+    }
+
+    .detail-panel-header p {
+        margin: 6px 0 0;
+        color: #bfdbfe;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .detail-panel-body {
+        padding: 22px;
+    }
+
+
+    /* ==========================================================
+       CABECERA DE LA INCIDENCIA
+       ========================================================== */
+
+    .incident-detail-hero {
+        padding: 24px;
+    }
+
+    .incident-detail-hero-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+    }
+
+    .incident-detail-code {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+
+        margin-bottom: 10px;
+
+        color: #93c5fd;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+    }
+
+    .incident-detail-title {
+        margin: 0;
+        color: var(--detail-text);
+        font-size: 24px;
+        line-height: 1.3;
+    }
+
+    .incident-detail-description {
+        max-width: 1000px;
+        margin: 12px 0 0;
+
+        color: #cbd5e1;
+        font-size: 14px;
+        line-height: 1.7;
+        overflow-wrap: anywhere;
+    }
+
+    .incident-detail-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .incident-inline-action {
+        display: inline-flex;
+        margin: 0;
+    }
+
+    .incident-inline-action .btn {
+        margin: 0;
+        white-space: nowrap;
+    }
+
+
+    /* ==========================================================
+       BADGES
+       ========================================================== */
+
+    .detail-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        min-height: 29px;
+        padding: 6px 12px;
+
+        border: 1px solid rgba(96, 165, 250, 0.35);
+        border-radius: 999px;
+
+        background: rgba(59, 130, 246, 0.13);
+        color: #bfdbfe;
+
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .detail-badge--detected {
+        border-color: rgba(251, 191, 36, 0.4);
+        background: rgba(251, 191, 36, 0.12);
+        color: #fde68a;
+    }
+
+    .detail-badge--assigned {
+        border-color: rgba(96, 165, 250, 0.4);
+        background: rgba(96, 165, 250, 0.12);
+        color: #bfdbfe;
+    }
+
+    .detail-badge--progress {
+        border-color: rgba(192, 132, 252, 0.4);
+        background: rgba(192, 132, 252, 0.12);
+        color: #e9d5ff;
+    }
+
+    .detail-badge--resolved {
+        border-color: rgba(74, 222, 128, 0.4);
+        background: rgba(74, 222, 128, 0.12);
+        color: #bbf7d0;
+    }
+
+    .detail-badge--closed {
+        border-color: rgba(148, 163, 184, 0.4);
+        background: rgba(148, 163, 184, 0.12);
+        color: #cbd5e1;
+    }
+
+    .detail-badge--critical {
+        border-color: rgba(248, 113, 113, 0.45);
+        background: rgba(248, 113, 113, 0.13);
+        color: #fecaca;
+    }
+
+    .detail-badge--high {
+        border-color: rgba(251, 146, 60, 0.45);
+        background: rgba(251, 146, 60, 0.13);
+        color: #fed7aa;
+    }
+
+    .detail-badge--medium {
+        border-color: rgba(250, 204, 21, 0.4);
+        background: rgba(250, 204, 21, 0.12);
+        color: #fef08a;
+    }
+
+    .detail-badge--low {
+        border-color: rgba(74, 222, 128, 0.4);
+        background: rgba(74, 222, 128, 0.12);
+        color: #bbf7d0;
+    }
+
+
+    /* ==========================================================
+       INFORMACIÓN GENERAL
+       ========================================================== */
+
+    .incident-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .incident-detail-field {
+        min-width: 0;
+        padding: 16px;
+
+        border: 1px solid var(--detail-border-soft);
+        border-radius: 12px;
+
+        background: rgba(3, 15, 48, 0.38);
+    }
+
+    .incident-detail-field-label {
+        display: block;
+        margin-bottom: 7px;
+
+        color: var(--detail-muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+
+    .incident-detail-field-value {
+        display: block;
+
+        color: var(--detail-text);
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+    }
+
+    .incident-detail-field-note {
+        display: block;
+        margin-top: 4px;
+
+        color: #94a3b8;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+
+    /* ==========================================================
+       INFORMACIÓN ZABBIX
+       ========================================================== */
+
+    .zabbix-info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .zabbix-info-item {
+        padding: 14px;
+
+        border: 1px solid rgba(74, 222, 128, 0.18);
+        border-radius: 11px;
+
+        background: rgba(6, 78, 59, 0.12);
+    }
+
+    .zabbix-info-item small {
+        display: block;
+        margin-bottom: 5px;
+
+        color: #86efac;
+        font-size: 11px;
+        text-transform: uppercase;
+    }
+
+    .zabbix-info-item strong {
+        color: #ecfdf5;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
+
+
+    /* ==========================================================
+       FORMULARIO Y BITÁCORA
+       ========================================================== */
+
+    .incident-operation-layout {
+        display: grid;
+        grid-template-columns:
+            minmax(290px, 0.72fr)
+            minmax(480px, 1.28fr);
+        gap: 22px;
+        align-items: start;
+    }
+
+    .incident-log-form {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .incident-log-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .incident-log-form-group[hidden] {
+    display: none !important;
+    }
+    .incident-log-form-group label {
+        color: #dbeafe;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .incident-log-form-group select,
+    .incident-log-form-group textarea,
+    .incident-log-form-group input {
+        width: 100%;
+        box-sizing: border-box;
+
+        padding: 11px 13px;
+
+        border: 1px solid rgba(96, 165, 250, 0.28);
+        border-radius: 10px;
+        outline: none;
+
+        background: rgba(2, 12, 40, 0.62);
+        color: #f8fafc;
+
+        font: inherit;
+    }
+
+    .incident-log-form-group select {
+        min-height: 44px;
+    }
+
+    .incident-log-form-group textarea {
+        min-height: 125px;
+        resize: vertical;
+        line-height: 1.5;
+    }
+
+    .incident-log-form-group select:focus,
+    .incident-log-form-group textarea:focus,
+    .incident-log-form-group input:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.12);
+    }
+
+    .incident-log-form-group option {
+        background: #0f245c;
+        color: #ffffff;
+    }
+
+    .incident-form-error {
+        color: #fca5a5;
+        font-size: 12px;
+    }
+
+    .incident-log-form-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .incident-log-closed {
+        padding: 16px;
+
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 10px;
+
+        background: rgba(148, 163, 184, 0.08);
+        color: #cbd5e1;
+
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+
+    /* ==========================================================
+       LÍNEA DE TIEMPO
+       ========================================================== */
+
+    .incident-history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .incident-history-order {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 7px;
+
+        margin-bottom: 18px;
+
+        color: #94a3b8;
+        font-size: 11px;
+    }
+
+    .incident-history-order svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+    }
+
+    .incident-history-entry {
+        position: relative;
+
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 13px;
+    }
+
+    .incident-history-axis {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .incident-history-icon {
+        position: relative;
+        z-index: 2;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        flex: 0 0 auto;
+
+        width: 34px;
+        height: 34px;
+
+        border: 1px solid rgba(96, 165, 250, 0.48);
+        border-radius: 50%;
+
+        background: #122b6f;
+        color: #bfdbfe;
+
+        box-shadow:
+            0 0 0 5px rgba(59, 130, 246, 0.08);
+    }
+
+    .incident-history-icon svg {
+        width: 17px;
+        height: 17px;
+
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .incident-history-entry--creacion
+    .incident-history-icon {
+        border-color: rgba(74, 222, 128, 0.5);
+        background: rgba(22, 101, 52, 0.6);
+        color: #bbf7d0;
+    }
+
+    .incident-history-entry--asignacion
+    .incident-history-icon {
+        border-color: rgba(96, 165, 250, 0.5);
+        background: rgba(30, 64, 175, 0.55);
+        color: #bfdbfe;
+    }
+
+    .incident-history-entry--atencion
+    .incident-history-icon {
+        border-color: rgba(250, 204, 21, 0.50);
+        background: rgba(161, 98, 7, 0.50);
+        color: #fef08a;
+    }
+
+    .incident-history-entry--comentario
+    .incident-history-icon {
+        border-color: rgba(192, 132, 252, 0.5);
+        background: rgba(107, 33, 168, 0.48);
+        color: #e9d5ff;
+    }
+
+    .incident-history-entry--reasignacion
+    .incident-history-icon {
+        border-color: rgba(251, 146, 60, 0.55);
+        background: rgba(154, 52, 18, 0.48);
+        color: #fed7aa;
+    }
+
+    .incident-history-entry--diagnostico
+    .incident-history-icon {
+        border-color: rgba(250, 204, 21, 0.5);
+        background: rgba(133, 77, 14, 0.48);
+        color: #fef08a;
+    }
+
+    .incident-history-entry--resolucion
+    .incident-history-icon,
+    .incident-history-entry--cierre
+    .incident-history-icon {
+        border-color: rgba(74, 222, 128, 0.5);
+        background: rgba(22, 101, 52, 0.6);
+        color: #bbf7d0;
+    }
+
+    .incident-history-line {
+        width: 2px;
+        flex: 1;
+        min-height: 24px;
+
+        background:
+            linear-gradient(
+                to bottom,
+                rgba(96, 165, 250, 0.38),
+                rgba(96, 165, 250, 0.07)
+            );
+    }
+
+    .incident-history-entry:last-child
+    .incident-history-line {
+        display: none;
+    }
+
+    .incident-history-content {
+        min-width: 0;
+
+        margin-bottom: 18px;
+        padding: 16px;
+
+        border: 1px solid var(--detail-border-soft);
+        border-radius: 13px;
+
+        background:
+            linear-gradient(
+                145deg,
+                rgba(9, 27, 75, 0.82),
+                rgba(4, 17, 52, 0.7)
+            );
+
+        transition:
+            border-color 0.2s ease,
+            transform 0.2s ease;
+    }
+
+    .incident-history-content:hover {
+        border-color: rgba(96, 165, 250, 0.38);
+        transform: translateY(-1px);
+    }
+
+    .incident-history-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+
+        border-bottom: 1px solid var(--detail-border-soft);
+    }
+
+    .incident-history-action {
+        display: inline-flex;
+        align-items: center;
+
+        padding: 5px 10px;
+
+        border: 1px solid rgba(96, 165, 250, 0.32);
+        border-radius: 999px;
+
+        background: rgba(59, 130, 246, 0.1);
+        color: #bfdbfe;
+
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.7px;
+        text-transform: uppercase;
+    }
+
+    .incident-history-entry--creacion
+    .incident-history-action {
+        border-color: rgba(74, 222, 128, 0.35);
+        background: rgba(74, 222, 128, 0.09);
+        color: #bbf7d0;
+    }
+
+    .incident-history-entry--comentario
+    .incident-history-action {
+        border-color: rgba(192, 132, 252, 0.35);
+        background: rgba(192, 132, 252, 0.09);
+        color: #e9d5ff;
+    }
+
+    .incident-history-entry--reasignacion
+    .incident-history-action {
+        border-color: rgba(251, 146, 60, 0.38);
+        background: rgba(251, 146, 60, 0.10);
+        color: #fed7aa;
+    }
+
+    .incident-history-entry--diagnostico
+    .incident-history-action {
+        border-color: rgba(250, 204, 21, 0.38);
+        background: rgba(250, 204, 21, 0.10);
+        color: #fef08a;
+    }
+
+    .incident-history-entry--atencion
+    .incident-history-action {
+        border-color: rgba(250, 204, 21, 0.35);
+        background: rgba(250, 204, 21, 0.09);
+        color: #fef08a;
+    }
+
+    .incident-history-entry--resolucion
+    .incident-history-action,
+    .incident-history-entry--cierre
+    .incident-history-action {
+        border-color: rgba(74, 222, 128, 0.35);
+        background: rgba(74, 222, 128, 0.09);
+        color: #bbf7d0;
+    }
+
+    .incident-history-date {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 2px;
+
+        white-space: nowrap;
+    }
+
+    .incident-history-date strong {
+        color: #e2e8f0;
+        font-size: 12px;
+    }
+
+    .incident-history-date span {
+        color: #94a3b8;
+        font-size: 11px;
+    }
+
+    .incident-history-user {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        margin-bottom: 12px;
+    }
+
+    .incident-history-avatar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        width: 31px;
+        height: 31px;
+
+        border-radius: 50%;
+
+        background: #facc15;
+        color: #172554;
+
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .incident-history-user-data {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .incident-history-user-data small {
+        color: #94a3b8;
+        font-size: 10px;
+        text-transform: uppercase;
+    }
+
+    .incident-history-user-data strong {
+        color: #f8fafc;
+        font-size: 13px;
+    }
+
+    .incident-history-description {
+        padding: 13px 14px;
+
+        border-left: 3px solid #60a5fa;
+        border-radius: 0 9px 9px 0;
+
+        background: rgba(2, 12, 40, 0.48);
+        color: #dbeafe;
+
+        font-size: 13px;
+        line-height: 1.65;
+
+        overflow-wrap: anywhere;
+    }
+
+    .incident-history-transition {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+
+        margin-top: 13px;
+        padding-top: 13px;
+
+        border-top: 1px solid var(--detail-border-soft);
+    }
+
+    .incident-history-transition-label {
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .incident-history-transition-values {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 7px;
+    }
+
+    .incident-state-value {
+        display: inline-flex;
+        align-items: center;
+
+        padding: 5px 9px;
+
+        border-radius: 999px;
+
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+    .incident-state-value--before {
+        border: 1px solid rgba(148, 163, 184, 0.32);
+        background: rgba(148, 163, 184, 0.1);
+        color: #cbd5e1;
+    }
+
+    .incident-state-value--after {
+        border: 1px solid rgba(74, 222, 128, 0.34);
+        background: rgba(74, 222, 128, 0.1);
+        color: #bbf7d0;
+    }
+
+    .incident-state-arrow {
+        color: #60a5fa;
+        font-weight: 900;
+    }
+
+    .incident-history-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+
+        min-height: 180px;
+        padding: 25px;
+
+        color: #94a3b8;
+        text-align: center;
+    }
+
+    .incident-history-empty svg {
+        width: 38px;
+        height: 38px;
+        margin-bottom: 12px;
+
+        fill: none;
+        stroke: #60a5fa;
+        stroke-width: 1.7;
+    }
+
+    .incident-history-empty strong {
+        margin-bottom: 5px;
+        color: #f8fafc;
+    }
+
+
+    /* ==========================================================
+       BOTONES FINALES
+       ========================================================== */
+
+    .incident-detail-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+
+    /* ==========================================================
+       RESPONSIVE
+       ========================================================== */
+
+    @media (max-width: 1100px) {
+        .incident-operation-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 900px) {
+        .incident-detail-grid,
+        .zabbix-info-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .incident-detail-hero-top {
+            flex-direction: column;
+        }
+    }
+
+    @media (max-width: 620px) {
+        .incident-detail-grid,
+        .zabbix-info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .incident-detail-title {
+            font-size: 20px;
+        }
+
+        .incident-history-entry {
+            grid-template-columns: 34px minmax(0, 1fr);
+            gap: 8px;
+        }
+
+        .incident-history-icon {
+            width: 29px;
+            height: 29px;
+        }
+
+        .incident-history-icon svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .incident-history-header {
+            flex-direction: column;
+        }
+
+        .incident-history-date {
+            align-items: flex-start;
+        }
+
+        .incident-history-transition {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+</style>
+
+
+<div id="incident-detail-page">
+
+
+    <!-- ========================================================
+         CABECERA
+         ======================================================== -->
+
+    <section class="detail-panel incident-detail-hero">
+
+        <div class="incident-detail-hero-top">
+
+            <div>
+
+                <div class="incident-detail-code">
+                    <span aria-hidden="true">●</span>
+                    {{ incidencia.codigo }}
+                </div>
+
+                <h2 class="incident-detail-title">
+                    {{ incidencia.titulo }}
+                </h2>
+
+                <p class="incident-detail-description">
+                    {{ incidencia.descripcion }}
+                </p>
+
+            </div>
+
+
+            <div class="incident-detail-actions">
+
+                {% if incidencia.estado == "DETECTADA" %}
+
+                    <span class="detail-badge detail-badge--detected">
+                        Detectada
+                    </span>
+
+                    <a
+                        href="{% url 'incidencias:incidencia_asignar' incidencia.id %}"
+                        class="btn btn-primary"
+                    >
+                        Asignar técnico
+                    </a>
+
+                {% elif incidencia.estado == "ASIGNADA" or incidencia.estado == "EN_ATENCION" %}
+
+                    <span class="detail-badge detail-badge--progress">
+                        En atención
+                    </span>
+
+                {% elif incidencia.estado == "RESUELTA" %}
+
+                    <span class="detail-badge detail-badge--resolved">
+                        Resuelta
+                    </span>
+
+                {% elif incidencia.estado == "CERRADA" %}
+
+                    <span class="detail-badge detail-badge--closed">
+                        Cerrada
+                    </span>
+
+                {% elif incidencia.estado == "CANCELADA" %}
+
+                    <span class="detail-badge detail-badge--closed">
+                        Cancelada
+                    </span>
+
+                {% else %}
+
+                    <span class="detail-badge">
+                        {{ incidencia.get_estado_display }}
+                    </span>
+
+                {% endif %}
+
+                <!-- REPORTE INDIVIDUAL DE LA INCIDENCIA -->
+                <a
+                    href="{% url 'incidencias:reporte_incidencia' incidencia.id %}"
+                    class="btn btn-warning"
+                    target="_blank"
+                    title="Generar reporte completo de la incidencia"
+                >
+                    <span aria-hidden="true">▣</span>
+                    Reporte PDF
+                </a>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================
+         INFORMACIÓN GENERAL
+         ======================================================== -->
+
+    <section class="detail-panel">
+
+        <header class="detail-panel-header">
+
+            <div>
+                <h3>Información general</h3>
+
+                <p>
+                    Datos operativos y responsable actual de la incidencia.
+                </p>
+            </div>
+
+        </header>
+
+
+        <div class="detail-panel-body">
+
+            <div class="incident-detail-grid">
+
+                <div class="incident-detail-field">
+
+                    <span class="incident-detail-field-label">
+                        Nodo afectado
+                    </span>
+
+                    <span class="incident-detail-field-value">
+                        {{ incidencia.nodo_afectado.codigo }}
+                    </span>
+
+                    <span class="incident-detail-field-note">
+                        {{ incidencia.nodo_afectado.nombre }}
+                    </span>
+
+                </div>
+
+
+                <div class="incident-detail-field">
+
+                    <span class="incident-detail-field-label">
+                        Componente principal
+                    </span>
+
+                    {% if incidencia.componente_principal %}
+
+                        <span class="incident-detail-field-value">
+                            {{ incidencia.componente_principal.codigo }}
+                        </span>
+
+                        <span class="incident-detail-field-note">
+                            {{ incidencia.componente_principal.nombre }}
+                        </span>
+
+                    {% else %}
+
+                        <span class="incident-detail-field-value">
+                            Sin componente
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div class="incident-detail-field">
+
+                    <span class="incident-detail-field-label">
+                        Técnico asignado
+                    </span>
+
+                    {% if incidencia.tecnico_asignado %}
+
+                        <span class="incident-detail-field-value">
+
+                            {% if incidencia.tecnico_asignado.get_full_name %}
+                                {{ incidencia.tecnico_asignado.get_full_name }}
+                            {% else %}
+                                {{ incidencia.tecnico_asignado.username }}
+                            {% endif %}
+
+                        </span>
+
+                        <span class="incident-detail-field-note">
+                            Usuario: {{ incidencia.tecnico_asignado.username }}
+                        </span>
+
+                    {% else %}
+
+                        <span class="incident-detail-field-value">
+                            Sin asignar
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div class="incident-detail-field">
+
+                    <span class="incident-detail-field-label">
+                        Severidad
+                    </span>
+
+                    {% if incidencia.severidad == "CRITICA" %}
+                        <span class="detail-badge detail-badge--critical">
+                            Crítica
+                        </span>
+
+                    {% elif incidencia.severidad == "ALTA" %}
+                        <span class="detail-badge detail-badge--high">
+                            Alta
+                        </span>
+
+                    {% elif incidencia.severidad == "MEDIA" %}
+                        <span class="detail-badge detail-badge--medium">
+                            Media
+                        </span>
+
+                    {% else %}
+                        <span class="detail-badge detail-badge--low">
+                            {{ incidencia.get_severidad_display }}
+                        </span>
+                    {% endif %}
+
+                </div>
+
+
+                <div class="incident-detail-field">
+
+                    <span class="incident-detail-field-label">
+                        Prioridad
+                    </span>
+
+                    <span class="incident-detail-field-value">
+                        {{ incidencia.get_prioridad_display }}
+                    </span>
+
+                </div>
+
+
+                <div class="incident-detail-field">
+
+                    <span class="incident-detail-field-label">
+                        Origen
+                    </span>
+
+                    <span class="incident-detail-field-value">
+                        {{ incidencia.get_origen_display }}
+                    </span>
+
+                </div>
+
+
+                <div class="incident-detail-field">
+
+                    <span class="incident-detail-field-label">
+                        Fecha de detección
+                    </span>
+
+                    <span class="incident-detail-field-value">
+                        {{ incidencia.fecha_deteccion|localtime|date:"d/m/Y" }}
+                    </span>
+
+                    <span class="incident-detail-field-note">
+                        {{ incidencia.fecha_deteccion|localtime|date:"H:i:s" }}
+                    </span>
+
+                </div>
+
+
+                <div class="incident-detail-field">
+
+                    <span class="incident-detail-field-label">
+                        Fecha de asignación
+                    </span>
+
+                    {% if incidencia.fecha_asignacion %}
+
+                        <span class="incident-detail-field-value">
+                            {{ incidencia.fecha_asignacion|localtime|date:"d/m/Y" }}
+                        </span>
+
+                        <span class="incident-detail-field-note">
+                            {{ incidencia.fecha_asignacion|localtime|date:"H:i:s" }}
+                        </span>
+
+                    {% else %}
+
+                        <span class="incident-detail-field-value">
+                            Sin asignación
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div class="incident-detail-field">
+
+                    <span class="incident-detail-field-label">
+                        Inicio de atención
+                    </span>
+
+                    {% if incidencia.fecha_inicio_atencion %}
+
+                        <span class="incident-detail-field-value">
+                            {{ incidencia.fecha_inicio_atencion|localtime|date:"d/m/Y" }}
+                        </span>
+
+                        <span class="incident-detail-field-note">
+                            {{ incidencia.fecha_inicio_atencion|localtime|date:"H:i:s" }}
+                        </span>
+
+                    {% else %}
+
+                        <span class="incident-detail-field-value">
+                            Pendiente
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div class="incident-detail-field">
+
+                    <span class="incident-detail-field-label">
+                        Fecha de cierre
+                    </span>
+
+                    {% if incidencia.fecha_cierre %}
+
+                        <span class="incident-detail-field-value">
+                            {{ incidencia.fecha_cierre|localtime|date:"d/m/Y" }}
+                        </span>
+
+                        <span class="incident-detail-field-note">
+                            {{ incidencia.fecha_cierre|localtime|date:"H:i:s" }}
+                        </span>
+
+                    {% else %}
+
+                        <span class="incident-detail-field-value">
+                            Pendiente
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div class="incident-detail-field">
+
+                    <span class="incident-detail-field-label">
+                        Clientes afectados
+                    </span>
+
+                    <span class="incident-detail-field-value">
+                        {{ incidencia.clientes_afectados_estimados|default:"0" }}
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================
+         INFORMACIÓN ZABBIX
+         ======================================================== -->
+
+    {% if incidencia.alerta_zabbix %}
+
+        <section class="detail-panel">
+
+            <header class="detail-panel-header">
+
+                <div>
+                    <h3>Información de Zabbix</h3>
+
+                    <p>
+                        Datos técnicos de la alerta que originó la incidencia.
+                    </p>
+                </div>
+
+                <span class="detail-badge detail-badge--resolved">
+                    Integración activa
+                </span>
+
+            </header>
+
+
+            <div class="detail-panel-body">
+
+                <div class="zabbix-info-grid">
+
+                    <div class="zabbix-info-item">
+                        <small>Event ID</small>
+
+                        <strong>
+                            {{ incidencia.alerta_zabbix.event_id }}
+                        </strong>
+                    </div>
+
+
+                    <div class="zabbix-info-item">
+                        <small>Trigger ID</small>
+
+                        <strong>
+                            {{ incidencia.alerta_zabbix.trigger_id|default:"—" }}
+                        </strong>
+                    </div>
+
+
+                    <div class="zabbix-info-item">
+                        <small>Host ID</small>
+
+                        <strong>
+                            {{ incidencia.alerta_zabbix.host_id|default:"—" }}
+                        </strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    {% endif %}
+
+
+    <!-- ========================================================
+         OPERACIÓN Y BITÁCORA
+         ======================================================== -->
+
+    <section class="incident-operation-layout">
+
+
+        <!-- REGISTRAR AVANCE -->
+
+        <article class="detail-panel">
+
+            <header class="detail-panel-header">
+
+                <div>
+                    <h3>Registrar avance</h3>
+
+                    <p>
+                        Documente validaciones, diagnóstico y acciones realizadas.
+                    </p>
+                </div>
+
+            </header>
+
+
+            <div class="detail-panel-body">
+
+                {% if incidencia.estado == "CERRADA" %}
+
+                    <div class="incident-log-closed">
+                        La incidencia está cerrada. El historial queda disponible
+                        únicamente para consulta.
+                    </div>
+
+                {% elif incidencia.estado == "CANCELADA" %}
+
+                    <div class="incident-log-closed">
+                        La incidencia está cancelada y no admite nuevos registros.
+                    </div>
+
+                {% elif incidencia.estado == "DETECTADA" %}
+
+                    <div class="incident-log-closed">
+                        Primero debe asignar un técnico. Al realizar la asignación,
+                        la incidencia empezará inmediatamente su atención.
+                    </div>
+
+                {% else %}
+
+                    <form
+                        method="post"
+                        class="incident-log-form"
+                        id="incident-progress-form"
+                    >
+                        {% csrf_token %}
+
+
+                        {% if form_avance.non_field_errors %}
+
+                            <div class="alert alert-danger">
+                                {{ form_avance.non_field_errors }}
+                            </div>
+
+                        {% endif %}
+
+
+                        <div class="incident-log-form-group">
+
+                            <label for="{{ form_avance.tipo_registro.id_for_label }}">
+                                {{ form_avance.tipo_registro.label }}
+                            </label>
+
+                            {{ form_avance.tipo_registro }}
+
+                            {% for error in form_avance.tipo_registro.errors %}
+                                <span class="incident-form-error">
+                                    {{ error }}
+                                </span>
+                            {% endfor %}
+
+                        </div>
+
+
+                        <div
+                            class="incident-log-form-group"
+                            id="incident-escalation-fields"
+                            hidden
+                        >
+
+                            <label for="{{ form_avance.nuevo_tecnico.id_for_label }}">
+                                Nuevo técnico responsable
+                            </label>
+
+                            {{ form_avance.nuevo_tecnico }}
+
+                            {% for error in form_avance.nuevo_tecnico.errors %}
+                                <span class="incident-form-error">
+                                    {{ error }}
+                                </span>
+                            {% endfor %}
+
+                            <span class="incident-detail-field-note">
+                                Al registrar el escalamiento se desactivará la
+                                asignación anterior y este usuario quedará como
+                                técnico actual.
+                            </span>
+
+                        </div>
+
+
+                        <div class="incident-log-form-group">
+
+                            <label
+                                for="{{ form_avance.detalle.id_for_label }}"
+                                id="incident-detail-label"
+                            >
+                                {{ form_avance.detalle.label }}
+                            </label>
+
+                            {{ form_avance.detalle }}
+
+                            {% for error in form_avance.detalle.errors %}
+                                <span class="incident-form-error">
+                                    {{ error }}
+                                </span>
+                            {% endfor %}
+
+                        </div>
+
+
+                        <div class="incident-log-form-actions">
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                                id="incident-progress-submit"
+                            >
+                                Registrar en bitácora
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                {% endif %}
+
+            </div>
+
+        </article>
+
+
+        <!-- BITÁCORA -->
+
+        <article class="detail-panel">
+
+            <header class="detail-panel-header">
+
+                <div>
+                    <h3>Bitácora de la incidencia</h3>
+
+                    <p>
+                        Historial de acciones, responsables y cambios de estado.
+                    </p>
+                </div>
+
+            </header>
+
+
+            <div class="detail-panel-body">
+
+                <div class="incident-history-order">
+
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 6h16M8 12h12M12 18h8"></path>
+                    </svg>
+
+                    Más reciente primero
+
+                </div>
+
+
+                <div class="incident-history-list">
+
+                    {% for evento in historial %}
+
+                        <article
+                            class="
+                                incident-history-entry
+                                incident-history-entry--{{ evento.accion|lower }}
+                            "
+                        >
+
+                            <div class="incident-history-axis">
+
+                                <div class="incident-history-icon">
+
+                                    {% if evento.accion == "CREACION" %}
+
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="M12 5v14M5 12h14"></path>
+                                        </svg>
+
+                                    {% elif evento.accion == "ASIGNACION" %}
+
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <circle cx="9" cy="8" r="4"></circle>
+                                            <path d="M2.5 21c.7-4 3-6 6.5-6"></path>
+                                            <path d="M18 13v8M14 17h8"></path>
+                                        </svg>
+
+                                    {% elif evento.accion == "REASIGNACION" %}
+
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <circle cx="8" cy="8" r="3"></circle>
+                                            <circle cx="17" cy="8" r="3"></circle>
+                                            <path d="M2 20c.5-3.3 2.5-5 6-5"></path>
+                                            <path d="M13 15h8"></path>
+                                            <path d="m18 12 3 3-3 3"></path>
+                                        </svg>
+
+                                    {% elif evento.accion == "DIAGNOSTICO" %}
+
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <circle cx="10" cy="10" r="6"></circle>
+                                            <path d="m15 15 5 5"></path>
+                                        </svg>
+
+                                    {% elif evento.accion == "COMENTARIO" %}
+
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="M4 5h16v11H8l-4 4V5Z"></path>
+                                            <path d="M8 9h8M8 12h5"></path>
+                                        </svg>
+
+                                    {% elif evento.accion == "EVIDENCIA" %}
+
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="m8 12 5-5a3 3 0 0 1 4 4l-7 7a5 5 0 0 1-7-7l7-7"></path>
+                                        </svg>
+
+                                    {% elif evento.accion == "ATENCION" %}
+
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="M8 5v14l11-7-11-7Z"></path>
+                                        </svg>
+
+                                    {% elif evento.accion == "RESOLUCION" %}
+
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="m5 12 4 4L19 6"></path>
+                                        </svg>
+
+                                    {% elif evento.accion == "CIERRE" %}
+
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+                                            <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+                                        </svg>
+
+                                    {% elif evento.accion == "CANCELACION" %}
+
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="M6 6l12 12M18 6 6 18"></path>
+                                        </svg>
+
+                                    {% else %}
+
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <circle cx="12" cy="12" r="8"></circle>
+                                            <path d="M12 8v5M12 16h.01"></path>
+                                        </svg>
+
+                                    {% endif %}
+
+                                </div>
+
+                                <div class="incident-history-line"></div>
+
+                            </div>
+
+
+                            <div class="incident-history-content">
+
+                                <header class="incident-history-header">
+
+                                    <span class="incident-history-action">
+                                        {{ evento.get_accion_display }}
+                                    </span>
+
+
+                                    <time class="incident-history-date">
+
+                                        <strong>
+                                            {{ evento.fecha_evento|localtime|date:"d/m/Y" }}
+                                        </strong>
+
+                                        <span>
+                                            {{ evento.fecha_evento|localtime|date:"H:i:s" }}
+                                        </span>
+
+                                    </time>
+
+                                </header>
+
+
+                                <div class="incident-history-user">
+
+                                    <span class="incident-history-avatar">
+
+                                        {% if evento.usuario %}
+                                            {{ evento.usuario.username|first|upper }}
+                                        {% else %}
+                                            S
+                                        {% endif %}
+
+                                    </span>
+
+
+                                    <div class="incident-history-user-data">
+
+                                        <small>Registrado por</small>
+
+                                        <strong>
+
+                                            {% if evento.usuario %}
+
+                                                {% if evento.usuario.get_full_name %}
+                                                    {{ evento.usuario.get_full_name }}
+                                                {% else %}
+                                                    {{ evento.usuario.username }}
+                                                {% endif %}
+
+                                            {% else %}
+                                                Sistema
+                                            {% endif %}
+
+                                        </strong>
+
+                                    </div>
+
+                                </div>
+
+
+                                {% if evento.descripcion %}
+
+                                    <div class="incident-history-description">
+                                        {{ evento.descripcion|linebreaksbr }}
+                                    </div>
+
+                                {% endif %}
+
+
+                                {% if evento.estado_anterior or evento.estado_nuevo %}
+
+                                    <div class="incident-history-transition">
+
+                                        <span class="incident-history-transition-label">
+                                            Cambio de estado
+                                        </span>
+
+
+                                        <div class="incident-history-transition-values">
+
+                                            {% if evento.estado_anterior %}
+
+                                                <span class="incident-state-value incident-state-value--before">
+                                                    {{ evento.get_estado_anterior_display }}
+                                                </span>
+
+                                            {% endif %}
+
+
+                                            {% if evento.estado_anterior and evento.estado_nuevo %}
+
+                                                <span class="incident-state-arrow">
+                                                    →
+                                                </span>
+
+                                            {% endif %}
+
+
+                                            {% if evento.estado_nuevo %}
+
+                                                <span class="incident-state-value incident-state-value--after">
+                                                    {{ evento.get_estado_nuevo_display }}
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+                                {% endif %}
+                                
+
+                            </div>
+
+                        </article>
+
+                    {% empty %}
+
+                        <div class="incident-history-empty">
+
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <path d="M12 7v5l3 2"></path>
+                            </svg>
+
+                            <strong>Sin movimientos registrados</strong>
+
+                            <span>
+                                La bitácora se actualizará conforme se atienda
+                                la incidencia.
+                            </span>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </article>
+
+    </section>
+
+
+    <!-- ========================================================
+         ACCIONES INFERIORES
+         ======================================================== -->
+
+    <div class="incident-detail-footer">
+
+        <a
+            href="{% url 'incidencias:incidencias' %}"
+            class="btn btn-secondary"
+        >
+            Volver a incidencias
+        </a>
+
+    </div>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const tipo = document.getElementById("id_tipo_registro");
+    const escalamiento = document.getElementById("incident-escalation-fields");
+    const detalleLabel = document.getElementById("incident-detail-label");
+    const boton = document.getElementById("incident-progress-submit");
+    const formulario = document.getElementById("incident-progress-form");
+
+    function actualizarFormulario() {
+
+        if (!tipo || !detalleLabel || !boton) {
+            return;
+        }
+
+        if (escalamiento) {
+            escalamiento.hidden = true;
+        }
+
+        detalleLabel.textContent = "Detalle del avance";
+        boton.textContent = "Registrar en bitácora";
+
+        if (tipo.value === "SEGUIMIENTO") {
+            detalleLabel.textContent = "Detalle del seguimiento";
+            boton.textContent = "Registrar seguimiento";
+        }
+
+        if (tipo.value === "DIAGNOSTICO") {
+            detalleLabel.textContent = "Detalle del diagnóstico";
+            boton.textContent = "Registrar diagnóstico";
+        }
+
+        if (tipo.value === "SOLUCION") {
+            detalleLabel.textContent = "Detalle de la solución aplicada";
+            boton.textContent = "Registrar solución";
+        }
+
+        if (tipo.value === "OBSERVACION") {
+            detalleLabel.textContent = "Observación";
+            boton.textContent = "Registrar observación";
+        }
+
+        if (tipo.value === "ESCALAMIENTO") {
+
+            if (escalamiento) {
+                escalamiento.hidden = false;
+            }
+
+            detalleLabel.textContent = "Motivo del escalamiento";
+            boton.textContent = "Escalar y reasignar";
+        }
+
+        if (tipo.value === "CIERRE") {
+            detalleLabel.textContent = "Solución / validación final";
+            boton.textContent = "Cerrar incidencia";
+        }
+    }
+
+    if (tipo) {
+        tipo.addEventListener("change", actualizarFormulario);
+        actualizarFormulario();
+    }
+
+    if (formulario) {
+        formulario.addEventListener("submit", function (event) {
+            if (tipo && tipo.value === "CIERRE") {
+                const confirmar = window.confirm(
+                    "¿Confirma el cierre definitivo de esta incidencia? " +
+                    "Después del cierre quedará en modo de solo lectura."
+                );
+
+                if (!confirmar) {
+                    event.preventDefault();
+                }
+            }
+        });
+    }
+
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}
+Asignar incidencia | Fiber Z NOC
+{% endblock %}
+
+{% block page_title %}
+Asignar incidencia
+{% endblock %}
+
+{% block page_subtitle %}
+Selección del técnico responsable.
+{% endblock %}
+
+{% block content %}
+
+<section class="card" style="padding: 24px;">
+
+    <div style="margin-bottom: 24px;">
+
+        <h3 style="margin-bottom: 8px;">
+            {{ incidencia.codigo }}
+        </h3>
+
+        <p style="margin-bottom: 8px;">
+            {{ incidencia.titulo }}
+        </p>
+
+        <p>
+            Estado:
+            <strong>
+                {{ incidencia.get_estado_display }}
+            </strong>
+        </p>
+
+        <p>
+            Nodo:
+            <strong>
+                {{ incidencia.nodo_afectado.codigo }}
+            </strong>
+        </p>
+
+        <p>
+            Severidad:
+            <strong>
+                {{ incidencia.get_severidad_display }}
+            </strong>
+        </p>
+
+    </div>
+
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+
+            <div
+                class="alert alert-danger"
+                style="margin-bottom: 16px;"
+            >
+                {{ form.non_field_errors }}
+            </div>
+
+        {% endif %}
+
+
+        <div style="margin-bottom: 18px;">
+
+            <label
+                for="{{ form.tecnico.id_for_label }}"
+                style="display: block; margin-bottom: 8px;"
+            >
+                {{ form.tecnico.label }}
+            </label>
+
+            {{ form.tecnico }}
+
+            {% for error in form.tecnico.errors %}
+                <div style="color: #f87171;">
+                    {{ error }}
+                </div>
+            {% endfor %}
+
+        </div>
+
+
+        <div style="margin-bottom: 18px;">
+
+            <label
+                for="{{ form.comentario.id_for_label }}"
+                style="display: block; margin-bottom: 8px;"
+            >
+                {{ form.comentario.label }}
+            </label>
+
+            {{ form.comentario }}
+
+            {% for error in form.comentario.errors %}
+                <div style="color: #f87171;">
+                    {{ error }}
+                </div>
+            {% endfor %}
+
+        </div>
+
+
+        <div
+            style="
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+            "
+        >
+
+            <a
+                href="{% url 'incidencias:incidencias' %}"
+                class="btn btn-secondary"
+            >
+                Cancelar
+            </a>
+
+            <button
+                type="submit"
+                class="btn btn-primary"
+            >
+                Asignar incidencia
+            </button>
+
+        </div>
+
+    </form>
+
+</section>
+
+{% endblock %}

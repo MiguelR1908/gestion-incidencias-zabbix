@@ -1,7 +1,18 @@
 from django import forms
 from django.contrib.auth.models import User
 
-from .models import PerfilUsuario, RolUsuario, Ubicacion, Nodo, ComponenteRed, ConfiguracionZabbix
+from .models import (
+    PerfilUsuario,
+    RolUsuario,
+    Ubicacion,
+    Nodo,
+    ComponenteRed,
+    ConfiguracionZabbix,
+    AsignacionIncidencia,
+    ComentarioIncidencia,
+    Incidencia,
+    TipoComentario,
+)
 
 
 class UsuarioForm(forms.ModelForm):
@@ -544,3 +555,271 @@ class ConfiguracionZabbixForm(forms.ModelForm):
 
         for field in self.fields.values():
             field.widget.attrs.update({"class": "form-control"})
+
+
+# =====================================================
+# FORMULARIOS DE INCIDENCIAS
+# =====================================================
+
+class AsignacionIncidenciaForm(forms.ModelForm):
+    """
+    Asignación inicial de una incidencia.
+
+    No se filtra por rol. Se permite seleccionar cualquier usuario
+    activo del sistema. Las validaciones definitivas se mantienen
+    también en el modelo AsignacionIncidencia.
+    """
+
+    class Meta:
+        model = AsignacionIncidencia
+        fields = [
+            "tecnico",
+            "comentario",
+        ]
+        labels = {
+            "tecnico": "Técnico responsable",
+            "comentario": "Comentario de asignación",
+        }
+        widgets = {
+            "tecnico": forms.Select(
+                attrs={
+                    "class": "form-control",
+                }
+            ),
+            "comentario": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Ingrese una observación opcional...",
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["tecnico"].queryset = (
+            User.objects
+            .filter(is_active=True)
+            .order_by(
+                "first_name",
+                "last_name",
+                "username",
+            )
+        )
+
+        self.fields["tecnico"].empty_label = "Seleccione un técnico"
+
+
+class ComentarioIncidenciaForm(forms.ModelForm):
+    """
+    Formulario simple de comentarios. Se conserva para compatibilidad
+    con otras partes del proyecto; el detalle usa RegistroAvanceIncidenciaForm.
+    """
+
+    class Meta:
+        model = ComentarioIncidencia
+        fields = [
+            "tipo_comentario",
+            "comentario",
+        ]
+        labels = {
+            "tipo_comentario": "Tipo de registro",
+            "comentario": "Detalle del avance",
+        }
+        widgets = {
+            "tipo_comentario": forms.Select(
+                attrs={
+                    "class": "form-control",
+                }
+            ),
+            "comentario": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": (
+                        "Describa las validaciones, diagnóstico "
+                        "o acciones realizadas..."
+                    ),
+                }
+            ),
+        }
+
+
+class ResolverIncidenciaForm(forms.ModelForm):
+    """
+    Se conserva por compatibilidad. El flujo operativo actual no obliga
+    a pasar por RESUELTA antes de CERRADA.
+    """
+
+    class Meta:
+        model = Incidencia
+        fields = [
+            "causa_raiz",
+            "solucion",
+        ]
+        labels = {
+            "causa_raiz": "Causa raíz",
+            "solucion": "Solución aplicada",
+        }
+        widgets = {
+            "causa_raiz": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": "Indique la causa identificada del problema...",
+                }
+            ),
+            "solucion": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Describa la solución aplicada...",
+                }
+            ),
+        }
+
+
+class RegistroAvanceIncidenciaForm(forms.Form):
+    """
+    Formulario operativo central del detalle de incidencia.
+
+    Flujo:
+        DETECTADA -> asignar técnico -> EN_ATENCION
+        EN_ATENCION -> comentarios / diagnóstico / solución / observación
+        EN_ATENCION -> escalamiento -> cambia técnico y sigue EN_ATENCION
+        EN_ATENCION -> cierre -> CERRADA
+
+    CIERRE es una acción del formulario y no un TipoComentario de BD.
+    """
+
+    TIPO_CIERRE = "CIERRE"
+
+    tipo_registro = forms.ChoiceField(
+        label="Tipo de registro",
+        choices=[],
+        widget=forms.Select(
+            attrs={
+                "class": "form-control",
+            }
+        ),
+    )
+
+    detalle = forms.CharField(
+        label="Detalle del avance",
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 5,
+                "placeholder": (
+                    "Describa las validaciones, diagnóstico "
+                    "o acciones realizadas..."
+                ),
+            }
+        ),
+    )
+
+    nuevo_tecnico = forms.ModelChoiceField(
+        label="Nuevo técnico responsable",
+        queryset=User.objects.none(),
+        required=False,
+        empty_label="Seleccione un técnico",
+        widget=forms.Select(
+            attrs={
+                "class": "form-control",
+            }
+        ),
+    )
+
+    def __init__(self, *args, incidencia=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.incidencia = incidencia
+
+        # Usuarios activos, sin validación por rol.
+        tecnicos = User.objects.filter(is_active=True)
+
+        if incidencia and incidencia.tecnico_asignado_id:
+            tecnicos = tecnicos.exclude(pk=incidencia.tecnico_asignado_id)
+
+        self.fields["nuevo_tecnico"].queryset = tecnicos.order_by(
+            "first_name",
+            "last_name",
+            "username",
+        )
+
+        if not incidencia:
+            self.fields["tipo_registro"].choices = []
+            return
+
+        if incidencia.estado in ["CERRADA", "CANCELADA", "DETECTADA"]:
+            self.fields["tipo_registro"].choices = []
+            return
+
+        # Compatibilidad con incidencias antiguas que hayan quedado RESUELTAS.
+        if incidencia.estado == "RESUELTA":
+            self.fields["tipo_registro"].choices = [
+                (TipoComentario.OBSERVACION, "Observación"),
+                (self.TIPO_CIERRE, "Cierre"),
+            ]
+            return
+
+        self.fields["tipo_registro"].choices = [
+            (TipoComentario.SEGUIMIENTO, "Seguimiento"),
+            (TipoComentario.DIAGNOSTICO, "Diagnóstico"),
+            (TipoComentario.SOLUCION, "Solución"),
+            (TipoComentario.OBSERVACION, "Observación"),
+            (TipoComentario.ESCALAMIENTO, "Escalamiento / Reasignación"),
+            (self.TIPO_CIERRE, "Cierre"),
+        ]
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        tipo = cleaned_data.get("tipo_registro")
+        detalle = (cleaned_data.get("detalle") or "").strip()
+        nuevo_tecnico = cleaned_data.get("nuevo_tecnico")
+
+        if not tipo:
+            return cleaned_data
+
+        if not detalle:
+            self.add_error(
+                "detalle",
+                "Debe ingresar el detalle del registro.",
+            )
+
+        if tipo == TipoComentario.ESCALAMIENTO:
+            if not nuevo_tecnico:
+                self.add_error(
+                    "nuevo_tecnico",
+                    "Seleccione el nuevo técnico responsable.",
+                )
+
+            if (
+                nuevo_tecnico
+                and self.incidencia
+                and self.incidencia.tecnico_asignado_id == nuevo_tecnico.id
+            ):
+                self.add_error(
+                    "nuevo_tecnico",
+                    "Seleccione un técnico diferente al actual.",
+                )
+
+        if tipo == self.TIPO_CIERRE:
+            estados_cerrables = {
+                "ASIGNADA",      # compatibilidad con datos anteriores
+                "EN_ATENCION",
+                "RESUELTA",      # compatibilidad con el flujo anterior
+            }
+
+            if (
+                self.incidencia
+                and self.incidencia.estado not in estados_cerrables
+            ):
+                self.add_error(
+                    "tipo_registro",
+                    "La incidencia no se encuentra en un estado que permita el cierre.",
+                )
+
+        return cleaned_data

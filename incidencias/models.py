@@ -1188,78 +1188,123 @@ class AsignacionIncidencia(ModeloAuditoria):
         ]
 
     def clean(self):
+        if not self.incidencia_id:
+            raise ValidationError(
+                "La asignación debe estar asociada a una incidencia."
+            )
+
+        if not self.tecnico_id:
+            raise ValidationError(
+                "Debe seleccionar un técnico responsable."
+            )
+
         if self.incidencia.estado in [
             EstadoIncidencia.CERRADA,
             EstadoIncidencia.CANCELADA,
         ]:
-            raise ValidationError("No se puede asignar una incidencia cerrada o cancelada.")
+            raise ValidationError(
+                "No se puede asignar una incidencia cerrada o cancelada."
+            )
 
+        # No se valida por RolUsuario. Basta con que el usuario esté activo.
+        if not self.tecnico.is_active:
+            raise ValidationError(
+                "El usuario seleccionado se encuentra inactivo."
+            )
+
+        # Si existe perfil, se respetan únicamente sus banderas operativas.
         perfil = getattr(self.tecnico, "perfil_incidencias", None)
 
         if perfil:
-            roles_validos = [
-                RolUsuario.ADMINISTRADOR,
-                RolUsuario.GESTOR_NOC,
-                RolUsuario.TECNICO,
-                RolUsuario.SUPERVISOR,
-            ]
-
-            if perfil.rol not in roles_validos:
+            if not perfil.activo:
                 raise ValidationError(
-                    "El usuario seleccionado no tiene un rol válido para atender incidencias."
+                    "El perfil del técnico se encuentra inactivo."
                 )
 
-            if not perfil.activo:
-                raise ValidationError("El perfil del técnico está inactivo.")
-
             if not perfil.disponible:
-                raise ValidationError("El técnico no se encuentra disponible.")
-
-        if self.activo:
-            existe_activa = AsignacionIncidencia.objects.filter(
-                incidencia=self.incidencia,
-                activo=True
-            ).exclude(pk=self.pk).exists()
-
-            if existe_activa:
                 raise ValidationError(
-                    "Ya existe una asignación activa para esta incidencia."
+                    "El técnico seleccionado no se encuentra disponible."
                 )
 
     def save(self, *args, **kwargs):
         self.full_clean()
 
+        incidencia = self.incidencia
+        tecnico_anterior = incidencia.tecnico_asignado
+        estado_anterior = incidencia.estado
+
+        # Una sola asignación activa. Al reasignar, la anterior queda inactiva.
         if self.activo:
             AsignacionIncidencia.objects.filter(
-                incidencia=self.incidencia,
-                activo=True
+                incidencia=incidencia,
+                activo=True,
             ).exclude(pk=self.pk).update(activo=False)
 
         super().save(*args, **kwargs)
 
-        incidencia = self.incidencia
-        estado_anterior = incidencia.estado
-
         incidencia.tecnico_asignado = self.tecnico
-        incidencia.fecha_asignacion = self.fecha_asignacion
 
+        # La fecha de asignación de Incidencia representa la primera asignación
+        # para conservar correctamente los indicadores/SLA.
+        if not incidencia.fecha_asignacion:
+            incidencia.fecha_asignacion = self.fecha_asignacion
+
+        # Asignar por primera vez significa comenzar la atención inmediatamente.
         if incidencia.estado in [
             EstadoIncidencia.DETECTADA,
             EstadoIncidencia.REGISTRADA,
             EstadoIncidencia.ASIGNADA,
         ]:
-            incidencia.estado = EstadoIncidencia.ASIGNADA
+            incidencia.estado = EstadoIncidencia.EN_ATENCION
+
+            if not incidencia.fecha_inicio_atencion:
+                incidencia.fecha_inicio_atencion = self.fecha_asignacion
+
+        if self.asignado_por:
+            incidencia.actualizado_por = self.asignado_por
 
         incidencia.save()
 
-        HistorialIncidencia.objects.create(
-            incidencia=incidencia,
-            usuario=self.asignado_por,
-            accion=AccionHistorial.ASIGNACION,
-            estado_anterior=estado_anterior,
-            estado_nuevo=incidencia.estado,
-            descripcion=f"Incidencia asignada a {self.tecnico}."
+        es_reasignacion = (
+            tecnico_anterior is not None
+            and tecnico_anterior.pk != self.tecnico.pk
         )
+
+        if es_reasignacion:
+            accion = AccionHistorial.REASIGNACION
+            descripcion = (
+                f"Incidencia reasignada de {tecnico_anterior} "
+                f"a {self.tecnico}."
+            )
+
+            if self.comentario:
+                descripcion += f" Motivo: {self.comentario}"
+        else:
+            accion = AccionHistorial.ASIGNACION
+            descripcion = (
+                f"Incidencia asignada a {self.tecnico}. "
+                "La atención inicia con la asignación."
+            )
+
+            if self.comentario:
+                descripcion += f" Observación: {self.comentario}"
+
+        historial_kwargs = {
+            "incidencia": incidencia,
+            "usuario": self.asignado_por,
+            "accion": accion,
+            "descripcion": descripcion,
+            "creado_por": self.asignado_por,
+            "actualizado_por": self.asignado_por,
+        }
+
+        # En una reasignación normalmente el estado sigue EN_ATENCION; evitamos
+        # mostrar una transición redundante EN_ATENCION -> EN_ATENCION.
+        if estado_anterior != incidencia.estado:
+            historial_kwargs["estado_anterior"] = estado_anterior
+            historial_kwargs["estado_nuevo"] = incidencia.estado
+
+        HistorialIncidencia.objects.create(**historial_kwargs)
 
     def __str__(self):
         return f"{self.incidencia.codigo} → {self.tecnico}"
@@ -1433,23 +1478,43 @@ class ComentarioIncidencia(ModeloAuditoria):
         ]
 
     def clean(self):
+        if not self.incidencia_id:
+            raise ValidationError(
+                "El comentario debe estar asociado a una incidencia."
+            )
+
         if self.incidencia.estado in [
             EstadoIncidencia.CERRADA,
             EstadoIncidencia.CANCELADA,
         ]:
             raise ValidationError(
-                "No se pueden agregar comentarios a una incidencia cerrada o cancelada."
+                "No se pueden agregar registros a una incidencia cerrada o cancelada."
+            )
+
+        if not (self.comentario or "").strip():
+            raise ValidationError(
+                "Debe ingresar el detalle del registro."
             )
 
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
 
+        accion = AccionHistorial.COMENTARIO
+
+        if self.tipo_comentario == TipoComentario.DIAGNOSTICO:
+            accion = AccionHistorial.DIAGNOSTICO
+
         HistorialIncidencia.objects.create(
             incidencia=self.incidencia,
             usuario=self.usuario,
-            accion=AccionHistorial.COMENTARIO,
-            descripcion=f"Comentario agregado: {self.get_tipo_comentario_display()}."
+            accion=accion,
+            descripcion=(
+                f"{self.get_tipo_comentario_display()}: "
+                f"{self.comentario}"
+            ),
+            creado_por=self.usuario,
+            actualizado_por=self.usuario,
         )
 
     def __str__(self):

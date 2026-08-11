@@ -1,0 +1,569 @@
+{% load tz %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte general de incidencias | Fiber Z NOC</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: #eef2f7;
+            color: #172033;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+        }
+
+        .report-toolbar {
+            max-width: 1180px;
+            margin: 20px auto 0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .report-toolbar a,
+        .report-toolbar button {
+            border: 0;
+            border-radius: 7px;
+            padding: 10px 16px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .btn-back {
+            background: #e2e8f0;
+            color: #172033;
+        }
+
+        .btn-print {
+            background: #173f8f;
+            color: white;
+        }
+
+        .report-page {
+            width: calc(100% - 32px);
+            max-width: 1180px;
+            margin: 14px auto 35px;
+            background: white;
+            border: 1px solid #dbe2ea;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, .08);
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            padding: 28px 32px 22px;
+            border-bottom: 3px solid #173f8f;
+        }
+
+        .report-brand {
+            color: #173f8f;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: .6px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .report-title {
+            margin: 0;
+            color: #111827;
+            font-size: 25px;
+            line-height: 1.2;
+        }
+
+        .report-subtitle {
+            margin: 7px 0 0;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .report-meta {
+            min-width: 245px;
+            border-left: 1px solid #dbe2ea;
+            padding-left: 22px;
+        }
+
+        .report-meta-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 7px;
+        }
+
+        .report-meta-row span:first-child { color: #64748b; }
+        .report-meta-row strong { text-align: right; }
+
+        .report-section {
+            padding: 22px 32px;
+            border-bottom: 1px solid #e5eaf0;
+        }
+
+        .section-title {
+            margin: 0 0 14px;
+            font-size: 15px;
+            color: #173f8f;
+            text-transform: uppercase;
+            letter-spacing: .35px;
+        }
+
+        .filter-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .filter-chip {
+            display: inline-flex;
+            gap: 5px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid #d7e0eb;
+            background: #f8fafc;
+            color: #475569;
+        }
+
+        .filter-chip strong { color: #172033; }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .kpi {
+            border: 1px solid #dfe6ee;
+            border-radius: 9px;
+            padding: 15px;
+            background: #fbfcfe;
+        }
+
+        .kpi-label {
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .45px;
+        }
+
+        .kpi-value {
+            margin-top: 7px;
+            color: #0f172a;
+            font-size: 26px;
+            font-weight: 800;
+        }
+
+        .kpi-note {
+            margin-top: 5px;
+            color: #94a3b8;
+            font-size: 11px;
+        }
+
+        .indicator-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .indicator {
+            border-left: 4px solid #173f8f;
+            background: #f8fafc;
+            padding: 13px 15px;
+        }
+
+        .indicator-title {
+            color: #64748b;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .indicator-value {
+            margin-top: 5px;
+            font-size: 19px;
+            font-weight: 800;
+            color: #172033;
+        }
+
+        .table-wrap { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th {
+            background: #173f8f;
+            color: white;
+            padding: 9px 7px;
+            font-size: 10px;
+            line-height: 1.25;
+            text-transform: uppercase;
+            letter-spacing: .25px;
+            text-align: left;
+        }
+
+        td {
+            padding: 9px 7px;
+            border-bottom: 1px solid #e7ebf0;
+            vertical-align: top;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        tbody tr:nth-child(even) { background: #fafbfd; }
+
+        .code {
+            color: #173f8f;
+            font-weight: 800;
+            font-size: 11px;
+        }
+
+        .muted { color: #64748b; }
+        .small { font-size: 11px; }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 7px;
+            border-radius: 999px;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .badge-closed { background: #dcfce7; color: #166534; }
+        .badge-attention { background: #dbeafe; color: #1d4ed8; }
+        .badge-detected { background: #fef3c7; color: #92400e; }
+        .badge-other { background: #e2e8f0; color: #475569; }
+
+        .severity-critical { color: #b91c1c; font-weight: 800; }
+        .severity-high { color: #c2410c; font-weight: 800; }
+        .severity-medium { color: #a16207; font-weight: 800; }
+        .severity-low { color: #15803d; font-weight: 800; }
+
+        .report-empty {
+            padding: 35px;
+            text-align: center;
+            color: #64748b;
+        }
+
+        .report-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 16px 32px;
+            color: #64748b;
+            font-size: 10px;
+        }
+
+        @media (max-width: 900px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .indicator-grid { grid-template-columns: 1fr; }
+            .report-header { flex-direction: column; }
+            .report-meta { border-left: 0; border-top: 1px solid #dbe2ea; padding: 15px 0 0; }
+        }
+
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 10mm;
+            }
+
+            body { background: white; }
+            .report-toolbar { display: none !important; }
+
+            .report-page {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+                border: 0;
+                box-shadow: none;
+            }
+
+            .report-header { padding: 10px 0 12px; }
+            .report-section { padding: 12px 0; }
+            .report-footer { padding: 10px 0 0; }
+
+            .kpi { padding: 9px; }
+            .kpi-value { font-size: 19px; }
+
+            table { font-size: 9px; }
+            th, td { padding: 5px 4px; }
+
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="report-toolbar">
+    <a href="{% url 'incidencias:incidencias' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn-back">
+        Volver a incidencias
+    </a>
+
+    <button type="button" class="btn-print" onclick="window.print()">
+        Imprimir / Guardar PDF
+    </button>
+</div>
+
+<main class="report-page">
+
+    <header class="report-header">
+        <div>
+            <div class="report-brand">Fiber Z Telecom S.R.L. · NOC</div>
+            <h1 class="report-title">Reporte general de incidencias</h1>
+            <p class="report-subtitle">
+                Resumen operativo de las incidencias registradas y del resultado de los filtros aplicados.
+            </p>
+        </div>
+
+        <div class="report-meta">
+            <div class="report-meta-row">
+                <span>Generado:</span>
+                <strong>{{ fecha_generacion|date:"d/m/Y H:i" }}</strong>
+            </div>
+            <div class="report-meta-row">
+                <span>Usuario:</span>
+                <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+            </div>
+            <div class="report-meta-row">
+                <span>Registros:</span>
+                <strong>{{ total_incidencias }}</strong>
+            </div>
+        </div>
+    </header>
+
+    <section class="report-section">
+        <h2 class="section-title">Criterios del reporte</h2>
+
+        <div class="filter-summary">
+            <span class="filter-chip">
+                Búsqueda: <strong>{{ query|default:"Todas" }}</strong>
+            </span>
+            <span class="filter-chip">
+                Estado: <strong>{{ estado_texto|default:"Todos" }}</strong>
+            </span>
+            <span class="filter-chip">
+                Severidad: <strong>{{ severidad_texto|default:"Todas" }}</strong>
+            </span>
+            <span class="filter-chip">
+                Nodo: <strong>{{ nodo_texto|default:"Todos" }}</strong>
+            </span>
+        </div>
+    </section>
+
+    <section class="report-section">
+        <h2 class="section-title">Resumen ejecutivo</h2>
+
+        <div class="kpi-grid">
+            <div class="kpi">
+                <div class="kpi-label">Total</div>
+                <div class="kpi-value">{{ total_incidencias }}</div>
+                <div class="kpi-note">Incidencias del reporte</div>
+            </div>
+
+            <div class="kpi">
+                <div class="kpi-label">Detectadas</div>
+                <div class="kpi-value">{{ total_detectadas }}</div>
+                <div class="kpi-note">Pendientes de asignación</div>
+            </div>
+
+            <div class="kpi">
+                <div class="kpi-label">En atención</div>
+                <div class="kpi-value">{{ total_en_atencion }}</div>
+                <div class="kpi-note">Con técnico responsable</div>
+            </div>
+
+            <div class="kpi">
+                <div class="kpi-label">Cerradas</div>
+                <div class="kpi-value">{{ total_cerradas }}</div>
+                <div class="kpi-note">Atención finalizada</div>
+            </div>
+
+            <div class="kpi">
+                <div class="kpi-label">Alta / Crítica</div>
+                <div class="kpi-value">{{ total_altas_criticas }}</div>
+                <div class="kpi-note">Mayor impacto operativo</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="report-section">
+        <h2 class="section-title">Indicadores de atención</h2>
+
+        <div class="indicator-grid">
+            <div class="indicator">
+                <div class="indicator-title">Tiempo promedio de asignación</div>
+                <div class="indicator-value">
+                    {% if promedio_asignacion_min is not None %}
+                        {{ promedio_asignacion_min }} min
+                    {% else %}
+                        Sin datos
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="indicator">
+                <div class="indicator-title">Tiempo promedio hasta cierre</div>
+                <div class="indicator-value">
+                    {% if promedio_cierre_min is not None %}
+                        {{ promedio_cierre_min }} min
+                    {% else %}
+                        Sin datos
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="indicator">
+                <div class="indicator-title">Cumplimiento SLA de resolución</div>
+                <div class="indicator-value">
+                    {% if porcentaje_sla is not None %}
+                        {{ porcentaje_sla }}%
+                    {% else %}
+                        Sin datos evaluados
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="report-section">
+        <h2 class="section-title">Detalle de incidencias</h2>
+
+        <div class="table-wrap">
+            <table>
+                <colgroup>
+                    <col style="width: 12%">
+                    <col style="width: 13%">
+                    <col style="width: 15%">
+                    <col style="width: 8%">
+                    <col style="width: 9%">
+                    <col style="width: 12%">
+                    <col style="width: 11%">
+                    <col style="width: 10%">
+                    <col style="width: 10%">
+                </colgroup>
+
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nodo</th>
+                        <th>Incidencia</th>
+                        <th>Severidad</th>
+                        <th>Estado</th>
+                        <th>Técnico</th>
+                        <th>Detección</th>
+                        <th>T. asignación</th>
+                        <th>T. cierre</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for incidencia in incidencias %}
+                        <tr>
+                            <td>
+                                <div class="code">{{ incidencia.codigo }}</div>
+                                <div class="small muted">{{ incidencia.get_origen_display }}</div>
+                            </td>
+
+                            <td>
+                                <strong>{{ incidencia.nodo_afectado.codigo }}</strong>
+                                <div class="small muted">{{ incidencia.nodo_afectado.nombre }}</div>
+                            </td>
+
+                            <td>
+                                <strong>{{ incidencia.titulo }}</strong>
+                                {% if incidencia.componente_principal %}
+                                    <div class="small muted">
+                                        {{ incidencia.componente_principal.codigo }}
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if incidencia.severidad == "CRITICA" %}
+                                    <span class="severity-critical">Crítica</span>
+                                {% elif incidencia.severidad == "ALTA" %}
+                                    <span class="severity-high">Alta</span>
+                                {% elif incidencia.severidad == "MEDIA" %}
+                                    <span class="severity-medium">Media</span>
+                                {% else %}
+                                    <span class="severity-low">{{ incidencia.get_severidad_display }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if incidencia.estado == "CERRADA" %}
+                                    <span class="badge badge-closed">Cerrada</span>
+                                {% elif incidencia.estado == "EN_ATENCION" or incidencia.estado == "ASIGNADA" %}
+                                    <span class="badge badge-attention">En atención</span>
+                                {% elif incidencia.estado == "DETECTADA" %}
+                                    <span class="badge badge-detected">Detectada</span>
+                                {% else %}
+                                    <span class="badge badge-other">{{ incidencia.get_estado_display }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if incidencia.tecnico_asignado %}
+                                    <strong>{{ incidencia.tecnico_asignado.get_full_name|default:incidencia.tecnico_asignado.username }}</strong>
+                                {% else %}
+                                    <span class="muted">Sin asignar</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ incidencia.fecha_deteccion|localtime|date:"d/m/Y" }}
+                                <div class="small muted">
+                                    {{ incidencia.fecha_deteccion|localtime|date:"H:i" }}
+                                </div>
+                            </td>
+
+                            <td>
+                                {% if incidencia.tiempo_asignacion_min is not None %}
+                                    {{ incidencia.tiempo_asignacion_min }} min
+                                {% else %}
+                                    <span class="muted">—</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if incidencia.tiempo_cierre_min is not None %}
+                                    {{ incidencia.tiempo_cierre_min }} min
+                                {% else %}
+                                    <span class="muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="report-empty">
+                                No existen incidencias para los criterios seleccionados.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <footer class="report-footer">
+        <span>Fiber Z Telecom S.R.L. · Sistema de Gestión de Incidencias</span>
+        <span>Documento generado automáticamente</span>
+    </footer>
+
+</main>
+
+</body>
+</html>

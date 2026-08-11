@@ -221,14 +221,25 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                 </form>
 
 
-                <!-- Exportación futura -->
+                <!-- REPORTE PDF -->
                 <a
-                    href="#"
+                    href="{% url 'incidencias:reporte_incidencias' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                    class="btn btn-primary"
+                    title="Generar reporte PDF de las incidencias filtradas"
+                >
+                    <span aria-hidden="true">▣</span>
+                    PDF
+                </a>
+
+
+                <!-- EXPORTAR CSV -->
+                <a
+                    href="{% url 'incidencias:exportar_incidencias_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
                     class="btn btn-warning"
-                    title="Exportar las incidencias filtradas"
+                    title="Exportar las incidencias filtradas a CSV"
                 >
                     <span aria-hidden="true">⇩</span>
-                    Exportar
+                    CSV
                 </a>
 
             </div>
@@ -754,7 +765,7 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                                 <div class="incident-actions">
 
                                     <a
-                                        href="#"
+                                        href="{% url 'incidencias:incidencia_detalle' incidencia.id %}"
                                         class="incident-action-btn incident-action-view"
                                         title="Ver detalle de la incidencia"
                                         aria-label="Ver detalle de {{ incidencia.codigo }}"
@@ -775,7 +786,7 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                                     {% if incidencia.estado == "DETECTADA" %}
 
                                         <a
-                                            href="#"
+                                            href="{% url 'incidencias:incidencia_asignar' incidencia.id %}"
                                             class="incident-action-btn incident-action-assign"
                                             title="Asignar incidencia a un técnico"
                                             aria-label="Asignar {{ incidencia.codigo }}"

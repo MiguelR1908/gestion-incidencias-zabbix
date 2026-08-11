@@ -8,8 +8,16 @@ urlpatterns = [
 
     path("incidencias/", views.incidencias_page, name="incidencias"),
     path("incidencias/sincronizar/",views.incidencias_sincronizar,name="incidencias_sincronizar",),
+    path("incidencias/<int:incidencia_id>/asignar/",views.incidencia_asignar,name="incidencia_asignar",),
+    path("incidencias/<int:incidencia_id>/detalle/",views.incidencia_detalle,name="incidencia_detalle",),
+    path("incidencias/<int:incidencia_id>/iniciar-atencion/",views.incidencia_iniciar_atencion,name="incidencia_iniciar_atencion",),
+    path("incidencias/<int:incidencia_id>/resolver/",views.incidencia_resolver,name="incidencia_resolver",),
+    path("incidencias/<int:incidencia_id>/cerrar/",views.incidencia_cerrar,name="incidencia_cerrar",),
+    path("incidencias/reporte/",views.reporte_incidencias,name="reporte_incidencias",),
+    path("incidencias/exportar/csv/",views.exportar_incidencias_csv,name="exportar_incidencias_csv",),
+    path("incidencias/<int:incidencia_id>/reporte/",views.reporte_incidencia,name="reporte_incidencia",),
 
-    
+
     path("asignaciones/", views.asignaciones_page, name="asignaciones"),
     #Usuarios
     path("usuarios/", views.usuarios_lista, name="usuarios_lista"),
