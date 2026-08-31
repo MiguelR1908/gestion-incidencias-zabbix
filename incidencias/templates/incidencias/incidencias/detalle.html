@@ -1020,252 +1020,143 @@ Información operativa, seguimiento y bitácora de la incidencia.
 
         <div class="detail-panel-body">
 
-            <div class="incident-detail-grid">
+            {% if not puede_editar %}
 
-                <div class="incident-detail-field">
+                <div class="incident-log-closed">
+                    <strong>Modo consulta</strong>
 
-                    <span class="incident-detail-field-label">
-                        Nodo afectado
-                    </span>
+                    <br><br>
 
-                    <span class="incident-detail-field-value">
-                        {{ incidencia.nodo_afectado.codigo }}
-                    </span>
+                    Esta incidencia ya no se encuentra bajo tu responsabilidad
+                    o se encuentra finalizada.
 
-                    <span class="incident-detail-field-note">
-                        {{ incidencia.nodo_afectado.nombre }}
-                    </span>
-
+                    Puedes consultar toda la información y la bitácora,
+                    pero no registrar nuevos avances.
                 </div>
 
 
-                <div class="incident-detail-field">
+            {% elif incidencia.estado == "CERRADA" %}
 
-                    <span class="incident-detail-field-label">
-                        Componente principal
-                    </span>
+                <div class="incident-log-closed">
+                    La incidencia está cerrada. El historial queda disponible
+                    únicamente para consulta.
+                </div>
 
-                    {% if incidencia.componente_principal %}
 
-                        <span class="incident-detail-field-value">
-                            {{ incidencia.componente_principal.codigo }}
-                        </span>
+            {% elif incidencia.estado == "CANCELADA" %}
+
+                <div class="incident-log-closed">
+                    La incidencia está cancelada y no admite nuevos registros.
+                </div>
+
+
+            {% elif incidencia.estado == "DETECTADA" %}
+
+                <div class="incident-log-closed">
+                    Primero debe asignar un técnico. Al realizar la asignación,
+                    la incidencia empezará inmediatamente su atención.
+                </div>
+
+
+            {% else %}
+
+                <form
+                    method="post"
+                    class="incident-log-form"
+                    id="incident-progress-form"
+                >
+
+                    {% csrf_token %}
+
+
+                    {% if form_avance.non_field_errors %}
+
+                        <div class="alert alert-danger">
+                            {{ form_avance.non_field_errors }}
+                        </div>
+
+                    {% endif %}
+
+
+                    <div class="incident-log-form-group">
+
+                        <label for="{{ form_avance.tipo_registro.id_for_label }}">
+                            {{ form_avance.tipo_registro.label }}
+                        </label>
+
+                        {{ form_avance.tipo_registro }}
+
+                        {% for error in form_avance.tipo_registro.errors %}
+                            <span class="incident-form-error">
+                                {{ error }}
+                            </span>
+                        {% endfor %}
+
+                    </div>
+
+
+                    <div
+                        class="incident-log-form-group"
+                        id="incident-escalation-fields"
+                        hidden
+                    >
+
+                        <label for="{{ form_avance.nuevo_tecnico.id_for_label }}">
+                            Nuevo técnico responsable
+                        </label>
+
+                        {{ form_avance.nuevo_tecnico }}
+
+                        {% for error in form_avance.nuevo_tecnico.errors %}
+                            <span class="incident-form-error">
+                                {{ error }}
+                            </span>
+                        {% endfor %}
 
                         <span class="incident-detail-field-note">
-                            {{ incidencia.componente_principal.nombre }}
+                            Al registrar el escalamiento se desactivará la
+                            asignación anterior y este usuario quedará como
+                            técnico actual.
                         </span>
 
-                    {% else %}
+                    </div>
 
-                        <span class="incident-detail-field-value">
-                            Sin componente
-                        </span>
 
-                    {% endif %}
+                    <div class="incident-log-form-group">
 
-                </div>
+                        <label
+                            for="{{ form_avance.detalle.id_for_label }}"
+                            id="incident-detail-label"
+                        >
+                            {{ form_avance.detalle.label }}
+                        </label>
 
+                        {{ form_avance.detalle }}
 
-                <div class="incident-detail-field">
+                        {% for error in form_avance.detalle.errors %}
+                            <span class="incident-form-error">
+                                {{ error }}
+                            </span>
+                        {% endfor %}
 
-                    <span class="incident-detail-field-label">
-                        Técnico asignado
-                    </span>
+                    </div>
 
-                    {% if incidencia.tecnico_asignado %}
 
-                        <span class="incident-detail-field-value">
+                    <div class="incident-log-form-actions">
 
-                            {% if incidencia.tecnico_asignado.get_full_name %}
-                                {{ incidencia.tecnico_asignado.get_full_name }}
-                            {% else %}
-                                {{ incidencia.tecnico_asignado.username }}
-                            {% endif %}
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                            id="incident-progress-submit"
+                        >
+                            Registrar en bitácora
+                        </button>
 
-                        </span>
+                    </div>
 
-                        <span class="incident-detail-field-note">
-                            Usuario: {{ incidencia.tecnico_asignado.username }}
-                        </span>
+                </form>
 
-                    {% else %}
-
-                        <span class="incident-detail-field-value">
-                            Sin asignar
-                        </span>
-
-                    {% endif %}
-
-                </div>
-
-
-                <div class="incident-detail-field">
-
-                    <span class="incident-detail-field-label">
-                        Severidad
-                    </span>
-
-                    {% if incidencia.severidad == "CRITICA" %}
-                        <span class="detail-badge detail-badge--critical">
-                            Crítica
-                        </span>
-
-                    {% elif incidencia.severidad == "ALTA" %}
-                        <span class="detail-badge detail-badge--high">
-                            Alta
-                        </span>
-
-                    {% elif incidencia.severidad == "MEDIA" %}
-                        <span class="detail-badge detail-badge--medium">
-                            Media
-                        </span>
-
-                    {% else %}
-                        <span class="detail-badge detail-badge--low">
-                            {{ incidencia.get_severidad_display }}
-                        </span>
-                    {% endif %}
-
-                </div>
-
-
-                <div class="incident-detail-field">
-
-                    <span class="incident-detail-field-label">
-                        Prioridad
-                    </span>
-
-                    <span class="incident-detail-field-value">
-                        {{ incidencia.get_prioridad_display }}
-                    </span>
-
-                </div>
-
-
-                <div class="incident-detail-field">
-
-                    <span class="incident-detail-field-label">
-                        Origen
-                    </span>
-
-                    <span class="incident-detail-field-value">
-                        {{ incidencia.get_origen_display }}
-                    </span>
-
-                </div>
-
-
-                <div class="incident-detail-field">
-
-                    <span class="incident-detail-field-label">
-                        Fecha de detección
-                    </span>
-
-                    <span class="incident-detail-field-value">
-                        {{ incidencia.fecha_deteccion|localtime|date:"d/m/Y" }}
-                    </span>
-
-                    <span class="incident-detail-field-note">
-                        {{ incidencia.fecha_deteccion|localtime|date:"H:i:s" }}
-                    </span>
-
-                </div>
-
-
-                <div class="incident-detail-field">
-
-                    <span class="incident-detail-field-label">
-                        Fecha de asignación
-                    </span>
-
-                    {% if incidencia.fecha_asignacion %}
-
-                        <span class="incident-detail-field-value">
-                            {{ incidencia.fecha_asignacion|localtime|date:"d/m/Y" }}
-                        </span>
-
-                        <span class="incident-detail-field-note">
-                            {{ incidencia.fecha_asignacion|localtime|date:"H:i:s" }}
-                        </span>
-
-                    {% else %}
-
-                        <span class="incident-detail-field-value">
-                            Sin asignación
-                        </span>
-
-                    {% endif %}
-
-                </div>
-
-
-                <div class="incident-detail-field">
-
-                    <span class="incident-detail-field-label">
-                        Inicio de atención
-                    </span>
-
-                    {% if incidencia.fecha_inicio_atencion %}
-
-                        <span class="incident-detail-field-value">
-                            {{ incidencia.fecha_inicio_atencion|localtime|date:"d/m/Y" }}
-                        </span>
-
-                        <span class="incident-detail-field-note">
-                            {{ incidencia.fecha_inicio_atencion|localtime|date:"H:i:s" }}
-                        </span>
-
-                    {% else %}
-
-                        <span class="incident-detail-field-value">
-                            Pendiente
-                        </span>
-
-                    {% endif %}
-
-                </div>
-
-
-                <div class="incident-detail-field">
-
-                    <span class="incident-detail-field-label">
-                        Fecha de cierre
-                    </span>
-
-                    {% if incidencia.fecha_cierre %}
-
-                        <span class="incident-detail-field-value">
-                            {{ incidencia.fecha_cierre|localtime|date:"d/m/Y" }}
-                        </span>
-
-                        <span class="incident-detail-field-note">
-                            {{ incidencia.fecha_cierre|localtime|date:"H:i:s" }}
-                        </span>
-
-                    {% else %}
-
-                        <span class="incident-detail-field-value">
-                            Pendiente
-                        </span>
-
-                    {% endif %}
-
-                </div>
-
-
-                <div class="incident-detail-field">
-
-                    <span class="incident-detail-field-label">
-                        Clientes afectados
-                    </span>
-
-                    <span class="incident-detail-field-value">
-                        {{ incidencia.clientes_afectados_estimados|default:"0" }}
-                    </span>
-
-                </div>
-
-            </div>
+            {% endif %}
 
         </div>
 

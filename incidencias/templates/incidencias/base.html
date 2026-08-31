@@ -11,11 +11,13 @@
     <!-- Estilos globales -->
     <link
         rel="stylesheet"
-        href="{% static 'incidencias/css/styles.css' %}?v=20260807-7"
+        href="{% static 'incidencias/css/styles.css' %}?v=20260823-7"
     >
 </head>
 
 <body>
+
+{% with rol=request.user.perfil_incidencias.rol %}
 
 <div class="app-layout">
 
@@ -24,7 +26,9 @@
          ========================================== -->
     <aside class="sidebar">
 
-        <!-- Marca -->
+        <!-- ==========================================
+             MARCA
+             ========================================== -->
         <div class="brand">
 
             <div class="brand-logo-img">
@@ -42,9 +46,12 @@
         </div>
 
 
-        <!-- ======================================
+        <!-- ==========================================
              OPERACIÓN NOC
-             ====================================== -->
+             Dashboard: todos
+             Incidencias: Admin / Gestor / Supervisor / Técnico
+             Notificaciones: todos
+             ========================================== -->
         <div class="menu-section">
 
             <div class="menu-title">
@@ -68,30 +75,34 @@
 
 
                 <!-- Incidencias -->
+                {% if request.user.is_superuser or rol == 'ADMINISTRADOR' or rol == 'GESTOR_NOC' or rol == 'SUPERVISOR' or rol == 'TECNICO' %}
+
+                    <a
+                        href="{% url 'incidencias:incidencias' %}"
+                        class="
+                            {% if request.resolver_match.url_name == 'incidencias' or request.resolver_match.url_name == 'incidencia_detalle' %}
+                                active
+                            {% endif %}
+                        "
+                    >
+                        <span class="menu-icon">⚠</span>
+                        <span>Incidencias</span>
+                    </a>
+
+                {% endif %}
+
+
+                <!-- Notificaciones -->
                 <a
-                    href="{% url 'incidencias:incidencias' %}"
+                    href="{% url 'incidencias:notificaciones_lista' %}"
                     class="
-                        {% if request.resolver_match.url_name == 'incidencias' %}
+                        {% if request.resolver_match.url_name == 'notificaciones_lista' %}
                             active
                         {% endif %}
                     "
                 >
-                    <span class="menu-icon">⚠</span>
-                    <span>Incidencias</span>
-                </a>
-
-
-                <!-- Asignaciones -->
-                <a
-                    href="{% url 'incidencias:asignaciones' %}"
-                    class="
-                        {% if request.resolver_match.url_name == 'asignaciones' %}
-                            active
-                        {% endif %}
-                    "
-                >
-                    <span class="menu-icon">✓</span>
-                    <span>Asignaciones</span>
+                    <span class="menu-icon">◉</span>
+                    <span>Notificaciones</span>
                 </a>
 
             </nav>
@@ -99,194 +110,261 @@
         </div>
 
 
-        <!-- ======================================
+        <!-- ==========================================
              INFRAESTRUCTURA
-             ====================================== -->
-        <div class="menu-section">
+             Consulta: Admin / Gestor / Supervisor / Técnico
+             Las altas/ediciones siguen protegidas por las vistas.
+             ========================================== -->
+        {% if request.user.is_superuser or rol == 'ADMINISTRADOR' or rol == 'GESTOR_NOC' or rol == 'SUPERVISOR' or rol == 'TECNICO' %}
 
-            <div class="menu-title">
-                Infraestructura
+            <div class="menu-section">
+
+                <div class="menu-title">
+                    Infraestructura
+                </div>
+
+                <nav class="menu">
+
+                    <a
+                        href="{% url 'incidencias:infraestructura_inventario' %}"
+                        class="
+                            {% if request.resolver_match.url_name == 'infraestructura_inventario' %}
+                                active
+                            {% endif %}
+                        "
+                    >
+                        <span class="menu-icon">▦</span>
+                        <span>Inventario</span>
+                    </a>
+
+
+                    <a
+                        href="{% url 'incidencias:ubicaciones_lista' %}"
+                        class="
+                            {% if request.resolver_match.url_name == 'ubicaciones_lista' or request.resolver_match.url_name == 'ubicacion_crear' or request.resolver_match.url_name == 'ubicacion_editar' %}
+                                active
+                            {% endif %}
+                        "
+                    >
+                        <span class="menu-icon">⌂</span>
+                        <span>Ubicaciones</span>
+                    </a>
+
+
+                    <a
+                        href="{% url 'incidencias:nodos_lista' %}"
+                        class="
+                            {% if request.resolver_match.url_name == 'nodos_lista' or request.resolver_match.url_name == 'nodo_crear' or request.resolver_match.url_name == 'nodo_editar' %}
+                                active
+                            {% endif %}
+                        "
+                    >
+                        <span class="menu-icon">◆</span>
+                        <span>Nodos</span>
+                    </a>
+
+
+                    <a
+                        href="{% url 'incidencias:componentes_lista' %}"
+                        class="
+                            {% if request.resolver_match.url_name == 'componentes_lista' or request.resolver_match.url_name == 'componente_crear' or request.resolver_match.url_name == 'componente_editar' %}
+                                active
+                            {% endif %}
+                        "
+                    >
+                        <span class="menu-icon">◇</span>
+                        <span>Componentes</span>
+                    </a>
+
+                </nav>
+
             </div>
 
-            <nav class="menu">
-
-                <!-- Inventario -->
-                <a
-                    href="{% url 'incidencias:infraestructura_inventario' %}"
-                    class="
-                        {% if request.resolver_match.url_name == 'infraestructura_inventario' %}
-                            active
-                        {% endif %}
-                    "
-                >
-                    <span class="menu-icon">▦</span>
-                    <span>Inventario</span>
-                </a>
+        {% endif %}
 
 
-                <!-- Ubicaciones -->
-                <a
-                    href="{% url 'incidencias:ubicaciones_lista' %}"
-                    class="
-                        {% if request.resolver_match.url_name == 'ubicaciones_lista' or request.resolver_match.url_name == 'ubicacion_crear' or request.resolver_match.url_name == 'ubicacion_editar' %}
-                            active
-                        {% endif %}
-                    "
-                >
-                    <span class="menu-icon">⌂</span>
-                    <span>Ubicaciones</span>
-                </a>
-
-
-                <!-- Nodos -->
-                <a
-                    href="{% url 'incidencias:nodos_lista' %}"
-                    class="
-                        {% if request.resolver_match.url_name == 'nodos_lista' or request.resolver_match.url_name == 'nodo_crear' or request.resolver_match.url_name == 'nodo_editar' %}
-                            active
-                        {% endif %}
-                    "
-                >
-                    <span class="menu-icon">◆</span>
-                    <span>Nodos</span>
-                </a>
-
-
-                <!-- Componentes -->
-                <a
-                    href="{% url 'incidencias:componentes_lista' %}"
-                    class="
-                        {% if request.resolver_match.url_name == 'componentes_lista' or request.resolver_match.url_name == 'componente_crear' or request.resolver_match.url_name == 'componente_editar' %}
-                            active
-                        {% endif %}
-                    "
-                >
-                    <span class="menu-icon">◇</span>
-                    <span>Componentes</span>
-                </a>
-
-            </nav>
-
-        </div>
-
-
-        <!-- ======================================
+        <!-- ==========================================
              GESTIÓN
-             ====================================== -->
-        <div class="menu-section">
+             SLA: solo Administrador
+             Reportes: Admin / Gestor / Supervisor / Dueño
+             ========================================== -->
+        {% if request.user.is_superuser or rol == 'ADMINISTRADOR' or rol == 'GESTOR_NOC' or rol == 'SUPERVISOR' or rol == 'DUENO' %}
 
-            <div class="menu-title">
-                Gestión
+            <div class="menu-section">
+
+                <div class="menu-title">
+                    Gestión
+                </div>      
+
+                <nav class="menu">
+
+                    <!-- Configuración SLA -->
+                    {% if request.user.is_superuser or rol == 'ADMINISTRADOR' %}
+
+                        <a
+                            href="{% url 'incidencias:sla_configuracion_lista' %}"
+                            class="
+                                {% if request.resolver_match.url_name == 'sla_configuracion_lista' or request.resolver_match.url_name == 'sla_configuracion_editar' %}
+                                    active
+                                {% endif %}
+                            "
+                        >
+                            <span class="menu-icon">◷</span>
+                            <span>Configuración SLA</span>
+                        </a>
+
+                    {% endif %}
+
+
+                    <!-- Reportes -->
+                    <details
+                        class="
+                            menu-group
+                            {% if request.resolver_match.url_name == 'reporte_incidencias' or request.resolver_match.url_name == 'reporte_nodos_componentes' or request.resolver_match.url_name == 'reporte_sla_tiempos' %}
+                                current
+                            {% endif %}
+                        "
+                        {% if request.resolver_match.url_name == 'reporte_incidencias' or request.resolver_match.url_name == 'reporte_nodos_componentes' or request.resolver_match.url_name == 'reporte_sla_tiempos' %}
+                            open
+                        {% endif %}
+                    >
+
+                        <summary>
+                            <span class="menu-icon">▤</span>
+
+                            <span class="menu-parent-label">
+                                Reportes
+                            </span>
+
+                            <span class="menu-chevron">
+                                ›
+                            </span>
+                        </summary>
+
+                        <div class="submenu">
+
+                            <a  
+                                href="{% url 'incidencias:reporte_incidencias' %}"
+                                class="
+                                    {% if request.resolver_match.url_name == 'reporte_incidencias' %}
+                                        active
+                                    {% endif %}
+                                "
+                            >
+                                <span class="submenu-dot"></span>
+                                <span>Incidencias</span>
+                            </a>
+
+
+                            <a
+                                href="{% url 'incidencias:reporte_nodos_componentes' %}"
+                                class="
+                                    {% if request.resolver_match.url_name == 'reporte_nodos_componentes' %}
+                                        active
+                                    {% endif %}
+                                "
+                            >
+                                <span class="submenu-dot"></span>
+                                <span>Recurrencia</span>
+                            </a>
+
+
+                            <a
+                                href="{% url 'incidencias:reporte_sla_tiempos' %}"
+                                class="
+                                    {% if request.resolver_match.url_name == 'reporte_sla_tiempos' %}
+                                        active
+                                    {% endif %}
+                                "
+                            >
+                                <span class="submenu-dot"></span>
+                                <span>SLA y tiempos</span>
+                            </a>
+
+                            <a
+                                href="{% url 'incidencias:reporte_tecnicos' %}"
+                                class="sidebar-subitem"
+                            >
+                                Rendimiento por técnico
+                            </a>
+
+                        </div>
+
+                    </details>
+
+                </nav>
+
             </div>
 
-            <nav class="menu">
-
-                <!-- SLA e indicadores -->
-                <a
-                    href="{% url 'incidencias:sla_indicadores' %}"
-                    class="
-                        {% if request.resolver_match.url_name == 'sla_indicadores' %}
-                            active
-                        {% endif %}
-                    "
-                >
-                    <span class="menu-icon">◌</span>
-                    <span>SLA e Indicadores</span>
-                </a>
+        {% endif %}
 
 
-                <!-- Reportes -->
-                <a
-                    href="{% url 'incidencias:reportes' %}"
-                    class="
-                        {% if request.resolver_match.url_name == 'reportes' %}
-                            active
-                        {% endif %}
-                    "
-                >
-                    <span class="menu-icon">▤</span>
-                    <span>Reportes</span>
-                </a>
-
-
-                <!-- Configuración general -->
-                <a
-                    href="{% url 'incidencias:configuracion' %}"
-                    class="
-                        {% if request.resolver_match.url_name == 'configuracion' %}
-                            active
-                        {% endif %}
-                    "
-                >
-                    <span class="menu-icon">⚙</span>
-                    <span>Configuración</span>
-                </a>
-
-            </nav>
-
-        </div>
-
-
-        <!-- ======================================
+        <!-- ==========================================
              INTEGRACIÓN ZABBIX
-             ====================================== -->
-        <div class="menu-section">
+             Se conserva solo para Administrador porque
+             las vistas actuales de Zabbix están protegidas
+             con es_administrador.
+             ========================================== -->
+        {% if request.user.is_superuser or rol == 'ADMINISTRADOR' %}
 
-            <div class="menu-title">
-                Integración Zabbix
+            <div class="menu-section">
+
+                <div class="menu-title">
+                    Integración Zabbix
+                </div>
+
+                <nav class="menu">
+
+                    <a
+                        href="{% url 'incidencias:configuracion_zabbix_lista' %}"
+                        class="
+                            {% if request.resolver_match.url_name == 'configuracion_zabbix_lista' or request.resolver_match.url_name == 'configuracion_zabbix_crear' or request.resolver_match.url_name == 'configuracion_zabbix_editar' or request.resolver_match.url_name == 'configuracion_zabbix_probar' %}
+                                active
+                            {% endif %}
+                        "
+                    >
+                        <span class="menu-icon">⚙</span>
+                        <span>Config. Zabbix</span>
+                    </a>
+
+
+                    <a
+                        href="{% url 'incidencias:zabbix_hosts_lista' %}"
+                        class="
+                            {% if request.resolver_match.url_name == 'zabbix_hosts_lista' %}
+                                active
+                            {% endif %}
+                        "
+                    >
+                        <span class="menu-icon">☍</span>
+                        <span>Hosts Zabbix</span>
+                    </a>
+
+
+                    <a
+                        href="{% url 'incidencias:zabbix_alertas_activas' %}"
+                        class="
+                            {% if request.resolver_match.url_name == 'zabbix_alertas_activas' or request.resolver_match.url_name == 'zabbix_alertas_sincronizar' %}
+                                active
+                            {% endif %}
+                        "
+                    >
+                        <span class="menu-icon">⚠</span>
+                        <span>Alertas Zabbix</span>
+                    </a>
+
+                </nav>
+
             </div>
 
-            <nav class="menu">
-
-                <!-- Configuración Zabbix -->
-                <a
-                    href="{% url 'incidencias:configuracion_zabbix_lista' %}"
-                    class="
-                        {% if request.resolver_match.url_name == 'configuracion_zabbix_lista' or request.resolver_match.url_name == 'configuracion_zabbix_crear' or request.resolver_match.url_name == 'configuracion_zabbix_editar' or request.resolver_match.url_name == 'configuracion_zabbix_probar' %}
-                            active
-                        {% endif %}
-                    "
-                >
-                    <span class="menu-icon">⚙</span>
-                    <span>Config. Zabbix</span>
-                </a>
+        {% endif %}
 
 
-                <!-- Hosts Zabbix -->
-                <a
-                    href="{% url 'incidencias:zabbix_hosts_lista' %}"
-                    class="
-                        {% if request.resolver_match.url_name == 'zabbix_hosts_lista' %}
-                            active
-                        {% endif %}
-                    "
-                >
-                    <span class="menu-icon">☍</span>
-                    <span>Hosts Zabbix</span>
-                </a>
-
-
-                <!-- Alertas Zabbix -->
-                <a
-                    href="{% url 'incidencias:zabbix_alertas_activas' %}"
-                    class="
-                        {% if request.resolver_match.url_name == 'zabbix_alertas_activas' or request.resolver_match.url_name == 'zabbix_alertas_sincronizar' %}
-                            active
-                        {% endif %}
-                    "
-                >
-                    <span class="menu-icon">⚠</span>
-                    <span>Alertas Zabbix</span>
-                </a>
-
-            </nav>
-
-        </div>
-
-
-        <!-- ======================================
+        <!-- ==========================================
              SISTEMA
-             ====================================== -->
+             Usuarios: solo Administrador
+             Django Admin: solo Superuser
+             ========================================== -->
         <div class="menu-section">
 
             <div class="menu-title">
@@ -295,32 +373,37 @@
 
             <nav class="menu">
 
-                <!-- Usuarios -->
-                <a
-                    href="{% url 'incidencias:usuarios_lista' %}"
-                    class="
-                        {% if request.resolver_match.url_name == 'usuarios_lista' or request.resolver_match.url_name == 'usuario_crear' or request.resolver_match.url_name == 'usuario_editar' or request.resolver_match.url_name == 'usuario_cambiar_estado' %}
-                            active
-                        {% endif %}
-                    "
-                >
-                    <span class="menu-icon">◉</span>
-                    <span>Usuarios</span>
-                </a>
+                {% if request.user.is_superuser or rol == 'ADMINISTRADOR' %}
+
+                    <a
+                        href="{% url 'incidencias:usuarios_lista' %}"
+                        class="
+                            {% if request.resolver_match.url_name == 'usuarios_lista' or request.resolver_match.url_name == 'usuario_crear' or request.resolver_match.url_name == 'usuario_editar' or request.resolver_match.url_name == 'usuario_cambiar_estado' %}
+                                active
+                            {% endif %}
+                        "
+                    >
+                        <span class="menu-icon">◉</span>
+                        <span>Usuarios</span>
+                    </a>
+
+                {% endif %}
 
 
-                <!-- Admin Django -->
-                <a
-                    href="/admin/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <span class="menu-icon">⛭</span>
-                    <span>Admin Django</span>
-                </a>
+                {% if request.user.is_superuser %}
+
+                    <a
+                        href="/admin/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <span class="menu-icon">⛭</span>
+                        <span>Administración</span>
+                    </a>
+
+                {% endif %}
 
 
-                <!-- Cerrar sesión -->
                 <a href="{% url 'incidencias:logout' %}">
                     <span class="menu-icon">⎋</span>
                     <span>Cerrar sesión</span>
@@ -351,7 +434,7 @@
 
                 <p>
                     {% block page_subtitle %}
-                        Sistema Web Integrado con Zabbix para la Gestión de Incidencias
+                        Monitoreo y gestión operativa de la red
                     {% endblock %}
                 </p>
 
@@ -360,6 +443,21 @@
 
             <!-- Usuario -->
             <div class="user-box">
+
+                <a
+                    href="{% url 'incidencias:notificaciones_lista' %}"
+                    class="topbar-notification-link"
+                >
+                    <span class="topbar-notification-bell">
+                        🔔
+                    </span>
+
+                    {% if contador_notificaciones_no_leidas > 0 %}
+                        <span class="topbar-notification-count">
+                            {{ contador_notificaciones_no_leidas }}
+                        </span>
+                    {% endif %}
+                </a>
 
                 <div class="user-meta">
 
@@ -372,11 +470,16 @@
                     </strong>
 
                     <span>
-                        {{ request.user.username }}
+                        {% if request.user.is_superuser %}
+                            Superusuario
+                        {% elif request.user.perfil_incidencias %}
+                            {{ request.user.perfil_incidencias.get_rol_display }}
+                        {% else %}
+                            {{ request.user.username }}
+                        {% endif %}
                     </span>
 
                 </div>
-
 
                 <div class="user-avatar">
                     {{ request.user.username|first|upper }}
@@ -387,24 +490,7 @@
         </header>
 
 
-        <!-- ======================================
-             MENSAJES DEL SISTEMA
-             ====================================== -->
-        {% if messages %}
 
-            <div class="messages-container">
-
-                {% for message in messages %}
-
-                    <div class="alert alert-{{ message.tags }}">
-                        {{ message }}
-                    </div>
-
-                {% endfor %}
-
-            </div>
-
-        {% endif %}
 
 
         <!-- ======================================
@@ -416,6 +502,275 @@
     </main>
 
 </div>
+{% if messages %}
+
+    <div class="system-toast-container">
+
+        {% for message in messages %}
+
+            <div class="system-toast system-toast-{{ message.tags }}">
+
+                <div class="system-toast-icon">
+
+                    {% if message.tags == "success" %}
+                        ✓
+                    {% elif message.tags == "error" %}
+                        !
+                    {% elif message.tags == "warning" %}
+                        !
+                    {% else %}
+                        🔔
+                    {% endif %}
+
+                </div>
+
+                <div class="system-toast-content">
+
+                    <strong>
+                        Fiber Z NOC
+                    </strong>
+
+                    <p>
+                        {{ message }}
+                    </p>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="system-toast-close"
+                    onclick="this.parentElement.remove();"
+                >
+                    ×
+                </button>
+
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+{% endif %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const toasts = document.querySelectorAll(".system-toast");
+
+        toasts.forEach(function (toast) {
+
+            setTimeout(function () {
+
+                toast.style.opacity = "0";
+                toast.style.transform = "translateX(25px)";
+
+                setTimeout(function () {
+                    toast.remove();
+                }, 300);
+
+            }, 5000);
+
+        });
+
+    });
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const storageKey = "fiberz_ultima_notificacion_id_{{ request.user.id }}";
+
+    async function obtenerNotificacionesNuevas() {
+
+        let ultimoId = localStorage.getItem(storageKey);
+
+        // Primera carga:
+        // no mostramos notificaciones antiguas.
+        if (ultimoId === null) {
+
+            try {
+                const response = await fetch(
+                    "{% url 'incidencias:notificaciones_nuevas' %}?ultimo_id=0"
+                );
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (data.notificaciones.length > 0) {
+
+                    const ultimo = data.notificaciones[
+                        data.notificaciones.length - 1
+                    ];
+
+                    localStorage.setItem(
+                        storageKey,
+                        ultimo.id
+                    );
+                } else {
+                    localStorage.setItem(
+                        storageKey,
+                        "0"
+                    );
+                }
+
+            } catch (error) {
+                console.error(
+                    "Error inicializando notificaciones:",
+                    error
+                );
+            }
+
+            return;
+        }
+
+
+        try {
+
+            const response = await fetch(
+                "{% url 'incidencias:notificaciones_nuevas' %}" +
+                "?ultimo_id=" + ultimoId
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+
+            if (!data.notificaciones.length) {
+                return;
+            }
+
+
+            data.notificaciones.forEach(function (notificacion) {
+
+                mostrarToastNotificacion(notificacion);
+
+                localStorage.setItem(
+                    storageKey,
+                    notificacion.id
+                );
+
+            });
+
+
+        } catch (error) {
+
+            console.error(
+                "Error consultando notificaciones:",
+                error
+            );
+
+        }
+
+    }
+
+
+    function mostrarToastNotificacion(notificacion) {
+
+        let contenedor = document.querySelector(
+            ".system-toast-container"
+        );
+
+        if (!contenedor) {
+
+            contenedor = document.createElement("div");
+
+            contenedor.className =
+                "system-toast-container";
+
+            document.body.appendChild(contenedor);
+        }
+
+
+        const toast = document.createElement("div");
+
+        toast.className =
+            "system-toast system-toast-info";
+
+
+        toast.innerHTML = `
+            <div class="system-toast-icon">
+                🔔
+            </div>
+
+            <div class="system-toast-content">
+
+                <strong>
+                    ${notificacion.codigo || "Fiber Z NOC"}
+                </strong>
+
+                <p>
+                    ${notificacion.mensaje}
+                </p>
+
+                ${
+                    notificacion.url
+                    ? `
+                        <a
+                            href="${notificacion.url}"
+                            class="system-toast-link"
+                        >
+                            Ver incidencia
+                        </a>
+                    `
+                    : ""
+                }
+
+            </div>
+
+            <button
+                type="button"
+                class="system-toast-close"
+            >
+                ×
+            </button>
+        `;
+
+
+        toast
+            .querySelector(".system-toast-close")
+            .addEventListener(
+                "click",
+                function () {
+                    toast.remove();
+                }
+            );
+
+
+        contenedor.appendChild(toast);
+
+
+        setTimeout(function () {
+
+            toast.style.opacity = "0";
+            toast.style.transform =
+                "translateX(25px)";
+
+            setTimeout(function () {
+                toast.remove();
+            }, 300);
+
+        }, 7000);
+
+    }
+
+
+    // Primera consulta al cargar la página
+    obtenerNotificacionesNuevas();
+
+    // Consultar cada 5 segundos
+    setInterval(
+        obtenerNotificacionesNuevas,
+        5000
+    );
+
+});
+</script>
+
+{% endwith %}
 
 </body>
 </html>

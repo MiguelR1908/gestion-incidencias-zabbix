@@ -135,6 +135,54 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
     </section>
 
 
+    {% if es_tecnico %}
+
+        <!-- =====================================================
+             BANDEJA PERSONAL DEL TÉCNICO
+             ===================================================== -->
+
+        <section
+            class="card"
+            style="margin-bottom: 18px;"
+        >
+            <div
+                class="incident-toolbar-actions"
+                style="justify-content: flex-start; padding: 14px 16px;"
+            >
+
+                <a
+                    href="{% url 'incidencias:incidencias' %}?vista=activas"
+                    class="btn {% if vista_tecnico == 'activas' %}btn-primary{% else %}btn-secondary{% endif %}"
+                >
+                    Mis activas
+                    <strong>({{ total_activas_tecnico }})</strong>
+                </a>
+
+                <a
+                    href="{% url 'incidencias:incidencias' %}?vista=historial"
+                    class="btn {% if vista_tecnico == 'historial' %}btn-primary{% else %}btn-secondary{% endif %}"
+                >
+                    Mi historial
+                    <strong>({{ total_historial_tecnico }})</strong>
+                </a>
+
+                <span
+                    class="incident-empty-value"
+                    style="margin-left: 8px;"
+                >
+                    {% if vista_tecnico == 'historial' %}
+                        Incidencias que estuvieron bajo tu responsabilidad.
+                    {% else %}
+                        Incidencias que actualmente están bajo tu responsabilidad.
+                    {% endif %}
+                </span>
+
+            </div>
+        </section>
+
+    {% endif %}
+
+
     <!-- =====================================================
          PANEL DE BÚSQUEDA Y FILTROS
          ===================================================== -->
@@ -144,11 +192,20 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
         <header class="incident-panel-header">
 
             <div>
-                <h3>Panel de incidencias</h3>
+                <h3>
+                    {% if es_tecnico %}
+                        Mis incidencias
+                    {% else %}
+                        Panel de incidencias
+                    {% endif %}
+                </h3>
 
                 <p>
-                    Consulta, filtra y gestiona las incidencias
-                    operativas del NOC.
+                    {% if es_tecnico %}
+                        Consulta y filtra las incidencias asociadas a tu atención.
+                    {% else %}
+                        Consulta, filtra y gestiona las incidencias operativas del NOC.
+                    {% endif %}
                 </p>
             </div>
 
@@ -169,15 +226,17 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                 </div>
 
 
-                <!-- Registrar incidencia manual -->
-                <a
-                    href="#"
-                    class="btn btn-primary"
-                    title="Registrar una incidencia manual"
-                >
-                    <span aria-hidden="true">＋</span>
-                    Nueva incidencia
-                </a>
+                {% if not es_tecnico %}
+                    <!-- Registrar incidencia manual -->
+                    <a
+                        href="#"
+                        class="btn btn-primary"
+                        title="Registrar una incidencia manual"
+                    >
+                        <span aria-hidden="true">＋</span>
+                        Nueva incidencia
+                    </a>
+                {% endif %}
 
 
                 <!-- Solo recarga cantidades y tabla desde la base de datos -->
@@ -191,6 +250,7 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                 </a>
 
 
+                {% if not es_tecnico %}
                 <!-- Consulta Zabbix inmediatamente -->
                 <form
                     id="incident-sync-form"
@@ -219,8 +279,10 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                         </span>
                     </button>
                 </form>
+                {% endif %}
 
 
+                {% if not es_tecnico %}
                 <!-- REPORTE PDF -->
                 <a
                     href="{% url 'incidencias:reporte_incidencias' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
@@ -241,6 +303,7 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                     <span aria-hidden="true">⇩</span>
                     CSV
                 </a>
+                {% endif %}
 
             </div>
 
@@ -248,6 +311,14 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
 
 
         <form method="get" class="incident-filter-form">
+
+            {% if es_tecnico %}
+                <input
+                    type="hidden"
+                    name="vista"
+                    value="{{ vista_tecnico }}"
+                >
+            {% endif %}
 
             <div class="incident-filter-grid">
 
@@ -420,7 +491,36 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                     </select>
 
                 </div>
+                <div class="incident-filter-group">
 
+                    <label for="id_fecha_desde">
+                        Desde
+                    </label>
+
+                    <input
+                        id="id_fecha_desde"
+                        type="date"
+                        name="fecha_desde"
+                        value="{{ fecha_desde }}"
+                    >
+
+                </div>
+
+
+                <div class="incident-filter-group">
+
+                    <label for="id_fecha_hasta">
+                        Hasta
+                    </label>
+
+                    <input
+                        id="id_fecha_hasta"
+                        type="date"
+                        name="fecha_hasta"
+                        value="{{ fecha_hasta }}"
+                    >
+
+                </div>
 
                 <div class="incident-filter-actions">
 
@@ -433,7 +533,7 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                     </button>
 
                     <a
-                        href="{% url 'incidencias:incidencias' %}"
+                        href="{% url 'incidencias:incidencias' %}{% if es_tecnico %}?vista={{ vista_tecnico }}{% endif %}"
                         class="btn btn-danger"
                     >
                         <span aria-hidden="true">×</span>
@@ -458,7 +558,17 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
         <header class="incident-list-header">
 
             <div>
-                <h3>Incidencias registradas</h3>
+                <h3>
+                    {% if es_tecnico %}
+                        {% if vista_tecnico == "historial" %}
+                            Mi historial de incidencias
+                        {% else %}
+                            Mis incidencias activas
+                        {% endif %}
+                    {% else %}
+                        Incidencias registradas
+                    {% endif %}
+                </h3>
 
                 <p>
                     Total encontrado:
@@ -466,7 +576,7 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                 </p>
             </div>
 
-            {% if query or estado_seleccionado or severidad_seleccionada or nodo_seleccionado %}
+            {% if query or estado_seleccionado or severidad_seleccionada or nodo_seleccionado or fecha_desde or fecha_hasta %}
 
                 <span class="incident-filter-active">
                     Filtros aplicados
@@ -941,4 +1051,4 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
     });
 </script>
 
-{% endblock %}
+{% endblock %}  

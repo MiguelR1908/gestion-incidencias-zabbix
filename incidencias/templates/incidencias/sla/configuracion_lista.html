@@ -1,0 +1,324 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}
+Configuración SLA | Fiber Z NOC
+{% endblock %}
+
+
+{% block page_title %}
+Configuración SLA
+{% endblock %}
+
+
+{% block page_subtitle %}
+Definición de tiempos máximos por severidad para el control de niveles de servicio.
+{% endblock %}
+
+
+{% block content %}
+
+<div id="sla-config-page">
+
+    <!-- ======================================================
+         CABECERA
+         ====================================================== -->
+
+    <section class="card sla-config-header">
+
+        <div>
+
+            <h3>
+                SLA por severidad
+            </h3>
+
+            <p>
+                Configure los tiempos máximos permitidos para
+                registro, asignación, inicio de atención y resolución.
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <!-- ======================================================
+         TABLA
+         ====================================================== -->
+
+    <section class="card sla-config-card">
+
+        <div class="sla-config-table-wrapper">
+
+            <table class="sla-config-table">
+
+                <thead>
+
+                    <tr>
+                        <th>Severidad</th>
+                        <th>Nombre</th>
+                        <th>AUTO ZABBIX</th>
+                        <th>CONFIRMACIÓN</th>
+                        <th>Registro</th>
+                        <th>Asignación</th>
+                        <th>Inicio atención</th>
+                        <th>Resolución</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for sla in slas %}
+
+                        <tr>
+
+                            <!-- SEVERIDAD -->
+
+                            <td>
+
+                                <span
+                                    class="
+                                        sla-config-severity
+
+                                        {% if sla.severidad == 'CRITICA' %}
+                                            sla-config-critical
+
+                                        {% elif sla.severidad == 'ALTA' %}
+                                            sla-config-high
+
+
+
+                                        {% elif sla.severidad == 'MEDIA' %}
+                                            sla-config-medium
+
+                                        {% elif sla.severidad == 'BAJA' %}
+                                            sla-config-low
+
+                                        {% elif sla.severidad == 'INFORMATIVA' %}
+                                            sla-config-info-severity
+
+                                        {% endif %}
+                                    "
+                                >
+                                    {{ sla.get_severidad_display }}
+                                </span>
+
+                            </td>
+
+
+                            <!-- NOMBRE -->
+
+                            <td>
+
+                                <div class="sla-config-name">
+
+                                    <strong>
+                                        {{ sla.nombre }}
+                                    </strong>
+
+                                    {% if sla.descripcion %}
+
+                                        <small>
+                                            {{ sla.descripcion|truncatechars:70 }}
+                                        </small>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </td>
+                            <td>
+                                {% if sla.genera_incidencia_automatica %}
+                                    <span class="sla-config-status sla-config-status-active">
+                                        Sí
+                                    </span>
+                                {% else %}
+                                    <span class="sla-config-status sla-config-status-inactive">
+                                        No
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if sla.genera_incidencia_automatica %}
+                                    <span class="sla-config-time">
+                                        {{ sla.tiempo_confirmacion_zabbix_min }}
+                                        <small>min</small>
+                                    </span>
+                                {% else %}
+                                    <span class="sla-config-muted">
+                                        —
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- REGISTRO -->
+
+                            <td>
+
+                                <div class="sla-config-time">
+
+                                    <strong>
+                                        {{ sla.tiempo_max_registro_min }}
+                                    </strong>
+
+                                    <span>
+                                        min
+                                    </span>
+
+                                </div>
+
+                            </td>
+
+
+                            <!-- ASIGNACIÓN -->
+
+                            <td>
+
+                                <div class="sla-config-time">
+
+                                    <strong>
+                                        {{ sla.tiempo_max_asignacion_min }}
+                                    </strong>
+
+                                    <span>
+                                        min
+                                    </span>
+
+                                </div>
+
+                            </td>
+
+
+                            <!-- INICIO -->
+
+                            <td>
+
+                                <div class="sla-config-time">
+
+                                    <strong>
+                                        {{ sla.tiempo_max_inicio_atencion_min }}
+                                    </strong>
+
+                                    <span>
+                                        min
+                                    </span>
+
+                                </div>
+
+                            </td>
+
+
+                            <!-- RESOLUCIÓN -->
+
+                            <td>
+
+                                <div class="sla-config-time">
+
+                                    <strong>
+                                        {{ sla.tiempo_max_resolucion_min }}
+                                    </strong>
+
+                                    <span>
+                                        min
+                                    </span>
+
+                                </div>
+
+                            </td>
+
+
+                            <!-- ESTADO -->
+
+                            <td>
+
+                                {% if sla.activo %}
+
+                                    <span class="sla-config-status sla-config-status-active">
+                                        Activo
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="sla-config-status sla-config-status-inactive">
+                                        Inactivo
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- ACCIÓN -->
+
+                            <td>
+
+                                <a
+                                    href="{% url 'incidencias:sla_configuracion_editar' sla.id %}"
+                                    class="btn btn-secondary"
+                                >
+                                    Editar
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+
+                    {% empty %}
+
+                        <tr>
+
+                            <td
+                                colspan="8"
+                                class="sla-config-empty"
+                            >
+                                No existen configuraciones SLA registradas.
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+    <!-- ======================================================
+         INFORMACIÓN
+         ====================================================== -->
+
+    <section class="card sla-config-info">
+
+        <div class="sla-config-info-icon">
+            i
+        </div>
+
+        <div>
+
+            <strong>
+                ¿Cómo se aplican estos tiempos?
+            </strong>
+
+            <p>
+                Cada incidencia utiliza la configuración correspondiente
+                a su severidad. El sistema compara los tiempos reales
+                de atención con estos límites para determinar si el SLA
+                fue cumplido o incumplido.
+            </p>
+
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}

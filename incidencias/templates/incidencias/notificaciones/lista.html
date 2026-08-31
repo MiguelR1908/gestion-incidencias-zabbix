@@ -1,0 +1,297 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}
+Notificaciones | Fiber Z NOC
+{% endblock %}
+
+
+{% block page_title %}
+Notificaciones
+{% endblock %}
+
+
+{% block page_subtitle %}
+Avisos internos relacionados con incidencias y eventos operativos.
+{% endblock %}
+
+
+{% block content %}
+
+<div id="notifications-page">
+
+    <!-- ======================================================
+         RESUMEN
+         ====================================================== -->
+
+    <section class="notifications-summary-grid">
+
+        <article class="notifications-summary-card">
+
+            <span class="notifications-summary-label">
+                Total
+            </span>
+
+            <strong class="notifications-summary-value">
+                {{ total_notificaciones|default:"0" }}
+            </strong>
+
+            <small>
+                Notificaciones registradas
+            </small>
+
+        </article>
+
+
+        <article class="notifications-summary-card notifications-summary-pending">
+
+            <span class="notifications-summary-label">
+                No leídas
+            </span>
+
+            <strong class="notifications-summary-value">
+                {{ notificaciones_no_leidas|default:"0" }}
+            </strong>
+
+            <small>
+                Pendientes de revisar
+            </small>
+
+        </article>
+
+    </section>
+
+
+    <!-- ======================================================
+         LISTADO
+         ====================================================== -->
+
+    <section class="card notifications-card">
+
+        <div class="notifications-header">
+
+            <div>
+                <h3>
+                    Bandeja de notificaciones
+                </h3>
+
+                <p>
+                    Avisos del sistema asociados a incidencias.
+                </p>
+            </div>
+
+            {% if notificaciones_no_leidas > 0 %}
+                <form
+                    method="post"
+                    action="{% url 'incidencias:notificaciones_marcar_todas_leidas' %}"
+                >
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="btn-mark-all-read"
+                    >
+                        ✓ Marcar todas como leídas
+                    </button>
+                </form>
+            {% endif %}
+
+        </div>
+        <div class="notifications-filters">
+
+            <a
+                href="{% url 'incidencias:notificaciones_lista' %}?filtro=todas"
+                class="notification-filter {% if filtro == 'todas' %}active{% endif %}"
+            >
+                Todas
+                <span>{{ total_notificaciones }}</span>
+            </a>
+
+            <a
+                href="{% url 'incidencias:notificaciones_lista' %}?filtro=no_leidas"
+                class="notification-filter {% if filtro == 'no_leidas' %}active{% endif %}"
+            >
+                No leídas
+                <span>{{ notificaciones_no_leidas }}</span>
+            </a>
+
+            <a
+                href="{% url 'incidencias:notificaciones_lista' %}?filtro=leidas"
+                class="notification-filter {% if filtro == 'leidas' %}active{% endif %}"
+            >
+                Leídas
+                <span>{{ notificaciones_leidas }}</span>
+            </a>
+
+        </div>
+        <div class="notifications-list">
+
+            {% for notificacion in notificaciones %}
+
+                <article
+                    class="
+                        notification-item
+
+                        {% if notificacion.leida %}
+                            notification-read
+                        {% else %}
+                            notification-unread
+                        {% endif %}
+
+                        {% if notificacion.estado == 'PENDIENTE' %}
+                            notification-pending
+                        {% elif notificacion.estado == 'FALLIDA' %}
+                            notification-failed
+                        {% endif %}
+                    "
+                >
+
+                    <!-- ICONO -->
+
+                    <div class="notification-icon">
+
+                        {% if notificacion.estado == 'PENDIENTE' %}
+                            !
+                        {% elif notificacion.estado == 'FALLIDA' %}
+                            ×
+                        {% else %}
+                            ✓
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- CONTENIDO -->
+
+                    <div class="notification-content">
+
+                        <div class="notification-top">
+
+                            <div>
+
+                                {% if notificacion.incidencia %}
+                                    <a
+                                        href="{% url 'incidencias:notificacion_abrir' notificacion.id %}"
+                                        class="notification-incident"
+                                    >
+                                        {{ notificacion.incidencia.codigo }}
+                                    </a>
+                                {% endif %}
+
+
+                                <span
+                                    class="
+                                        notification-status
+
+                                        {% if notificacion.estado == 'PENDIENTE' %}
+                                            notification-status-pending
+
+                                        {% elif notificacion.estado == 'FALLIDA' %}
+                                            notification-status-failed
+
+                                        {% else %}
+                                            notification-status-sent
+                                        {% endif %}
+                                    "
+                                >
+                                    {{ notificacion.get_estado_display }}
+                                </span>
+                                {% if notificacion.leida %}
+                                    <span class="notification-read-status notification-read-status-read">
+                                        ✓ Leída
+                                    </span>
+                                {% else %}
+                                    <span class="notification-read-status notification-read-status-new">
+                                        • Nueva
+                                    </span>
+                                {% endif %}
+                            </div>
+
+
+                            <time class="notification-date">
+                                {{ notificacion.creado_en|date:"d/m/Y H:i" }}
+                            </time>
+
+                        </div>
+
+
+                        <p class="notification-message">
+                            {{ notificacion.mensaje }}
+                        </p>
+
+
+                        <div class="notification-meta">
+
+                            <span>
+                                Medio:
+                                <strong>
+                                    {{ notificacion.get_medio_display }}
+                                </strong>
+                            </span>
+
+
+                            {% if notificacion.destinatario %}
+
+                                <span>
+                                    Destinatario:
+                                    <strong>
+                                        {{ notificacion.destinatario }}
+                                    </strong>
+                                </span>
+
+                            {% endif %}
+
+
+                            {% if notificacion.fecha_envio %}
+
+                                <span>
+                                    Enviada:
+                                    <strong>
+                                        {{ notificacion.fecha_envio|date:"d/m/Y H:i" }}
+                                    </strong>
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        {% if notificacion.error %}
+
+                            <div class="notification-error">
+                                {{ notificacion.error }}
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </article>
+
+
+            {% empty %}
+
+                <div class="notifications-empty">
+
+                    <div class="notifications-empty-icon">
+                        🔔
+                    </div>
+
+                    <strong>
+                        No tienes notificaciones
+                    </strong>
+
+                    <p>
+                        Los avisos relacionados con incidencias aparecerán aquí.
+                    </p>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}

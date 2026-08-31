@@ -1,0 +1,964 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}
+SLA y tiempos | Fiber Z NOC
+{% endblock %}
+
+
+{% block page_title %}
+SLA y tiempos
+{% endblock %}
+
+
+{% block page_subtitle %}
+Indicadores de atención y cumplimiento de niveles de servicio.
+{% endblock %}
+
+
+{% block content %}
+
+<div id="sla-report-page">
+
+
+    <!-- ======================================================
+         FILTROS
+         ====================================================== -->
+
+    <section class="card sla-filter-card">
+
+        <div class="sla-section-header">
+
+            <div>
+
+                <h3>
+                    Filtros de análisis
+                </h3>
+
+                <p>
+                    Consulte los indicadores según período,
+                    estado, severidad o nodo.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <form
+            method="get"
+            class="sla-filter-form"
+        >
+
+            <div class="sla-filter-grid">
+
+
+                <!-- Buscar -->
+
+                <div class="sla-filter-group sla-filter-search">
+
+                    <label for="q">
+                        Buscar
+                    </label>
+
+                    <input
+                        id="q"
+                        type="text"
+                        name="q"
+                        value="{{ query }}"
+                        placeholder="Código, título, nodo, componente..."
+                    >
+
+                </div>
+
+
+                <!-- Estado -->
+
+                <div class="sla-filter-group">
+
+                    <label for="estado">
+                        Estado
+                    </label>
+
+                    <select
+                        id="estado"
+                        name="estado"
+                    >
+
+                        <option value="">
+                            Todos
+                        </option>
+
+                        <option
+                            value="DETECTADA"
+                            {% if estado_seleccionado == "DETECTADA" %}selected{% endif %}
+                        >
+                            Detectada
+                        </option>
+
+                        <option
+                            value="REGISTRADA"
+                            {% if estado_seleccionado == "REGISTRADA" %}selected{% endif %}
+                        >
+                            Registrada
+                        </option>
+
+                        <option
+                            value="ASIGNADA"
+                            {% if estado_seleccionado == "ASIGNADA" %}selected{% endif %}
+                        >
+                            Asignada
+                        </option>
+
+                        <option
+                            value="EN_ATENCION"
+                            {% if estado_seleccionado == "EN_ATENCION" %}selected{% endif %}
+                        >
+                            En atención
+                        </option>
+
+                        <option
+                            value="RESUELTA"
+                            {% if estado_seleccionado == "RESUELTA" %}selected{% endif %}
+                        >
+                            Resuelta
+                        </option>
+
+                        <option
+                            value="CERRADA"
+                            {% if estado_seleccionado == "CERRADA" %}selected{% endif %}
+                        >
+                            Cerrada
+                        </option>
+
+                        <option
+                            value="CANCELADA"
+                            {% if estado_seleccionado == "CANCELADA" %}selected{% endif %}
+                        >
+                            Cancelada
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- Severidad -->
+
+                <div class="sla-filter-group">
+
+                    <label for="severidad">
+                        Severidad
+                    </label>
+
+                    <select
+                        id="severidad"
+                        name="severidad"
+                    >
+
+                        <option value="">
+                            Todas
+                        </option>
+
+                        <option
+                            value="CRITICA"
+                            {% if severidad_seleccionada == "CRITICA" %}selected{% endif %}
+                        >
+                            Crítica
+                        </option>
+
+                        <option
+                            value="ALTA"
+                            {% if severidad_seleccionada == "ALTA" %}selected{% endif %}
+                        >
+                            Alta
+                        </option>
+
+                        <option
+                            value="MEDIA"
+                            {% if severidad_seleccionada == "MEDIA" %}selected{% endif %}
+                        >
+                            Media
+                        </option>
+
+                        <option
+                            value="BAJA"
+                            {% if severidad_seleccionada == "BAJA" %}selected{% endif %}
+                        >
+                            Baja
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- Nodo -->
+
+                <div class="sla-filter-group">
+
+                    <label for="nodo">
+                        Nodo
+                    </label>
+
+                    <select
+                        id="nodo"
+                        name="nodo"
+                    >
+
+                        <option value="">
+                            Todos
+                        </option>
+
+                        {% for nodo in nodos %}
+
+                            <option
+                                value="{{ nodo.id }}"
+                                {% if nodo_seleccionado == nodo.id|stringformat:"s" %}selected{% endif %}
+                            >
+                                {{ nodo.codigo }} - {{ nodo.nombre }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <!-- Desde -->
+
+                <div class="sla-filter-group">
+
+                    <label for="fecha_desde">
+                        Desde
+                    </label>
+
+                    <input
+                        id="fecha_desde"
+                        type="date"
+                        name="fecha_desde"
+                        value="{{ fecha_desde }}"
+                    >
+
+                </div>
+
+
+                <!-- Hasta -->
+
+                <div class="sla-filter-group">
+
+                    <label for="fecha_hasta">
+                        Hasta
+                    </label>
+
+                    <input
+                        id="fecha_hasta"
+                        type="date"
+                        name="fecha_hasta"
+                        value="{{ fecha_hasta }}"
+                    >
+
+                </div>
+
+
+                <!-- Acciones -->
+
+                <div class="sla-filter-actions">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        Aplicar
+                    </button>
+
+                    <a
+                        href="{% url 'incidencias:reporte_sla_tiempos' %}"
+                        class="btn btn-secondary"
+                    >
+                        Limpiar
+                    </a>
+
+                </div>
+
+
+            </div>
+
+        </form>
+
+    </section>
+
+
+
+    <!-- ======================================================
+         RESUMEN GENERAL
+         ====================================================== -->
+
+    <section class="sla-summary-grid">
+
+
+        <!-- Incidencias -->
+
+        <article class="sla-summary-card">
+
+            <div class="sla-summary-icon">
+                ▤
+            </div>
+
+            <div>
+
+                <span class="sla-summary-label">
+                    Incidencias
+                </span>
+
+                <strong class="sla-summary-value">
+                    {{ total_incidencias|default:"0" }}
+                </strong>
+
+                <small class="sla-summary-note">
+                    Registros analizados
+                </small>
+
+            </div>
+
+        </article>
+
+
+
+        <!-- Cumplimiento general -->
+
+        <article class="sla-summary-card">
+
+            <div class="sla-summary-icon sla-summary-icon-success">
+                ✓
+            </div>
+
+            <div>
+
+                <span class="sla-summary-label">
+                    Cumplimiento general
+                </span>
+
+                <strong class="sla-summary-value">
+
+                    {% if porcentaje_sla_general is not None %}
+
+                        {{ porcentaje_sla_general }}%
+
+                    {% else %}
+
+                        -
+
+                    {% endif %}
+
+                </strong>
+
+                <small class="sla-summary-note">
+                    Sobre evaluaciones disponibles
+                </small>
+
+            </div>
+
+        </article>
+
+
+
+        <!-- Cumplidos -->
+
+        <article class="sla-summary-card">
+
+            <div class="sla-summary-icon sla-summary-icon-success">
+                ✓
+            </div>
+
+            <div>
+
+                <span class="sla-summary-label">
+                    Cumplidos
+                </span>
+
+                <strong class="sla-summary-value">
+                    {{ sla_total_cumplidos|default:"0" }}
+                </strong>
+
+                <small class="sla-summary-note">
+                    Evaluaciones dentro del SLA
+                </small>
+
+            </div>
+
+        </article>
+
+
+
+        <!-- Incumplidos -->
+
+        <article class="sla-summary-card sla-summary-card-danger">
+
+            <div class="sla-summary-icon sla-summary-icon-danger">
+                !
+            </div>
+
+            <div>
+
+                <span class="sla-summary-label">
+                    Incumplidos
+                </span>
+
+                <strong class="sla-summary-value">
+                    {{ sla_total_incumplidos|default:"0" }}
+                </strong>
+
+                <small class="sla-summary-note">
+                    Evaluaciones fuera del SLA
+                </small>
+
+            </div>
+
+        </article>
+
+
+    </section>
+
+
+
+    <!-- ======================================================
+         TIEMPOS PROMEDIO
+         ====================================================== -->
+
+    <section class="card sla-times-card">
+
+        <div class="sla-section-header">
+            <div>
+                <h3>Tiempos promedio</h3>
+                <p>Duración promedio de cada etapa del ciclo de atención.</p>
+            </div>
+        </div>
+
+        <div class="sla-times-grid">
+
+            <article class="sla-time-item">
+                <span class="sla-time-label">Registro</span>
+                <strong class="sla-time-value">
+                    {% if promedio_registro is not None %}
+                        {{ promedio_registro }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </strong>
+                <small class="sla-time-unit">minutos</small>
+            </article>
+
+            <article class="sla-time-item">
+                <span class="sla-time-label">Asignación</span>
+                <strong class="sla-time-value">
+                    {% if promedio_asignacion is not None %}
+                        {{ promedio_asignacion }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </strong>
+                <small class="sla-time-unit">minutos</small>
+            </article>
+
+            <article class="sla-time-item">
+                <span class="sla-time-label">Inicio de atención</span>
+                <strong class="sla-time-value">
+                    {% if promedio_inicio_atencion is not None %}
+                        {{ promedio_inicio_atencion }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </strong>
+                <small class="sla-time-unit">minutos</small>
+            </article>
+
+            <article class="sla-time-item">
+                <span class="sla-time-label">Resolución</span>
+                <strong class="sla-time-value">
+                    {% if promedio_resolucion is not None %}
+                        {{ promedio_resolucion }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </strong>
+                <small class="sla-time-unit">minutos</small>
+            </article>
+
+            <article class="sla-time-item">
+                <span class="sla-time-label">Cierre</span>
+                <strong class="sla-time-value">
+                    {% if promedio_cierre is not None %}
+                        {{ promedio_cierre }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </strong>
+                <small class="sla-time-unit">minutos</small>
+            </article>
+
+        </div>
+
+    </section>
+
+
+    <!-- ======================================================
+         CUMPLIMIENTO POR ETAPA
+         ====================================================== -->
+
+    <section class="card sla-compliance-card">
+
+        <div class="sla-section-header">
+            <div>
+                <h3>Cumplimiento por etapa</h3>
+                <p>Resultado de las evaluaciones de SLA disponibles.</p>
+            </div>
+
+            <span class="sla-evaluated-count">
+                {{ sla_total_evaluados|default:"0" }} evaluaciones
+            </span>
+        </div>
+
+        <div class="sla-table-wrapper">
+            <table class="sla-table">
+                <thead>
+                    <tr>
+                        <th>Etapa</th>
+                        <th>Evaluados</th>
+                        <th>Cumplidos</th>
+                        <th>Incumplidos</th>
+                        <th>Cumplimiento</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in resumen_sla %}
+                        <tr>
+                            <td>
+                                <strong class="sla-stage-name">{{ item.etapa }}</strong>
+                            </td>
+
+                            <td>{{ item.evaluados }}</td>
+
+                            <td>
+                                <span class="sla-count sla-count-success">
+                                    {{ item.cumplidos }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="sla-count sla-count-danger">
+                                    {{ item.incumplidos }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {% if item.porcentaje is not None %}
+                                    <div class="sla-percentage-cell">
+                                        <div class="sla-percentage-top">
+                                            <strong>{{ item.porcentaje }}%</strong>
+                                        </div>
+
+                                        <div class="sla-progress-wrapper">
+                                            <progress
+                                                class="sla-progress {% if item.porcentaje >= 95 %}sla-progress-good{% elif item.porcentaje >= 85 %}sla-progress-warning{% else %}sla-progress-danger{% endif %}"
+                                                value="{{ item.porcentaje }}"
+                                                max="100"
+                                            >
+                                                {{ item.porcentaje }}%
+                                            </progress>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="sla-not-evaluated">Sin datos</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="sla-empty">
+                                No existen evaluaciones SLA para los filtros seleccionados.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </section>
+
+
+    <!-- ======================================================
+         DETALLE SLA POR INCIDENCIA
+         ====================================================== -->
+
+    <section class="card sla-detail-card">
+
+        <div class="sla-section-header">
+            <div>
+                <h3>Detalle SLA por incidencia</h3>
+                <p>Tiempo real, límite permitido y resultado por cada etapa.</p>
+            </div>
+
+            <span class="sla-evaluated-count">
+                {{ total_incidencias|default:"0" }} incidencias
+            </span>
+        </div>
+
+        <div class="sla-table-wrapper">
+            <table class="sla-table sla-detail-table">
+
+                <thead>
+                    <tr>
+                        <th>Incidencia</th>
+                        <th>Severidad</th>
+                        <th>Registro</th>
+                        <th>Resultado</th>
+                        <th>Asignación</th>
+                        <th>Resultado</th>
+                        <th>Inicio</th>
+                        <th>Resultado</th>
+                        <th>Resolución</th>
+                        <th>Resultado</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for incidencia in incidencias %}
+                        <tr>
+                            <td>
+                                <div class="sla-incident-cell">
+                                    <strong>{{ incidencia.codigo }}</strong>
+                                    <small>{{ incidencia.titulo|default:"Sin título" }}</small>
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="sla-severity-badge {% if incidencia.severidad == 'CRITICA' %}sla-severity-critical{% elif incidencia.severidad == 'ALTA' %}sla-severity-high{% elif incidencia.severidad == 'MEDIA' %}sla-severity-medium{% else %}sla-severity-low{% endif %}">
+                                    {{ incidencia.get_severidad_display }}
+                                </span>
+                            </td>
+
+                            <!-- REGISTRO -->
+                            <td>
+                                {% if incidencia.tiempo_registro_min is not None %}
+                                    <div class="sla-time-limit-cell">
+                                        <strong class="sla-time-table-value">
+                                            {{ incidencia.tiempo_registro_min }} min
+                                        </strong>
+
+                                        {% if incidencia.sla_registro_max is not None %}
+                                            <small class="sla-limit-text">
+                                                Límite: {{ incidencia.sla_registro_max }} min
+                                            </small>
+                                        {% else %}
+                                            <small class="sla-limit-text">Sin SLA</small>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="sla-not-evaluated">-</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if incidencia.cumple_sla_registro is True %}
+                                    <span class="sla-result-badge sla-result-success">✓ Cumple</span>
+                                {% elif incidencia.cumple_sla_registro is False %}
+                                    <span class="sla-result-badge sla-result-danger">✕ Incumple</span>
+                                {% else %}
+                                    <span class="sla-result-badge sla-result-pending">Pendiente</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- ASIGNACIÓN -->
+                            <td>
+                                {% if incidencia.tiempo_asignacion_min is not None %}
+                                    <div class="sla-time-limit-cell">
+                                        <strong class="sla-time-table-value">
+                                            {{ incidencia.tiempo_asignacion_min }} min
+                                        </strong>
+
+                                        {% if incidencia.sla_asignacion_max is not None %}
+                                            <small class="sla-limit-text">
+                                                Límite: {{ incidencia.sla_asignacion_max }} min
+                                            </small>
+                                        {% else %}
+                                            <small class="sla-limit-text">Sin SLA</small>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="sla-not-evaluated">-</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if incidencia.cumple_sla_asignacion is True %}
+                                    <span class="sla-result-badge sla-result-success">✓ Cumple</span>
+                                {% elif incidencia.cumple_sla_asignacion is False %}
+                                    <span class="sla-result-badge sla-result-danger">✕ Incumple</span>
+                                {% else %}
+                                    <span class="sla-result-badge sla-result-pending">Pendiente</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- INICIO DE ATENCIÓN -->
+                            <td>
+                                {% if incidencia.tiempo_inicio_atencion_min is not None %}
+                                    <div class="sla-time-limit-cell">
+                                        <strong class="sla-time-table-value">
+                                            {{ incidencia.tiempo_inicio_atencion_min }} min
+                                        </strong>
+
+                                        {% if incidencia.sla_inicio_max is not None %}
+                                            <small class="sla-limit-text">
+                                                Límite: {{ incidencia.sla_inicio_max }} min
+                                            </small>
+                                        {% else %}
+                                            <small class="sla-limit-text">Sin SLA</small>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="sla-not-evaluated">-</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if incidencia.cumple_sla_inicio_atencion is True %}
+                                    <span class="sla-result-badge sla-result-success">✓ Cumple</span>
+                                {% elif incidencia.cumple_sla_inicio_atencion is False %}
+                                    <span class="sla-result-badge sla-result-danger">✕ Incumple</span>
+                                {% else %}
+                                    <span class="sla-result-badge sla-result-pending">Pendiente</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- RESOLUCIÓN -->
+                            <td>
+                                {% if incidencia.tiempo_resolucion_min is not None %}
+                                    <div class="sla-time-limit-cell">
+                                        <strong class="sla-time-table-value">
+                                            {{ incidencia.tiempo_resolucion_min }} min
+                                        </strong>
+
+                                        {% if incidencia.sla_resolucion_max is not None %}
+                                            <small class="sla-limit-text">
+                                                Límite: {{ incidencia.sla_resolucion_max }} min
+                                            </small>
+                                        {% else %}
+                                            <small class="sla-limit-text">Sin SLA</small>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="sla-not-evaluated">-</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if incidencia.cumple_sla_resolucion is True %}
+                                    <span class="sla-result-badge sla-result-success">✓ Cumple</span>
+                                {% elif incidencia.cumple_sla_resolucion is False %}
+                                    <span class="sla-result-badge sla-result-danger">✕ Incumple</span>
+                                {% else %}
+                                    <span class="sla-result-badge sla-result-pending">Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+
+                                {% if incidencia.sla_actual_estado == "VENCIDO" %}
+
+                                    <div class="sla-current-status sla-current-danger">
+
+                                        <strong>
+                                            VENCIDO
+                                        </strong>
+
+                                        <span>
+                                            {{ incidencia.sla_actual_etapa }}
+                                        </span>
+
+                                        <small>
+                                            {{ incidencia.sla_actual_transcurrido }} /
+                                            {{ incidencia.sla_actual_limite }} min
+                                        </small>
+
+                                    </div>
+
+                                {% elif incidencia.sla_actual_estado == "EN_TIEMPO" %}
+
+                                    <div class="sla-current-status sla-current-success">
+
+                                        <strong>
+                                            EN TIEMPO
+                                        </strong>
+
+                                        <span>
+                                            {{ incidencia.sla_actual_etapa }}
+                                        </span>
+
+                                        <small>
+                                            {{ incidencia.sla_actual_transcurrido }} /
+                                            {{ incidencia.sla_actual_limite }} min
+                                        </small>
+
+                                    </div>
+
+                                {% else %}
+
+                                    <span class="sla-not-evaluated">
+                                        -
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="10" class="sla-empty">
+                                No existen incidencias para los filtros seleccionados.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+
+    </section>
+
+
+    <!-- ======================================================
+         INTERPRETACIÓN OPERATIVA
+         ====================================================== -->
+
+    <section class="card sla-status-card">
+
+
+        <div class="sla-section-header">
+
+            <div>
+
+                <h3>
+                    Estado del servicio
+                </h3>
+
+                <p>
+                    Lectura rápida del nivel general de cumplimiento.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        {% if porcentaje_sla_general is not None %}
+
+
+            {% if porcentaje_sla_general >= 95 %}
+
+                <div class="sla-operational-status sla-operational-good">
+
+                    <div class="sla-operational-icon">
+                        ✓
+                    </div>
+
+                    <div>
+
+                        <strong>
+                            Cumplimiento favorable
+                        </strong>
+
+                        <p>
+                            El nivel general de cumplimiento se encuentra
+                            dentro de un rango favorable.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+            {% elif porcentaje_sla_general >= 85 %}
+
+                <div class="sla-operational-status sla-operational-warning">
+
+                    <div class="sla-operational-icon">
+                        !
+                    </div>
+
+                    <div>
+
+                        <strong>
+                            Requiere seguimiento
+                        </strong>
+
+                        <p>
+                            Existen incumplimientos que deberían ser revisados
+                            por etapa y período.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+            {% else %}
+
+                <div class="sla-operational-status sla-operational-danger">
+
+                    <div class="sla-operational-icon">
+                        !
+                    </div>
+
+                    <div>
+
+                        <strong>
+                            Cumplimiento bajo
+                        </strong>
+
+                        <p>
+                            El nivel de incumplimiento requiere revisión
+                            de los tiempos de atención y resolución.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+            {% endif %}
+
+
+        {% else %}
+
+
+            <div class="sla-operational-status sla-operational-neutral">
+
+                <div class="sla-operational-icon">
+                    -
+                </div>
+
+                <div>
+
+                    <strong>
+                        Sin información evaluable
+                    </strong>
+
+                    <p>
+                        No existen suficientes datos de SLA para los filtros seleccionados.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+        {% endif %}
+
+
+    </section>
+
+
+</div>
+
+{% endblock %}

@@ -10,8 +10,9 @@ from ..models import (
     Incidencia,
     OrigenIncidencia,
     Severidad,
+    SLAIncidencia,
 )
-
+from .notificaciones import crear_notificacion_sistema
 
 # ============================================================
 # REGLAS PARA CREAR INCIDENCIAS SEGÚN SEVERIDAD ZABBIX
@@ -30,12 +31,7 @@ from ..models import (
 # no generará una incidencia automática.
 # ============================================================
 
-MINUTOS_POR_SEVERIDAD = {
-    Severidad.CRITICA: 5,
-    Severidad.ALTA: 10,
-    Severidad.MEDIA: 20,
-    Severidad.BAJA: 60,
-}
+
 
 
 def evaluar_alerta_para_incidencia(alerta, usuario=None):
@@ -220,29 +216,47 @@ def evaluar_alerta_para_incidencia(alerta, usuario=None):
             }
 
         # ============================================================
-        # 5. OBTENER EL TIEMPO MÍNIMO SEGÚN LA SEVERIDAD
+        # 5. OBTENER CONFIGURACIÓN DE CREACIÓN AUTOMÁTICA
         # ============================================================
 
-        minutos_requeridos = MINUTOS_POR_SEVERIDAD.get(
-            alerta.severidad
+        sla_config = (
+            SLAIncidencia.objects
+            .filter(
+                severidad=alerta.severidad,
+                activo=True,
+            )
+            .first()
         )
 
-        # Information, Not classified y cualquier valor que no esté
-        # configurado en MINUTOS_POR_SEVERIDAD no crea incidencia.
-        if minutos_requeridos is None:
+        if not sla_config:
             return {
                 "creada": False,
-                "estado": "SEVERIDAD_SIN_INCIDENCIA",
+                "estado": "SIN_CONFIGURACION_SLA",
                 "motivo": (
-                    f"La severidad "
-                    f"{alerta.get_severidad_display()} "
-                    f"no genera una incidencia automática."
+                    f"No existe una configuración SLA activa para la severidad "
+                    f"{alerta.get_severidad_display()}."
                 ),
                 "incidencia": None,
                 "minutos_activa": None,
                 "minutos_requeridos": None,
             }
 
+        if not sla_config.genera_incidencia_automatica:
+            return {
+                "creada": False,
+                "estado": "CREACION_AUTOMATICA_DESACTIVADA",
+                "motivo": (
+                    f"La severidad {alerta.get_severidad_display()} "
+                    f"no está configurada para generar incidencias automáticas."
+                ),
+                "incidencia": None,
+                "minutos_activa": None,
+                "minutos_requeridos": None,
+            }
+
+        minutos_requeridos = (
+            sla_config.tiempo_confirmacion_zabbix_min
+        )
         # ============================================================
         # 6. VALIDAR LA FECHA DEL EVENTO
         # ============================================================
@@ -333,7 +347,16 @@ def evaluar_alerta_para_incidencia(alerta, usuario=None):
         )
 
         incidencia.save()
-
+        crear_notificacion_sistema(
+            incidencia=incidencia,
+            mensaje=(
+                f"Nueva incidencia {incidencia.codigo} detectada automáticamente. "
+                f"Severidad: {incidencia.get_severidad_display()}. "
+                f"Nodo: {incidencia.nodo_afectado.codigo}. "
+                f"Componente: {incidencia.componente_principal.codigo}."
+            ),
+            creado_por=usuario_valido,
+        )
         # ============================================================
         # 10. MARCAR LA ALERTA COMO PROCESADA
         # ============================================================

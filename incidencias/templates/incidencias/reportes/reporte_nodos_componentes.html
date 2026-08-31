@@ -1,0 +1,698 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}
+Recurrencia | Fiber Z NOC
+{% endblock %}
+
+
+{% block page_title %}
+Recurrencia de incidencias
+{% endblock %}
+
+
+{% block page_subtitle %}
+Análisis de concentración de incidencias por nodo y componente de red.
+{% endblock %}
+
+
+{% block content %}
+
+<div id="recurrence-report-page">
+
+
+    <!-- ======================================================
+         FILTROS
+         ====================================================== -->
+
+    <section class="card recurrence-filter-card">
+
+        <div class="recurrence-section-header">
+
+            <div>
+                <h3>Período de análisis</h3>
+
+                <p>
+                    Seleccione el rango de fechas que desea evaluar.
+                </p>
+            </div>
+
+        </div>
+
+
+        <form
+            method="get"
+            class="recurrence-filter-form"
+        >
+
+            <div class="recurrence-filter-grid">
+
+
+                <div class="recurrence-filter-group">
+
+                    <label for="fecha_desde">
+                        Desde
+                    </label>
+
+                    <input
+                        id="fecha_desde"
+                        type="date"
+                        name="fecha_desde"
+                        value="{{ fecha_desde }}"
+                    >
+
+                </div>
+
+
+                <div class="recurrence-filter-group">
+
+                    <label for="fecha_hasta">
+                        Hasta
+                    </label>
+
+                    <input
+                        id="fecha_hasta"
+                        type="date"
+                        name="fecha_hasta"
+                        value="{{ fecha_hasta }}"
+                    >
+
+                </div>
+
+
+                <div class="recurrence-filter-actions">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        Aplicar filtros
+                    </button>
+
+
+                    <a
+                        href="{% url 'incidencias:reporte_nodos_componentes' %}"
+                        class="btn btn-secondary"
+                    >
+                        Limpiar
+                    </a>
+
+                </div>
+
+
+            </div>
+
+        </form>
+
+    </section>
+
+
+
+    <!-- ======================================================
+         RESUMEN
+         ====================================================== -->
+
+    <section class="recurrence-summary-grid">
+
+
+        <article class="recurrence-summary-card">
+
+            <div class="recurrence-summary-icon">
+                ▤
+            </div>
+
+            <div>
+
+                <span class="recurrence-summary-label">
+                    Incidencias
+                </span>
+
+                <strong class="recurrence-summary-value">
+                    {{ total_incidencias|default:"0" }}
+                </strong>
+
+                <small class="recurrence-summary-note">
+                    Registros analizados
+                </small>
+
+            </div>
+
+        </article>
+
+
+
+        <article class="recurrence-summary-card">
+
+            <div class="recurrence-summary-icon">
+                ◆
+            </div>
+
+            <div>
+
+                <span class="recurrence-summary-label">
+                    Nodos afectados
+                </span>
+
+                <strong class="recurrence-summary-value">
+                    {{ total_nodos|default:"0" }}
+                </strong>
+
+                <small class="recurrence-summary-note">
+                    Infraestructura con incidencias
+                </small>
+
+            </div>
+
+        </article>
+
+
+
+        <article class="recurrence-summary-card">
+
+            <div class="recurrence-summary-icon">
+                ◇
+            </div>
+
+            <div>
+
+                <span class="recurrence-summary-label">
+                    Componentes
+                </span>
+
+                <strong class="recurrence-summary-value">
+                    {{ total_componentes|default:"0" }}
+                </strong>
+
+                <small class="recurrence-summary-note">
+                    Componentes afectados
+                </small>
+
+            </div>
+
+        </article>
+
+
+
+        <article class="recurrence-summary-card recurrence-summary-critical">
+
+            <div class="recurrence-summary-icon">
+                !
+            </div>
+
+            <div>
+
+                <span class="recurrence-summary-label">
+                    Críticas
+                </span>
+
+                <strong class="recurrence-summary-value">
+                    {{ total_criticas|default:"0" }}
+                </strong>
+
+                <small class="recurrence-summary-note">
+                    Incidencias de mayor severidad
+                </small>
+
+            </div>
+
+        </article>
+
+
+    </section>
+
+
+
+    <!-- ======================================================
+         RANKING DE NODOS
+         ====================================================== -->
+
+    <section class="card recurrence-table-card">
+
+
+        <div class="recurrence-section-header">
+
+            <div>
+
+                <h3>
+                    Nodos con mayor recurrencia
+                </h3>
+
+                <p>
+                    Ordenados por cantidad de incidencias registradas.
+                </p>
+
+            </div>
+
+
+            <span class="recurrence-result-count">
+
+                {{ total_nodos|default:"0" }}
+
+                {% if total_nodos == 1 %}
+                    nodo
+                {% else %}
+                    nodos
+                {% endif %}
+
+            </span>
+
+        </div>
+
+
+
+        <div class="recurrence-table-wrapper">
+
+            <table class="recurrence-table">
+
+                <thead>
+
+                    <tr>
+                        <th class="recurrence-column-rank">
+                            #
+                        </th>
+
+                        <th>
+                            Nodo
+                        </th>
+
+                        <th>
+                            Nombre
+                        </th>
+
+                        <th class="recurrence-column-number">
+                            Incidencias
+                        </th>
+
+                        <th class="recurrence-column-number">
+                            Críticas
+                        </th>
+
+                        <th class="recurrence-column-number">
+                            Altas
+                        </th>
+
+                        <th class="recurrence-column-number">
+                            Cerradas
+                        </th>
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for nodo in ranking_nodos %}
+
+                        <tr>
+
+
+                            <td>
+
+                                <span class="recurrence-rank">
+
+                                    {{ forloop.counter }}
+
+                                </span>
+
+                            </td>
+
+
+                            <td>
+
+                                <strong class="recurrence-code">
+
+                                    {{ nodo.nodo_afectado__codigo|default:"-" }}
+
+                                </strong>
+
+                            </td>
+
+
+                            <td>
+
+                                <span class="recurrence-name">
+
+                                    {{ nodo.nodo_afectado__nombre|default:"Sin nombre" }}
+
+                                </span>
+
+                            </td>
+
+
+                            <td>
+
+                                <strong class="recurrence-total">
+
+                                    {{ nodo.total }}
+
+                                </strong>
+
+                            </td>
+
+
+                            <td>
+
+                                {% if nodo.criticas %}
+
+                                    <span class="recurrence-badge recurrence-badge-critical">
+                                        {{ nodo.criticas }}
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="recurrence-zero">
+                                        0
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td>
+
+                                {% if nodo.altas %}
+
+                                    <span class="recurrence-badge recurrence-badge-high">
+                                        {{ nodo.altas }}
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="recurrence-zero">
+                                        0
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td>
+
+                                <span class="recurrence-badge recurrence-badge-closed">
+
+                                    {{ nodo.cerradas }}
+
+                                </span>
+
+                            </td>
+
+
+                        </tr>
+
+
+                    {% empty %}
+
+
+                        <tr>
+
+                            <td
+                                colspan="7"
+                                class="recurrence-empty"
+                            >
+
+                                <div class="recurrence-empty-content">
+
+                                    <strong>
+                                        Sin resultados
+                                    </strong>
+
+                                    <span>
+                                        No existen incidencias para el período seleccionado.
+                                    </span>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- ======================================================
+         RANKING DE COMPONENTES
+         ====================================================== -->
+
+    <section class="card recurrence-table-card">
+
+
+        <div class="recurrence-section-header">
+
+            <div>
+
+                <h3>
+                    Componentes con mayor recurrencia
+                </h3>
+
+                <p>
+                    Componentes que concentran la mayor cantidad de incidencias.
+                </p>
+
+            </div>
+
+
+            <span class="recurrence-result-count">
+
+                {{ total_componentes|default:"0" }}
+
+                {% if total_componentes == 1 %}
+                    componente
+                {% else %}
+                    componentes
+                {% endif %}
+
+            </span>
+
+        </div>
+
+
+
+        <div class="recurrence-table-wrapper">
+
+            <table class="recurrence-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th class="recurrence-column-rank">
+                            #
+                        </th>
+
+                        <th>
+                            Componente
+                        </th>
+
+                        <th>
+                            Nombre
+                        </th>
+
+                        <th>
+                            Nodo
+                        </th>
+
+                        <th class="recurrence-column-number">
+                            Incidencias
+                        </th>
+
+                        <th class="recurrence-column-number">
+                            Críticas
+                        </th>
+
+                        <th class="recurrence-column-number">
+                            Altas
+                        </th>
+
+                        <th class="recurrence-column-number">
+                            Cerradas
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for componente in ranking_componentes %}
+
+                        <tr>
+
+
+                            <td>
+
+                                <span class="recurrence-rank">
+                                    {{ forloop.counter }}
+                                </span>
+
+                            </td>
+
+
+                            <td>
+
+                                <strong class="recurrence-code">
+
+                                    {{ componente.componente_principal__codigo|default:"-" }}
+
+                                </strong>
+
+                            </td>
+
+
+                            <td>
+
+                                <span class="recurrence-name">
+
+                                    {{ componente.componente_principal__nombre|default:"Sin nombre" }}
+
+                                </span>
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="recurrence-node-cell">
+
+                                    <strong>
+
+                                        {{ componente.nodo_afectado__codigo|default:"-" }}
+
+                                    </strong>
+
+                                    {% if componente.nodo_afectado__nombre %}
+
+                                        <small>
+
+                                            {{ componente.nodo_afectado__nombre }}
+
+                                        </small>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </td>
+
+
+                            <td>
+
+                                <strong class="recurrence-total">
+
+                                    {{ componente.total }}
+
+                                </strong>
+
+                            </td>
+
+
+                            <td>
+
+                                {% if componente.criticas %}
+
+                                    <span class="recurrence-badge recurrence-badge-critical">
+
+                                        {{ componente.criticas }}
+
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="recurrence-zero">
+                                        0
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td>
+
+                                {% if componente.altas %}
+
+                                    <span class="recurrence-badge recurrence-badge-high">
+
+                                        {{ componente.altas }}
+
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="recurrence-zero">
+                                        0
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td>
+
+                                <span class="recurrence-badge recurrence-badge-closed">
+
+                                    {{ componente.cerradas }}
+
+                                </span>
+
+                            </td>
+
+
+                        </tr>
+
+
+                    {% empty %}
+
+
+                        <tr>
+
+                            <td
+                                colspan="8"
+                                class="recurrence-empty"
+                            >
+
+                                <div class="recurrence-empty-content">
+
+                                    <strong>
+                                        Sin resultados
+                                    </strong>
+
+                                    <span>
+                                        No existen componentes afectados para el período seleccionado.
+                                    </span>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+    </section>
+
+
+</div>
+
+{% endblock %}

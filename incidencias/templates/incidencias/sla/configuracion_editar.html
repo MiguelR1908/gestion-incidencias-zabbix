@@ -1,0 +1,447 @@
+{% extends "incidencias/base.html" %}
+
+{% block title %}
+Editar SLA | Fiber Z NOC
+{% endblock %}
+
+
+{% block page_title %}
+Editar configuración SLA
+{% endblock %}
+
+
+{% block page_subtitle %}
+Modificación de parámetros SLA para la severidad {{ sla.get_severidad_display }}.
+{% endblock %}
+
+
+{% block content %}
+
+<div id="sla-config-page">
+
+    <section class="card sla-edit-card">
+
+        <!-- ==================================================
+             CABECERA
+             ================================================== -->
+
+        <div class="sla-edit-header">
+
+            <div>
+
+                <span
+                    class="
+                        sla-config-severity
+
+                        {% if sla.severidad == 'CRITICA' %}
+                            sla-config-critical
+
+                        {% elif sla.severidad == 'ALTA' %}
+                            sla-config-high
+
+                        {% elif sla.severidad == 'MEDIA' %}
+                            sla-config-medium
+
+                        {% elif sla.severidad == 'BAJA' %}
+                            sla-config-low
+
+                        {% elif sla.severidad == 'INFORMATIVA' %}
+                            sla-config-info-severity
+
+                        {% endif %}
+                    "
+                >
+                    {{ sla.get_severidad_display }}
+                </span>
+
+                <h3>
+                    {{ sla.nombre }}
+                </h3>
+
+                <p>
+                    Configure las reglas de creación automática y los tiempos
+                    máximos de atención para esta severidad.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- ==================================================
+             FORMULARIO
+             ================================================== -->
+
+        <form
+            method="post"
+            class="sla-edit-form"
+        >
+
+            {% csrf_token %}
+
+
+            <!-- ==================================================
+                 INFORMACIÓN GENERAL
+                 ================================================== -->
+
+            <div class="sla-edit-section">
+
+                <h4>
+                    Información general
+                </h4>
+
+                <div class="sla-edit-grid">
+
+                    <div class="sla-edit-group">
+
+                        <label for="nombre">
+                            Nombre
+                        </label>
+
+                        <input
+                            id="nombre"
+                            type="text"
+                            name="nombre"
+                            maxlength="100"
+                            value="{{ sla.nombre }}"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="sla-edit-group sla-edit-full">
+
+                        <label for="descripcion">
+                            Descripción
+                        </label>
+
+                        <textarea
+                            id="descripcion"
+                            name="descripcion"
+                            rows="3"
+                            placeholder="Descripción opcional del SLA"
+                        >{{ sla.descripcion|default_if_none:"" }}</textarea>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ==================================================
+                CREACIÓN AUTOMÁTICA DESDE ZABBIX
+                ================================================== -->
+
+            <div class="sla-edit-section">
+
+                <div class="sla-edit-section-header">
+
+                    <div>
+                        <h4>
+                            Creación automática desde Zabbix
+                        </h4>
+
+                        <p class="sla-edit-section-description">
+                            Define si las alertas de esta severidad pueden generar
+                            incidencias automáticamente.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <div class="zabbix-auto-grid">
+
+                    <!-- GENERACIÓN AUTOMÁTICA -->
+
+                    <div class="zabbix-auto-option">
+
+                        <div class="zabbix-auto-info">
+
+                            <strong>
+                                Generación automática
+                            </strong>
+
+                            <span>
+                                Permite crear incidencias automáticamente desde
+                                alertas de Zabbix.
+                            </span>
+
+                        </div>
+
+
+                        <label class="zabbix-switch">
+
+                            <input
+                                type="checkbox"
+                                name="genera_incidencia_automatica"
+                                id="genera_incidencia_automatica"
+                                {% if sla.genera_incidencia_automatica %}
+                                    checked
+                                {% endif %}
+                            >
+
+                            <span class="zabbix-switch-slider"></span>
+
+                        </label>
+
+                    </div>
+
+
+                    <!-- TIEMPO DE CONFIRMACIÓN -->
+
+                    <div class="zabbix-auto-time">
+
+                        <label for="tiempo_confirmacion_zabbix_min">
+                            Tiempo de confirmación Zabbix
+                        </label>
+
+                        <div class="sla-edit-input-unit">
+
+                            <input
+                                type="number"
+                                id="tiempo_confirmacion_zabbix_min"
+                                name="tiempo_confirmacion_zabbix_min"
+                                min="1"
+                                value="{{ sla.tiempo_confirmacion_zabbix_min }}"
+                                required
+                            >
+
+                            <span>
+                                min
+                            </span>
+
+                        </div>
+
+                        <small>
+                            Tiempo mínimo que la alerta debe permanecer activa
+                            antes de generar la incidencia.
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ==================================================
+                 TIEMPOS MÁXIMOS SLA
+                 ================================================== -->
+
+            <div class="sla-edit-section">
+
+                <h4>
+                    Tiempos máximos SLA
+                </h4>
+
+                <p class="sla-edit-section-description">
+                    Todos los valores se expresan en minutos.
+                </p>
+
+
+                <div class="sla-edit-grid sla-edit-times-grid">
+
+
+                    <!-- REGISTRO -->
+
+                    <div class="sla-edit-group">
+
+                        <label for="tiempo_max_registro_min">
+                            Registro
+                        </label>
+
+                        <div class="sla-edit-input-unit">
+
+                            <input
+                                id="tiempo_max_registro_min"
+                                type="number"
+                                name="tiempo_max_registro_min"
+                                min="1"
+                                value="{{ sla.tiempo_max_registro_min }}"
+                                required
+                            >
+
+                            <span>
+                                min
+                            </span>
+
+                        </div>
+
+                        <small>
+                            Desde la detección hasta el registro.
+                        </small>
+
+                    </div>
+
+
+                    <!-- ASIGNACIÓN -->
+
+                    <div class="sla-edit-group">
+
+                        <label for="tiempo_max_asignacion_min">
+                            Asignación
+                        </label>
+
+                        <div class="sla-edit-input-unit">
+
+                            <input
+                                id="tiempo_max_asignacion_min"
+                                type="number"
+                                name="tiempo_max_asignacion_min"
+                                min="1"
+                                value="{{ sla.tiempo_max_asignacion_min }}"
+                                required
+                            >
+
+                            <span>
+                                min
+                            </span>
+
+                        </div>
+
+                        <small>
+                            Desde el registro hasta la asignación.
+                        </small>
+
+                    </div>
+
+
+                    <!-- INICIO ATENCIÓN -->
+
+                    <div class="sla-edit-group">
+
+                        <label for="tiempo_max_inicio_atencion_min">
+                            Inicio de atención
+                        </label>
+
+                        <div class="sla-edit-input-unit">
+
+                            <input
+                                id="tiempo_max_inicio_atencion_min"
+                                type="number"
+                                name="tiempo_max_inicio_atencion_min"
+                                min="1"
+                                value="{{ sla.tiempo_max_inicio_atencion_min }}"
+                                required
+                            >
+
+                            <span>
+                                min
+                            </span>
+
+                        </div>
+
+                        <small>
+                            Desde la asignación hasta el inicio de atención.
+                        </small>
+
+                    </div>
+
+
+                    <!-- RESOLUCIÓN -->
+
+                    <div class="sla-edit-group">
+
+                        <label for="tiempo_max_resolucion_min">
+                            Resolución
+                        </label>
+
+                        <div class="sla-edit-input-unit">
+
+                            <input
+                                id="tiempo_max_resolucion_min"
+                                type="number"
+                                name="tiempo_max_resolucion_min"
+                                min="1"
+                                value="{{ sla.tiempo_max_resolucion_min }}"
+                                required
+                            >
+
+                            <span>
+                                min
+                            </span>
+
+                        </div>
+
+                        <small>
+                            Desde la detección hasta la resolución.
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ==================================================
+                 ESTADO DEL SLA
+                 ================================================== -->
+
+            <div class="sla-edit-section">
+
+                <h4>
+                    Estado
+                </h4>
+
+                <label class="sla-edit-toggle">
+
+                    <input
+                        type="checkbox"
+                        name="activo"
+                        {% if sla.activo %}
+                            checked
+                        {% endif %}
+                    >
+
+                    <span class="sla-edit-toggle-control"></span>
+
+                    <span class="sla-edit-toggle-text">
+
+                        <strong>
+                            SLA activo
+                        </strong>
+
+                        <small>
+                            Las incidencias podrán utilizar esta configuración.
+                        </small>
+
+                    </span>
+
+                </label>
+
+            </div>
+
+
+            <!-- ==================================================
+                 ACCIONES
+                 ================================================== -->
+
+            <div class="sla-edit-actions">
+
+                <a
+                    href="{% url 'incidencias:sla_configuracion_lista' %}"
+                    class="btn btn-secondary"
+                >
+                    Cancelar
+                </a>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Guardar cambios
+                </button>
+
+            </div>
+
+        </form>
+
+    </section>
+
+</div>
+
+{% endblock %}

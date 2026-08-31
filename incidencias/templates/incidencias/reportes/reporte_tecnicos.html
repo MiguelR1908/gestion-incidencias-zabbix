@@ -1,0 +1,460 @@
+{% extends "incidencias/base.html" %}
+
+
+{% block title %}
+Rendimiento por técnico | Fiber Z NOC
+{% endblock %}
+
+
+{% block page_title %}
+Rendimiento por técnico
+{% endblock %}
+
+
+{% block page_subtitle %}
+Indicadores operativos, cumplimiento SLA y tiempos de atención por técnico.
+{% endblock %}
+
+
+{% block content %}
+
+<div class="report-page">
+
+
+    <!-- ======================================================
+         RESUMEN
+         ====================================================== -->
+
+    <section class="report-summary-grid">
+
+        <article class="report-summary-card">
+
+            <span>
+                Asignadas
+            </span>
+
+            <strong>
+                {{ total_asignadas_general }}
+            </strong>
+
+            <small>
+                Participaciones registradas
+            </small>
+
+        </article>
+
+
+        <article class="report-summary-card">
+
+            <span>
+                Activas
+            </span>
+
+            <strong>
+                {{ total_activas_general }}
+            </strong>
+
+            <small>
+                Actualmente en atención
+            </small>
+
+        </article>
+
+
+        <article class="report-summary-card">
+
+            <span>
+                Cerradas
+            </span>
+
+            <strong>
+                {{ total_cerradas_general }}
+            </strong>
+
+            <small>
+                Atenciones finalizadas
+            </small>
+
+        </article>
+
+
+        <article class="report-summary-card">
+
+            <span>
+                Reasignadas
+            </span>
+
+            <strong>
+                {{ total_reasignadas_general }}
+            </strong>
+
+            <small>
+                Transferidas a otro técnico
+            </small>
+
+        </article>
+
+
+        <article class="report-summary-card">
+
+            <span>
+                Cumplimiento SLA
+            </span>
+
+            <strong>
+                {{ cumplimiento_sla_general }}%
+            </strong>
+
+            <small>
+                SLA de resolución
+            </small>
+
+        </article>
+
+
+        <article class="report-summary-card">
+
+            <span>
+                Tiempo promedio
+            </span>
+
+            <strong>
+
+                {% if tiempo_promedio_general != None %}
+
+                    {{ tiempo_promedio_general }} min
+
+                {% else %}
+
+                    —
+
+                {% endif %}
+
+            </strong>
+
+            <small>
+                Resolución de incidencias
+            </small>
+
+        </article>
+
+    </section>
+
+
+
+    <!-- ======================================================
+         FILTROS
+         ====================================================== -->
+
+    <section class="card report-filter-card">
+
+        <div class="report-section-header">
+
+            <div>
+
+                <h3>
+                    Filtros
+                </h3>
+
+                <p>
+                    Consulta el desempeño por técnico y período.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <form
+            method="get"
+            class="report-filter-form"
+        >
+
+            <div class="form-group">
+
+                <label>
+                    Técnico
+                </label>
+
+                <select name="tecnico">
+
+                    <option value="">
+                        Todos los técnicos
+                    </option>
+
+                    {% for tecnico in tecnicos %}
+
+                        <option
+                            value="{{ tecnico.id }}"
+                            {% if tecnico_id == tecnico.id|stringformat:"s" %}
+                                selected
+                            {% endif %}
+                        >
+
+                            {% if tecnico.get_full_name %}
+
+                                {{ tecnico.get_full_name }}
+
+                            {% else %}
+
+                                {{ tecnico.username }}
+
+                            {% endif %}
+
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>
+                    Desde
+                </label>
+
+                <input
+                    type="date"
+                    name="desde"
+                    value="{{ fecha_desde }}"
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>
+                    Hasta
+                </label>
+
+                <input
+                    type="date"
+                    name="hasta"
+                    value="{{ fecha_hasta }}"
+                >
+
+            </div>
+
+
+            <div class="report-filter-actions">
+
+                <button
+                    type="submit"
+                    class="btn-primary"
+                >
+                    Filtrar
+                </button>
+
+
+                <a
+                    href="{% url 'incidencias:reporte_tecnicos' %}"
+                    class="btn-secondary"
+                >
+                    Limpiar
+                </a>
+
+            </div>
+
+        </form>
+
+    </section>
+
+
+
+    <!-- ======================================================
+         TABLA
+         ====================================================== -->
+
+    <section class="card report-table-card">
+
+        <div class="report-section-header">
+
+            <div>
+
+                <h3>
+                    Rendimiento de técnicos
+                </h3>
+
+                <p>
+                    Indicadores calculados sobre las incidencias registradas.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="table-responsive">
+
+            <table class="report-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Técnico
+                        </th>
+
+                        <th>
+                            Asignadas
+                        </th>
+
+                        <th>
+                            Activas
+                        </th>
+
+                        <th>
+                            Cerradas
+                        </th>
+
+                        <th>
+                            Reasignadas
+                        </th>
+
+                        <th>
+                            SLA
+                        </th>
+
+                        <th>
+                            Tiempo promedio
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for fila in resultados %}
+
+                        <tr>
+
+                            <td>
+
+                                <div class="technician-cell">
+
+                                    <strong>
+
+                                        {% if fila.tecnico.get_full_name %}
+
+                                            {{ fila.tecnico.get_full_name }}
+
+                                        {% else %}
+
+                                            {{ fila.tecnico.username }}
+
+                                        {% endif %}
+
+                                    </strong>
+
+                                    <small>
+                                        {{ fila.tecnico.username }}
+                                    </small>
+
+                                </div>
+
+                            </td>
+
+
+                            <td>
+                                {{ fila.total_asignadas }}
+                            </td>
+
+
+                            <td>
+                                {{ fila.total_activas }}
+                            </td>
+
+
+                            <td>
+                                {{ fila.total_cerradas }}
+                            </td>
+
+
+                            <td>
+                                {{ fila.total_reasignadas }}
+                            </td>
+
+
+                            <td>
+
+                                {% if fila.porcentaje_sla >= 90 %}
+
+                                    <span class="sla-performance sla-good">
+
+                                        {{ fila.porcentaje_sla }}%
+
+                                    </span>
+
+                                {% elif fila.porcentaje_sla >= 70 %}
+
+                                    <span class="sla-performance sla-warning">
+
+                                        {{ fila.porcentaje_sla }}%
+
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="sla-performance sla-bad">
+
+                                        {{ fila.porcentaje_sla }}%
+
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td>
+
+                                {% if fila.tiempo_promedio != None %}
+
+                                    {{ fila.tiempo_promedio }} min
+
+                                {% else %}
+
+                                    —
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+
+                    {% empty %}
+
+                        <tr>
+
+                            <td
+                                colspan="7"
+                                class="table-empty"
+                            >
+
+                                No existen datos para los filtros seleccionados.
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}

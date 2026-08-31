@@ -1,9 +1,13 @@
 from datetime import datetime
 import csv
+from django.urls import reverse
+from django.utils import timezone
 from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ValidationError
+from django.db.models import Case, When, Value, IntegerField
+from .services.notificaciones import crear_notificacion_sistema
 from django.contrib.auth.decorators import (
     login_required,
     permission_required,
@@ -11,13 +15,13 @@ from django.contrib.auth.decorators import (
 )
 from django.db import transaction
 from django.contrib.auth.models import User
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
-
+from django.http import JsonResponse
 from .models import (
     HistorialIncidencia,
     AccionHistorial,
@@ -32,11 +36,134 @@ from .models import (
     Nodo,
     TipoComentario,
     Ubicacion,
+    calcular_minutos,
+    SLAIncidencia,
+    NotificacionIncidencia,
+    MedioNotificacion,
+    EstadoNotificacion,
 )
 from .services.evaluacion_alertas import evaluar_alerta_para_incidencia
 from .services.sincronizacion_alertas import sincronizar_alertas_zabbix
 from .services.sincronizacion_hosts import sincronizar_hosts_zabbix
 from .forms import AsignacionIncidenciaForm, RegistroAvanceIncidenciaForm
+from datetime import datetime, time, timedelta
+from django.utils.dateparse import parse_date
+from django.contrib.auth import get_user_model
+
+# ==========================================================
+# CONTROL DE ACCESO POR ROLES
+# ==========================================================
+
+def obtener_rol_usuario(user):
+    """
+    Obtiene el rol del usuario autenticado.
+    """
+
+    if not user or not user.is_authenticated:
+        return None
+
+    perfil = getattr(
+        user,
+        "perfil_incidencias",
+        None,
+    )
+
+    if not perfil:
+        return None
+
+    return perfil.rol
+
+
+def es_administrador(user):
+    """
+    Administrador funcional del sistema.
+    """
+
+    if not user or not user.is_authenticated:
+        return False
+
+    if user.is_superuser:
+        return True
+
+    return (
+        obtener_rol_usuario(user)
+        == "ADMINISTRADOR"
+    )
+
+
+def es_operacion_noc(user):
+    """
+    Personal que participa en la operación del NOC.
+    """
+
+    if not user or not user.is_authenticated:
+        return False
+
+    if user.is_superuser:
+        return True
+
+    return obtener_rol_usuario(user) in [
+        "ADMINISTRADOR",
+        "GESTOR_NOC",
+        "SUPERVISOR",
+    ]
+
+
+def puede_atender_incidencias(user):
+    """
+    Usuarios que pueden consultar/atender incidencias.
+    """
+
+    if not user or not user.is_authenticated:
+        return False
+
+    if user.is_superuser:
+        return True
+
+    return obtener_rol_usuario(user) in [
+        "ADMINISTRADOR",
+        "GESTOR_NOC",
+        "SUPERVISOR",
+        "TECNICO",
+    ]
+
+
+def puede_ver_infraestructura(user):
+    """
+    Acceso de consulta a infraestructura.
+    """
+
+    if not user or not user.is_authenticated:
+        return False
+
+    if user.is_superuser:
+        return True
+
+    return obtener_rol_usuario(user) in [
+        "ADMINISTRADOR",
+        "GESTOR_NOC",
+        "SUPERVISOR",
+        "TECNICO",
+    ]
+
+
+def puede_ver_reportes(user):
+    """
+    Acceso a reportes operativos y gerenciales.
+    """
+
+    if not user or not user.is_authenticated:
+        return False
+
+    if user.is_superuser:
+        return True
+
+    return obtener_rol_usuario(user) in [
+        "ADMINISTRADOR",
+        "GESTOR_NOC",
+        "SUPERVISOR",
+        "DUENO",
+    ]
 
 
 
@@ -101,39 +228,448 @@ def logout_view(request):
 
 @login_required
 def dashboard(request):
-    from .models import Nodo, ComponenteRed, Incidencia, AlertaZabbix, EstadoIncidencia
+
+    from django.utils import timezone
+    from django.db.models import Count, Q
+
+    from .models import (
+        Nodo,
+        ComponenteRed,
+        Incidencia,
+        AlertaZabbix,
+        EstadoIncidencia,
+        Severidad,
+        AsignacionIncidencia,
+    )
+
+
+    # ==========================================================
+    # ROL DEL USUARIO
+    # ==========================================================
+
+    rol_usuario = obtener_rol_usuario(
+        request.user
+    )
+
+    es_tecnico = (
+        rol_usuario == "TECNICO"
+        and not request.user.is_superuser
+    )
+
+
+    # ==========================================================
+    # QUERYSET BASE DE INCIDENCIAS
+    # ==========================================================
+
+    incidencias = (
+        Incidencia.objects
+        .select_related(
+            "nodo_afectado",
+            "componente_principal",
+            "tecnico_asignado",
+        )
+    )
+
+
+    # Técnico: dashboard únicamente con sus incidencias
+    if es_tecnico:
+
+        incidencias = incidencias.filter(
+            Q(tecnico_asignado=request.user)
+            | Q(asignaciones__tecnico=request.user)
+        ).distinct()
+
+
+    # ==========================================================
+    # INCIDENCIAS ABIERTAS
+    # ==========================================================
+
+    incidencias_abiertas_qs = (
+        incidencias
+        .exclude(
+            estado__in=[
+                EstadoIncidencia.CERRADA,
+                EstadoIncidencia.CANCELADA,
+            ]
+        )
+    )
+
+    incidencias_abiertas = (
+        incidencias_abiertas_qs.count()
+    )
+
+
+    # ==========================================================
+    # CRÍTICAS ABIERTAS
+    # ==========================================================
+
+    incidencias_criticas = (
+        incidencias_abiertas_qs
+        .filter(
+            severidad=Severidad.CRITICA
+        )
+        .count()
+    )
+
+
+    # ==========================================================
+    # SIN ASIGNAR
+    # ==========================================================
+
+    incidencias_sin_asignar = (
+        incidencias_abiertas_qs
+        .filter(
+            tecnico_asignado__isnull=True
+        )
+        .count()
+    )
+
+
+    # ==========================================================
+    # EN ATENCIÓN
+    # ==========================================================
+
+    incidencias_en_atencion = (
+        incidencias_abiertas_qs
+        .filter(
+            estado=EstadoIncidencia.EN_ATENCION
+        )
+        .count()
+    )
+
+
+    # ==========================================================
+    # SLA INCUMPLIDO
+    # ==========================================================
+
+    incidencias_sla_incumplido = (
+        incidencias
+        .filter(
+            Q(cumple_sla_registro=False)
+            | Q(cumple_sla_asignacion=False)
+            | Q(cumple_sla_inicio_atencion=False)
+            | Q(cumple_sla_resolucion=False)
+        )
+        .distinct()
+        .count()
+    )
+
+
+    # ==========================================================
+    # CERRADAS HOY
+    # ==========================================================
+
+    hoy = timezone.localdate()
+
+    incidencias_cerradas_hoy = (
+        incidencias
+        .filter(
+            estado=EstadoIncidencia.CERRADA,
+            fecha_cierre__date=hoy,
+        )
+        .count()
+    )
+
+
+    # ==========================================================
+    # CUMPLIMIENTO SLA
+    # ==========================================================
+
+    incidencias_evaluadas_sla = (
+        incidencias
+        .filter(
+            cumple_sla_resolucion__isnull=False
+        )
+    )
+
+    total_evaluadas_sla = (
+        incidencias_evaluadas_sla.count()
+    )
+
+    total_cumplen_sla = (
+        incidencias_evaluadas_sla
+        .filter(
+            cumple_sla_resolucion=True
+        )
+        .count()
+    )
+
+    if total_evaluadas_sla:
+
+        cumplimiento_sla = round(
+            (
+                total_cumplen_sla
+                / total_evaluadas_sla
+            ) * 100,
+            1,
+        )
+
+    else:
+
+        cumplimiento_sla = 0
+
+
+    # ==========================================================
+    # INCIDENCIAS PRIORITARIAS
+    # ==========================================================
+
+    incidencias_prioritarias = (
+        incidencias_abiertas_qs
+        .order_by(
+            "severidad",
+            "fecha_deteccion",
+        )[:10]
+    )
+
+
+    # ==========================================================
+    # ALERTAS ZABBIX
+    # ==========================================================
+
+    alertas_zabbix = (
+        AlertaZabbix.objects
+        .order_by(
+            "-fecha_evento"
+        )[:10]
+    )
+
+
+    total_alertas_zabbix = (
+        AlertaZabbix.objects.count()
+    )
+
+
+    # ==========================================================
+    # CARGA POR TÉCNICO
+    # ==========================================================
+
+    if es_tecnico:
+
+        carga_tecnicos = []
+
+    else:
+
+        carga_tecnicos = (
+            AsignacionIncidencia.objects
+            .filter(
+                activo=True
+            )
+            .values(
+                "tecnico__id",
+                "tecnico__username",
+                "tecnico__first_name",
+                "tecnico__last_name",
+            )
+            .annotate(
+                activas=Count(
+                    "incidencia",
+                    distinct=True,
+                )
+            )
+            .order_by(
+                "-activas"
+            )[:10]
+        )
+
+
+    # ==========================================================
+    # DATOS DE INFRAESTRUCTURA SECUNDARIOS
+    # ==========================================================
 
     total_nodos = Nodo.objects.count()
-    total_componentes = ComponenteRed.objects.count()
-    alertas_zabbix = AlertaZabbix.objects.count()
+    total_componentes = (
+        ComponenteRed.objects.count()
+    )
 
-    incidencias_abiertas = Incidencia.objects.exclude(
-        estado__in=[
-            EstadoIncidencia.CERRADA,
-            EstadoIncidencia.CANCELADA,
-        ]
-    ).count()
+
+    # ==========================================================
+    # CONTEXTO
+    # ==========================================================
 
     context = {
-        "total_nodos": total_nodos,
-        "total_componentes": total_componentes,
-        "incidencias_abiertas": incidencias_abiertas,
-        "alertas_zabbix": alertas_zabbix,
+
+        "rol_usuario": rol_usuario,
+        "es_tecnico": es_tecnico,
+
+        "incidencias_abiertas":
+            incidencias_abiertas,
+
+        "incidencias_criticas":
+            incidencias_criticas,
+
+        "incidencias_sin_asignar":
+            incidencias_sin_asignar,
+
+        "incidencias_en_atencion":
+            incidencias_en_atencion,
+
+        "incidencias_sla_incumplido":
+            incidencias_sla_incumplido,
+
+        "incidencias_cerradas_hoy":
+            incidencias_cerradas_hoy,
+
+        "cumplimiento_sla":
+            cumplimiento_sla,
+
+        "total_alertas_zabbix":
+            total_alertas_zabbix,
+
+        "incidencias_prioritarias":
+            incidencias_prioritarias,
+
+        "alertas_zabbix":
+            alertas_zabbix,
+
+        "carga_tecnicos":
+            carga_tecnicos,
+
+        "total_nodos":
+            total_nodos,
+
+        "total_componentes":
+            total_componentes,
     }
 
-    return render(request, "incidencias/dashboard/dashboard.html", context)
+
+    return render(
+        request,
+        "incidencias/dashboard/dashboard.html",
+        context,
+    )
+
+
+def aplicar_filtros_incidencias(request, queryset):
+    """
+    Aplica los filtros comunes del módulo de incidencias.
+
+    Se utiliza para:
+    - listado;
+    - reporte PDF;
+    - exportación CSV.
+
+    El período se evalúa usando fecha_deteccion.
+    """
+
+    query = request.GET.get("q", "").strip()
+    estado = request.GET.get("estado", "").strip()
+    severidad = request.GET.get("severidad", "").strip()
+    nodo_id = request.GET.get("nodo", "").strip()
+
+    fecha_desde_texto = request.GET.get(
+        "fecha_desde",
+        "",
+    ).strip()
+
+    fecha_hasta_texto = request.GET.get(
+        "fecha_hasta",
+        "",
+    ).strip()
+
+    # ==========================================================
+    # FILTROS GENERALES
+    # ==========================================================
+
+    if query:
+        queryset = queryset.filter(
+            Q(codigo__icontains=query)
+            | Q(titulo__icontains=query)
+            | Q(descripcion__icontains=query)
+            | Q(nodo_afectado__codigo__icontains=query)
+            | Q(nodo_afectado__nombre__icontains=query)
+            | Q(componente_principal__codigo__icontains=query)
+            | Q(componente_principal__nombre__icontains=query)
+            | Q(tecnico_asignado__username__icontains=query)
+            | Q(registrado_por__username__icontains=query)
+        )
+
+    if estado:
+        queryset = queryset.filter(
+            estado=estado,
+        )
+
+    if severidad:
+        queryset = queryset.filter(
+            severidad=severidad,
+        )
+
+    if nodo_id:
+        queryset = queryset.filter(
+            nodo_afectado_id=nodo_id,
+        )
+
+    # ==========================================================
+    # FILTRO POR PERÍODO
+    # ==========================================================
+
+    fecha_desde = parse_date(fecha_desde_texto)
+    fecha_hasta = parse_date(fecha_hasta_texto)
+
+    zona_horaria = timezone.get_current_timezone()
+
+    if fecha_desde:
+
+        inicio = timezone.make_aware(
+            datetime.combine(
+                fecha_desde,
+                time.min,
+            ),
+            zona_horaria,
+        )
+
+        queryset = queryset.filter(
+            fecha_deteccion__gte=inicio,
+        )
+
+    if fecha_hasta:
+
+        # Usamos el inicio del día siguiente como límite
+        # exclusivo. Así se incluye TODO el día seleccionado.
+        dia_siguiente = fecha_hasta + timedelta(days=1)
+
+        fin_exclusivo = timezone.make_aware(
+            datetime.combine(
+                dia_siguiente,
+                time.min,
+            ),
+            zona_horaria,
+        )
+
+        queryset = queryset.filter(
+            fecha_deteccion__lt=fin_exclusivo,
+        )
+
+    return queryset, {
+        "query": query,
+        "estado_seleccionado": estado,
+        "severidad_seleccionada": severidad,
+        "nodo_seleccionado": nodo_id,
+        "fecha_desde": fecha_desde_texto,
+        "fecha_hasta": fecha_hasta_texto,
+    }
 
 @login_required
+@user_passes_test(
+    puede_atender_incidencias,
+    login_url="incidencias:acceso_denegado",
+)
 def incidencias_page(request):
     """
     Lista, busca y filtra las incidencias.
 
-    Las tarjetas superiores muestran cantidades generales.
-    La tabla muestra únicamente el resultado filtrado.
+    Para ADMINISTRADOR, GESTOR_NOC y SUPERVISOR conserva
+    exactamente la vista general existente.
+
+    Para TECNICO muestra únicamente:
+    - ACTIVAS: incidencias actualmente asignadas al técnico y no finalizadas.
+    - HISTORIAL: incidencias que estuvieron asignadas al técnico y que ya
+      no forman parte de su bandeja activa.
+
+    Los filtros existentes se aplican después de esta restricción por rol.
     """
 
     # ==========================================================
-    # CONSULTA GENERAL
+    # CONSULTA BASE
     # ==========================================================
 
     base_incidencias = (
@@ -149,51 +685,101 @@ def incidencias_page(request):
     )
 
     # ==========================================================
-    # PARÁMETROS DE FILTRO
+    # VISTA PERSONAL DEL TÉCNICO
     # ==========================================================
 
-    query = request.GET.get("q", "").strip()
-    estado = request.GET.get("estado", "").strip()
-    severidad = request.GET.get("severidad", "").strip()
-    nodo_id = request.GET.get("nodo", "").strip()
+    rol_usuario = obtener_rol_usuario(request.user)
+    es_tecnico = rol_usuario == "TECNICO"
 
-    # La tabla comienza con todas las incidencias.
-    incidencias = base_incidencias
+    vista_tecnico = "activas"
+    total_activas_tecnico = 0
+    total_historial_tecnico = 0
+
+    if es_tecnico:
+
+        vista_solicitada = request.GET.get(
+            "vista",
+            "activas",
+        ).strip().lower()
+
+        if vista_solicitada in [
+            "activas",
+            "historial",
+        ]:
+            vista_tecnico = vista_solicitada
+
+        # ------------------------------------------------------
+        # ACTIVAS
+        # Actualmente están bajo responsabilidad del técnico
+        # y todavía no están finalizadas.
+        # ------------------------------------------------------
+
+        incidencias_activas_tecnico = (
+            base_incidencias
+            .filter(
+                tecnico_asignado=request.user,
+            )
+            .exclude(
+                estado__in=[
+                    EstadoIncidencia.CERRADA,
+                    EstadoIncidencia.CANCELADA,
+                ]
+            )
+        )
+
+        # ------------------------------------------------------
+        # HISTORIAL DE PARTICIPACIÓN
+        # La incidencia tuvo en algún momento una asignación
+        # hacia este técnico, pero ya no está en su bandeja activa.
+        #
+        # Incluye:
+        # - cerradas/canceladas que atendió;
+        # - incidencias reasignadas posteriormente a otra persona.
+        # ------------------------------------------------------
+
+        incidencias_historial_tecnico = (
+            base_incidencias
+            .filter(
+                asignaciones__tecnico=request.user,
+            )
+            .filter(
+                Q(
+                    estado__in=[
+                        EstadoIncidencia.CERRADA,
+                        EstadoIncidencia.CANCELADA,
+                    ]
+                )
+                | ~Q(
+                    tecnico_asignado=request.user,
+                )
+            )
+            .distinct()
+        )
+
+        total_activas_tecnico = (
+            incidencias_activas_tecnico.count()
+        )
+
+        total_historial_tecnico = (
+            incidencias_historial_tecnico.count()
+        )
+
+        if vista_tecnico == "historial":
+            base_incidencias = incidencias_historial_tecnico
+        else:
+            base_incidencias = incidencias_activas_tecnico
 
     # ==========================================================
-    # APLICAR FILTROS
+    # APLICAR FILTROS COMUNES
     # ==========================================================
 
-    if query:
-        incidencias = incidencias.filter(
-            Q(codigo__icontains=query)
-            | Q(titulo__icontains=query)
-            | Q(descripcion__icontains=query)
-            | Q(nodo_afectado__codigo__icontains=query)
-            | Q(nodo_afectado__nombre__icontains=query)
-            | Q(componente_principal__codigo__icontains=query)
-            | Q(componente_principal__nombre__icontains=query)
-            | Q(tecnico_asignado__username__icontains=query)
-            | Q(registrado_por__username__icontains=query)
-        )
-
-    if estado:
-        incidencias = incidencias.filter(
-            estado=estado,
-        )
-
-    if severidad:
-        incidencias = incidencias.filter(
-            severidad=severidad,
-        )
-
-    if nodo_id:
-        incidencias = incidencias.filter(
-            nodo_afectado_id=nodo_id,
-        )
+    incidencias, filtros = aplicar_filtros_incidencias(
+        request,
+        base_incidencias,
+    )
 
     # ==========================================================
-    # NODOS DISPONIBLES PARA EL SELECT
+    # NODOS PARA SELECT
     # ==========================================================
 
     nodos = (
@@ -206,28 +792,31 @@ def incidencias_page(request):
     )
 
     # ==========================================================
-    # CANTIDADES GENERALES
+    # RESUMEN DEL RESULTADO FILTRADO
     # ==========================================================
 
-    total_general = base_incidencias.count()
+    total_general = incidencias.count()
 
-    incidencias_detectadas = base_incidencias.filter(
-        estado="DETECTADA",
+    incidencias_detectadas = incidencias.filter(
+        estado=EstadoIncidencia.DETECTADA,
     ).count()
 
-    incidencias_en_proceso = base_incidencias.filter(
-        estado="EN_PROCESO",
+    incidencias_en_proceso = incidencias.filter(
+        estado__in=[
+            EstadoIncidencia.ASIGNADA,
+            EstadoIncidencia.EN_ATENCION,
+        ],
     ).count()
 
-    incidencias_altas = base_incidencias.filter(
+    incidencias_altas = incidencias.filter(
         severidad__in=[
             "ALTA",
             "CRITICA",
         ],
     ).count()
 
-    incidencias_cerradas = base_incidencias.filter(
-        estado="CERRADA",
+    incidencias_cerradas = incidencias.filter(
+        estado=EstadoIncidencia.CERRADA,
     ).count()
 
     # ==========================================================
@@ -235,25 +824,24 @@ def incidencias_page(request):
     # ==========================================================
 
     context = {
-        # Listado filtrado
         "incidencias": incidencias,
-        "total_incidencias": incidencias.count(),
+        "total_incidencias": total_general,
 
-        # Tarjetas generales
         "total_general": total_general,
         "incidencias_detectadas": incidencias_detectadas,
         "incidencias_en_proceso": incidencias_en_proceso,
         "incidencias_altas": incidencias_altas,
         "incidencias_cerradas": incidencias_cerradas,
 
-        # Filtro de nodos
         "nodos": nodos,
 
-        # Mantener valores seleccionados
-        "query": query,
-        "estado_seleccionado": estado,
-        "severidad_seleccionada": severidad,
-        "nodo_seleccionado": nodo_id,
+        # Vista por rol. No altera la lógica de las incidencias.
+        "es_tecnico": es_tecnico,
+        "vista_tecnico": vista_tecnico,
+        "total_activas_tecnico": total_activas_tecnico,
+        "total_historial_tecnico": total_historial_tecnico,
+
+        **filtros,
     }
 
     return render(
@@ -280,28 +868,6 @@ def asignaciones_page(request):
             "pbi": "EP05 - Gestión de atención de incidencias",
         }
     )
-
-def es_administrador(user):
-    """
-    Verifica si el usuario tiene permisos de administración del sistema.
-    Permite acceso a:
-    - Superusuarios de Django.
-    - Usuarios con perfil ADMINISTRADOR.
-    """
-
-    if not user.is_authenticated:
-        return False
-
-    # Superusuario de Django: acceso total
-    if user.is_superuser:
-        return True
-
-    perfil = getattr(user, "perfil_incidencias", None)
-
-    if not perfil:
-        return False
-
-    return perfil.rol == "ADMINISTRADOR"
 
 @login_required
 @user_passes_test(es_administrador, login_url="incidencias:acceso_denegado")
@@ -477,31 +1043,618 @@ def componentes_page(request):
     })
 
 
-@login_required
-def sla_indicadores_page(request):
-    return render(request, "incidencias/modulo.html", {
-        "titulo": "SLA e Indicadores",
-        "subtitulo": "Control de tiempos de registro, asignación, atención, resolución y cumplimiento de SLA.",
-        "pbi": "EP08 - Gestión de SLA e indicadores",
-    })
-
 
 @login_required
-def reportes_page(request):
-    return render(request, "incidencias/modulo.html", {
-        "titulo": "Reportes",
-        "subtitulo": "Reportes operativos, históricos y estadísticos de incidencias.",
-        "pbi": "EP10 - Reportes y estadísticas",
-    })
+def reporte_nodos_componentes(request):
+    """
+    PBI-097.
 
+    Reporte de incidencias agrupadas por:
+    - nodo;
+    - componente de red.
+
+    Permite identificar recurrencia y concentración
+    de incidencias en la infraestructura.
+    """
+
+    # ==========================================================
+    # CONSULTA BASE
+    # ==========================================================
+
+    incidencias = (
+        Incidencia.objects
+        .select_related(
+            "nodo_afectado",
+            "componente_principal",
+            "tecnico_asignado",
+            "registrado_por",
+            "alerta_zabbix",
+        )
+        .order_by("-fecha_deteccion")
+    )
+
+    # ==========================================================
+    # FILTROS
+    #
+    # Reutilizamos exactamente los mismos filtros
+    # del listado, PDF y CSV.
+    # ==========================================================
+
+    incidencias, filtros = aplicar_filtros_incidencias(
+        request,
+        incidencias,
+    )
+
+    # ==========================================================
+    # RESUMEN GENERAL
+    # ==========================================================
+
+    total_incidencias = incidencias.count()
+
+    total_nodos = (
+        incidencias
+        .values("nodo_afectado_id")
+        .distinct()
+        .count()
+    )
+
+    total_componentes = (
+        incidencias
+        .filter(
+            componente_principal__isnull=False,
+        )
+        .values("componente_principal_id")
+        .distinct()
+        .count()
+    )
+
+    total_criticas = incidencias.filter(
+        severidad="CRITICA",
+    ).count()
+
+    # ==========================================================
+    # RANKING POR NODO
+    # ==========================================================
+
+    ranking_nodos = (
+        incidencias
+        .values(
+            "nodo_afectado_id",
+            "nodo_afectado__codigo",
+            "nodo_afectado__nombre",
+        )
+        .annotate(
+            total=Count("id"),
+
+            criticas=Count(
+                "id",
+                filter=Q(
+                    severidad="CRITICA"
+                ),
+            ),
+
+            altas=Count(
+                "id",
+                filter=Q(
+                    severidad="ALTA"
+                ),
+            ),
+
+            cerradas=Count(
+                "id",
+                filter=Q(
+                    estado=EstadoIncidencia.CERRADA
+                ),
+            ),
+        )
+        .order_by(
+            "-total",
+            "nodo_afectado__codigo",
+        )
+    )
+
+    # ==========================================================
+    # RANKING POR COMPONENTE
+    # ==========================================================
+
+    ranking_componentes = (
+        incidencias
+        .filter(
+            componente_principal__isnull=False,
+        )
+        .values(
+            "componente_principal_id",
+            "componente_principal__codigo",
+            "componente_principal__nombre",
+            "nodo_afectado__codigo",
+            "nodo_afectado__nombre",
+        )
+        .annotate(
+            total=Count("id"),
+
+            criticas=Count(
+                "id",
+                filter=Q(
+                    severidad="CRITICA"
+                ),
+            ),
+
+            altas=Count(
+                "id",
+                filter=Q(
+                    severidad="ALTA"
+                ),
+            ),
+
+            cerradas=Count(
+                "id",
+                filter=Q(
+                    estado=EstadoIncidencia.CERRADA
+                ),
+            ),
+        )
+        .order_by(
+            "-total",
+            "componente_principal__codigo",
+        )
+    )
+
+    # ==========================================================
+    # CONTEXTO
+    # ==========================================================
+
+    context = {
+        "ranking_nodos": ranking_nodos,
+        "ranking_componentes": ranking_componentes,
+
+        "total_incidencias": total_incidencias,
+        "total_nodos": total_nodos,
+        "total_componentes": total_componentes,
+        "total_criticas": total_criticas,
+
+        **filtros,
+    }
+
+    return render(
+        request,
+        "incidencias/reportes/reporte_nodos_componentes.html",
+        context,
+    )
 
 @login_required
-def configuracion_page(request):
-    return render(request, "incidencias/modulo.html", {
-        "titulo": "Configuración",
-        "subtitulo": "Parámetros generales, catálogos y opciones administrativas del sistema.",
-        "pbi": "EP11 - Administración y configuración del sistema",
-    })
+def reporte_sla_tiempos(request):
+    """
+    Reporte operativo de tiempos de atención
+    y cumplimiento de SLA.
+    """
+
+    # ==========================================================
+    # CONSULTA BASE
+    # ==========================================================
+
+    incidencias = (
+        Incidencia.objects
+        .select_related(
+            "nodo_afectado",
+            "componente_principal",
+            "tecnico_asignado",
+            "sla",
+        )
+        .order_by("-fecha_deteccion")
+    )
+
+    # ==========================================================
+    # FILTROS COMUNES
+    # ==========================================================
+
+    incidencias, filtros = aplicar_filtros_incidencias(
+        request,
+        incidencias,
+    )
+
+    # Evaluamos una sola vez el queryset porque los tiempos
+    # son propiedades calculadas del modelo.
+    incidencias_lista = list(incidencias)
+
+    # ==========================================================
+    # LÍMITES SLA POR INCIDENCIA
+    # ==========================================================
+
+    for incidencia in incidencias_lista:
+
+        incidencia.sla_registro_max = (
+            incidencia.sla.tiempo_max_registro_min
+            if incidencia.sla
+            else None
+        )
+
+        incidencia.sla_asignacion_max = (
+            incidencia.sla.tiempo_max_asignacion_min
+            if incidencia.sla
+            else None
+        )
+
+        incidencia.sla_inicio_max = (
+            incidencia.sla.tiempo_max_inicio_atencion_min
+            if incidencia.sla
+            else None
+        )
+
+        incidencia.sla_resolucion_max = (
+            incidencia.sla.tiempo_max_resolucion_min
+            if incidencia.sla
+            else None
+        )
+
+    # ==========================================================
+    # ESTADO ACTUAL DEL SLA EN INCIDENCIAS ABIERTAS
+    # ==========================================================
+
+    ahora = timezone.now()
+
+    for incidencia in incidencias_lista:
+
+        incidencia.sla_actual_estado = None
+        incidencia.sla_actual_etapa = None
+        incidencia.sla_actual_transcurrido = None
+        incidencia.sla_actual_limite = None
+
+        if not incidencia.sla:
+            continue
+
+        # ======================================================
+        # ESPERANDO ASIGNACIÓN
+        # Registro -> Asignación
+        # ======================================================
+
+        if (
+            incidencia.fecha_registro
+            and not incidencia.fecha_asignacion
+        ):
+
+            minutos = calcular_minutos(
+                incidencia.fecha_registro,
+                ahora,
+            )
+
+            limite = (
+                incidencia.sla
+                .tiempo_max_asignacion_min
+            )
+
+            incidencia.sla_actual_etapa = "Asignación"
+            incidencia.sla_actual_transcurrido = minutos
+            incidencia.sla_actual_limite = limite
+
+            if minutos is not None and limite is not None:
+
+                if minutos > limite:
+                    incidencia.sla_actual_estado = "VENCIDO"
+                else:
+                    incidencia.sla_actual_estado = "EN_TIEMPO"
+
+        # ======================================================
+        # ASIGNADA PERO SIN INICIAR ATENCIÓN
+        # Asignación -> Inicio
+        # ======================================================
+
+        elif (
+            incidencia.fecha_asignacion
+            and not incidencia.fecha_inicio_atencion
+        ):
+
+            minutos = calcular_minutos(
+                incidencia.fecha_asignacion,
+                ahora,
+            )
+
+            limite = (
+                incidencia.sla
+                .tiempo_max_inicio_atencion_min
+            )
+
+            incidencia.sla_actual_etapa = "Inicio de atención"
+            incidencia.sla_actual_transcurrido = minutos
+            incidencia.sla_actual_limite = limite
+
+            if minutos is not None and limite is not None:
+
+                if minutos > limite:
+                    incidencia.sla_actual_estado = "VENCIDO"
+                else:
+                    incidencia.sla_actual_estado = "EN_TIEMPO"
+
+        # ======================================================
+        # EN ATENCIÓN PERO SIN RESOLVER
+        # Detección -> Resolución
+        # ======================================================
+
+        elif (
+            incidencia.fecha_inicio_atencion
+            and not incidencia.fecha_resolucion
+        ):
+
+            minutos = calcular_minutos(
+                incidencia.fecha_deteccion,
+                ahora,
+            )
+
+            limite = (
+                incidencia.sla
+                .tiempo_max_resolucion_min
+            )
+
+            incidencia.sla_actual_etapa = "Resolución"
+            incidencia.sla_actual_transcurrido = minutos
+            incidencia.sla_actual_limite = limite
+
+            if minutos is not None and limite is not None:
+
+                if minutos > limite:
+                    incidencia.sla_actual_estado = "VENCIDO"
+                else:
+                    incidencia.sla_actual_estado = "EN_TIEMPO"
+
+    # ==========================================================
+    # RESUMEN SLA ACTUAL DE INCIDENCIAS ABIERTAS
+    # ==========================================================
+
+    incidencias_sla_vencido = sum(
+        1
+        for incidencia in incidencias_lista
+        if incidencia.sla_actual_estado == "VENCIDO"
+    )
+
+    incidencias_sla_en_tiempo = sum(
+        1
+        for incidencia in incidencias_lista
+        if incidencia.sla_actual_estado == "EN_TIEMPO"
+    )
+
+    # ==========================================================
+    # FUNCIONES AUXILIARES
+    # ==========================================================
+
+    def promedio(valores):
+
+        valores_validos = [
+            valor
+            for valor in valores
+            if valor is not None
+        ]
+
+        if not valores_validos:
+            return None
+
+        return round(
+            sum(valores_validos) / len(valores_validos),
+            2,
+        )
+
+    def calcular_sla(nombre_campo):
+
+        valores = [
+            getattr(incidencia, nombre_campo)
+            for incidencia in incidencias_lista
+        ]
+
+        evaluados = [
+            valor
+            for valor in valores
+            if valor is not None
+        ]
+
+        cumplidos = sum(
+            1
+            for valor in evaluados
+            if valor is True
+        )
+
+        incumplidos = sum(
+            1
+            for valor in evaluados
+            if valor is False
+        )
+
+        porcentaje = (
+            round(
+                (
+                    cumplidos
+                    / len(evaluados)
+                ) * 100,
+                2,
+            )
+            if evaluados
+            else None
+        )
+
+        return {
+            "evaluados": len(evaluados),
+            "cumplidos": cumplidos,
+            "incumplidos": incumplidos,
+            "porcentaje": porcentaje,
+        }
+
+    # ==========================================================
+    # TOTAL GENERAL
+    # ==========================================================
+
+    total_incidencias = len(incidencias_lista)
+
+    # ==========================================================
+    # TIEMPOS PROMEDIO
+    # ==========================================================
+
+    promedio_registro = promedio([
+        incidencia.tiempo_registro_min
+        for incidencia in incidencias_lista
+    ])
+
+    promedio_asignacion = promedio([
+        incidencia.tiempo_asignacion_min
+        for incidencia in incidencias_lista
+    ])
+
+    promedio_inicio_atencion = promedio([
+        incidencia.tiempo_inicio_atencion_min
+        for incidencia in incidencias_lista
+    ])
+
+    promedio_resolucion = promedio([
+        incidencia.tiempo_resolucion_min
+        for incidencia in incidencias_lista
+    ])
+
+    promedio_cierre = promedio([
+        incidencia.tiempo_cierre_min
+        for incidencia in incidencias_lista
+    ])
+
+    # ==========================================================
+    # CUMPLIMIENTO SLA HISTÓRICO
+    # ==========================================================
+
+    sla_registro = calcular_sla(
+        "cumple_sla_registro"
+    )
+
+    sla_asignacion = calcular_sla(
+        "cumple_sla_asignacion"
+    )
+
+    sla_inicio_atencion = calcular_sla(
+        "cumple_sla_inicio_atencion"
+    )
+
+    sla_resolucion = calcular_sla(
+        "cumple_sla_resolucion"
+    )
+
+    # ==========================================================
+    # RESUMEN SLA POR ETAPA
+    # ==========================================================
+
+    resumen_sla = [
+        {
+            "etapa": "Registro",
+            **sla_registro,
+        },
+        {
+            "etapa": "Asignación",
+            **sla_asignacion,
+        },
+        {
+            "etapa": "Inicio de atención",
+            **sla_inicio_atencion,
+        },
+        {
+            "etapa": "Resolución",
+            **sla_resolucion,
+        },
+    ]
+
+    # ==========================================================
+    # INDICADORES GENERALES
+    # ==========================================================
+
+    sla_total_evaluados = sum(
+        item["evaluados"]
+        for item in resumen_sla
+    )
+
+    sla_total_cumplidos = sum(
+        item["cumplidos"]
+        for item in resumen_sla
+    )
+
+    sla_total_incumplidos = sum(
+        item["incumplidos"]
+        for item in resumen_sla
+    )
+
+    porcentaje_sla_general = (
+        round(
+            (
+                sla_total_cumplidos
+                / sla_total_evaluados
+            ) * 100,
+            2,
+        )
+        if sla_total_evaluados
+        else None
+    )
+
+    # ==========================================================
+    # NODOS PARA FILTRO
+    # ==========================================================
+
+    nodos = (
+        Nodo.objects
+        .filter(activo=True)
+        .order_by(
+            "codigo",
+            "nombre",
+        )
+    )
+
+    # ==========================================================
+    # CONTEXTO
+    # ==========================================================
+
+    context = {
+
+        # ------------------------------------------------------
+        # GENERAL
+        # ------------------------------------------------------
+
+        "total_incidencias": total_incidencias,
+        "incidencias": incidencias_lista,
+
+        # ------------------------------------------------------
+        # TIEMPOS PROMEDIO
+        # ------------------------------------------------------
+
+        "promedio_registro": promedio_registro,
+        "promedio_asignacion": promedio_asignacion,
+        "promedio_inicio_atencion": promedio_inicio_atencion,
+        "promedio_resolucion": promedio_resolucion,
+        "promedio_cierre": promedio_cierre,
+
+        # ------------------------------------------------------
+        # SLA HISTÓRICO
+        # ------------------------------------------------------
+
+        "resumen_sla": resumen_sla,
+
+        "sla_total_evaluados": sla_total_evaluados,
+        "sla_total_cumplidos": sla_total_cumplidos,
+        "sla_total_incumplidos": sla_total_incumplidos,
+
+        "porcentaje_sla_general": porcentaje_sla_general,
+
+        # ------------------------------------------------------
+        # SLA ACTUAL DE INCIDENCIAS ABIERTAS
+        # ------------------------------------------------------
+
+        "incidencias_sla_vencido": incidencias_sla_vencido,
+        "incidencias_sla_en_tiempo": incidencias_sla_en_tiempo,
+
+        # ------------------------------------------------------
+        # FILTROS
+        # ------------------------------------------------------
+
+        "nodos": nodos,
+
+        **filtros,
+    }
+
+    return render(
+        request,
+        "incidencias/reportes/reporte_sla_tiempos.html",
+        context,
+    )
+
+
 
 
 def pagina_no_encontrada(request, ruta_invalida=None):
@@ -1617,6 +2770,10 @@ def incidencias_sincronizar(request):
 
 
 @login_required
+@user_passes_test(
+    es_operacion_noc,
+    login_url="/403/",
+)
 def incidencia_asignar(request, incidencia_id):
     """
     Asignación inicial.
@@ -1693,6 +2850,19 @@ def incidencia_asignar(request, incidencia_id):
                     asignacion.actualizado_por = request.user
                     asignacion.activo = True
                     asignacion.save()
+                    crear_notificacion_sistema(
+                        incidencia=incidencia_bloqueada,
+                        usuario_destino=asignacion.tecnico,
+                        mensaje=(
+                            f"Se te asignó la incidencia "
+                            f"{incidencia_bloqueada.codigo}. "
+                            f"Severidad: "
+                            f"{incidencia_bloqueada.get_severidad_display()}. "
+                            f"Nodo: "
+                            f"{incidencia_bloqueada.nodo_afectado.codigo}."
+                        ),
+                        creado_por=request.user,
+                    )
 
                 nombre_tecnico = (
                     asignacion.tecnico.get_full_name()
@@ -1747,7 +2917,16 @@ def incidencia_detalle(request, incidencia_id):
     - Escalamiento: crea una nueva AsignacionIncidencia, cambia el técnico
       actual y mantiene EN_ATENCION.
     - Cierre: pasa directamente a CERRADA y deja la bitácora en solo lectura.
+
+    Permisos para técnicos:
+    - Puede visualizar una incidencia si participó en ella alguna vez.
+    - Solo puede modificarla si actualmente es el técnico responsable.
+    - Si nunca participó, obtiene 403.
     """
+
+    # ==========================================================
+    # OBTENER INCIDENCIA
+    # ==========================================================
 
     incidencia = get_object_or_404(
         Incidencia.objects.select_related(
@@ -1762,62 +2941,180 @@ def incidencia_detalle(request, incidencia_id):
         pk=incidencia_id,
     )
 
+
+    # ==========================================================
+    # PERMISOS POR ROL
+    # ==========================================================
+
+    rol_usuario = obtener_rol_usuario(request.user)
+
+    es_tecnico = (
+        rol_usuario == "TECNICO"
+        and not request.user.is_superuser
+    )
+
+    puede_editar = True
+
+
+    # ----------------------------------------------------------
+    # TÉCNICO
+    # ----------------------------------------------------------
+
+    if es_tecnico:
+
+        participo = (
+            AsignacionIncidencia.objects
+            .filter(
+                incidencia=incidencia,
+                tecnico=request.user,
+            )
+            .exists()
+        )
+
+        # Nunca participó en esta incidencia
+        if not participo:
+            return render(
+                request,
+                "incidencias/403.html",
+                status=403,
+            )
+
+
+        # Solo puede modificarla si actualmente sigue asignado
+        # y la incidencia continúa operativa.
+        puede_editar = (
+            incidencia.tecnico_asignado_id
+            == request.user.id
+            and incidencia.estado not in [
+                EstadoIncidencia.CERRADA,
+                EstadoIncidencia.CANCELADA,
+            ]
+        )
+
+
+    # ==========================================================
+    # HISTORIAL
+    # ==========================================================
+
     historial = (
         incidencia.historial
         .select_related("usuario")
         .order_by("-fecha_evento")
     )
 
+
+    # ==========================================================
+    # POST
+    # ==========================================================
+
     if request.method == "POST":
+
+        # ------------------------------------------------------
+        # SEGURIDAD PARA TÉCNICOS
+        # ------------------------------------------------------
+
+        if not puede_editar:
+            return render(
+                request,
+                "incidencias/403.html",
+                status=403,
+            )
+
+
+        # ------------------------------------------------------
+        # INCIDENCIA AÚN NO ASIGNADA
+        # ------------------------------------------------------
+
         if incidencia.estado == EstadoIncidencia.DETECTADA:
+
             messages.warning(
                 request,
                 "Primero debe asignar un técnico a la incidencia.",
             )
+
             return redirect(
                 "incidencias:incidencia_detalle",
                 incidencia_id=incidencia.id,
             )
 
+
+        # ------------------------------------------------------
+        # INCIDENCIA FINALIZADA
+        # ------------------------------------------------------
+
         if incidencia.estado in [
             EstadoIncidencia.CERRADA,
             EstadoIncidencia.CANCELADA,
         ]:
+
             messages.warning(
                 request,
                 "La incidencia está finalizada y no admite nuevos registros.",
             )
+
             return redirect(
                 "incidencias:incidencia_detalle",
                 incidencia_id=incidencia.id,
             )
+
+
+        # ------------------------------------------------------
+        # FORMULARIO
+        # ------------------------------------------------------
 
         form_avance = RegistroAvanceIncidenciaForm(
             request.POST,
             incidencia=incidencia,
         )
 
+
         if form_avance.is_valid():
-            tipo = form_avance.cleaned_data["tipo_registro"]
+
+            tipo = form_avance.cleaned_data[
+                "tipo_registro"
+            ]
+
             detalle = (
-                form_avance.cleaned_data.get("detalle")
+                form_avance.cleaned_data.get(
+                    "detalle"
+                )
                 or ""
             ).strip()
 
+
             try:
+
                 with transaction.atomic():
+
                     incidencia_bloqueada = (
                         Incidencia.objects
                         .select_for_update()
-                        .select_related("tecnico_asignado")
-                        .get(pk=incidencia.pk)
+                        .select_related(
+                            "tecnico_asignado"
+                        )
+                        .get(
+                            pk=incidencia.pk
+                        )
                     )
 
-                    # --------------------------------------------------
+
+                    # ==================================================
                     # ESCALAMIENTO / REASIGNACIÓN
-                    # --------------------------------------------------
+                    # ==================================================
+
                     if tipo == TipoComentario.ESCALAMIENTO:
-                        nuevo_tecnico = form_avance.cleaned_data["nuevo_tecnico"]
+
+                        nuevo_tecnico = (
+                            form_avance.cleaned_data[
+                                "nuevo_tecnico"
+                            ]
+                        )
+
+                        tecnico_anterior = (
+                            incidencia_bloqueada
+                            .tecnico_asignado
+                        )
+
 
                         AsignacionIncidencia.objects.create(
                             incidencia=incidencia_bloqueada,
@@ -1829,6 +3126,59 @@ def incidencia_detalle(request, incidencia_id):
                             activo=True,
                         )
 
+
+                        # ==============================================
+                        # NOTIFICACIÓN AL NUEVO TÉCNICO
+                        # ==============================================
+
+                        crear_notificacion_sistema(
+                            incidencia=incidencia_bloqueada,
+                            usuario_destino=nuevo_tecnico,
+                            mensaje=(
+                                f"Se te reasignó la incidencia "
+                                f"{incidencia_bloqueada.codigo}. "
+                                f"Severidad: "
+                                f"{incidencia_bloqueada.get_severidad_display()}. "
+                                f"Nodo: "
+                                f"{incidencia_bloqueada.nodo_afectado.codigo}. "
+                                f"Motivo: "
+                                f"{detalle or 'Sin observación adicional.'}"
+                            ),
+                            creado_por=request.user,
+                        )
+
+
+                        # ==============================================
+                        # NOTIFICACIÓN AL TÉCNICO ANTERIOR
+                        # ==============================================
+
+                        if (
+                            tecnico_anterior
+                            and tecnico_anterior.id
+                            != nuevo_tecnico.id
+                        ):
+
+                            nombre_nuevo_tecnico = (
+                                nuevo_tecnico.get_full_name()
+                                or nuevo_tecnico.username
+                            )
+
+                            crear_notificacion_sistema(
+                                incidencia=incidencia_bloqueada,
+                                usuario_destino=tecnico_anterior,
+                                mensaje=(
+                                    f"La incidencia "
+                                    f"{incidencia_bloqueada.codigo} "
+                                    f"fue reasignada a "
+                                    f"{nombre_nuevo_tecnico}. "
+                                    f"Ya no se encuentra bajo tu responsabilidad. "
+                                    f"Motivo: "
+                                    f"{detalle or 'Sin observación adicional.'}"
+                                ),
+                                creado_por=request.user,
+                            )
+
+
                         messages.success(
                             request,
                             (
@@ -1837,49 +3187,94 @@ def incidencia_detalle(request, incidencia_id):
                             ),
                         )
 
-                    # --------------------------------------------------
+
+                    # ==================================================
                     # CIERRE DIRECTO
-                    # --------------------------------------------------
-                    elif tipo == RegistroAvanceIncidenciaForm.TIPO_CIERRE:
+                    # ==================================================
+
+                    elif (
+                        tipo
+                        == RegistroAvanceIncidenciaForm.TIPO_CIERRE
+                    ):
+
                         estados_cerrables = {
                             EstadoIncidencia.ASIGNADA,
                             EstadoIncidencia.EN_ATENCION,
                             EstadoIncidencia.RESUELTA,
                         }
 
-                        if incidencia_bloqueada.estado not in estados_cerrables:
+
+                        if (
+                            incidencia_bloqueada.estado
+                            not in estados_cerrables
+                        ):
+
                             messages.error(
                                 request,
-                                "La incidencia no se encuentra en un estado cerrable.",
+                                (
+                                    "La incidencia no se encuentra "
+                                    "en un estado cerrable."
+                                ),
                             )
+
                             return redirect(
                                 "incidencias:incidencia_detalle",
                                 incidencia_id=incidencia_bloqueada.id,
                             )
 
-                        estado_anterior = incidencia_bloqueada.estado
+
+                        estado_anterior = (
+                            incidencia_bloqueada.estado
+                        )
+
                         ahora = timezone.now()
 
-                        # El modelo actual exige fecha_resolucion y solucion
-                        # para poder guardar una incidencia CERRADA. No se usa
-                        # RESUELTA como paso visible/intermedio.
+
+                        # El modelo exige fecha_resolucion y solucion
+                        # antes de guardar una incidencia CERRADA.
+
                         if not incidencia_bloqueada.solucion:
-                            incidencia_bloqueada.solucion = detalle
+                            incidencia_bloqueada.solucion = (
+                                detalle
+                            )
+
 
                         if not incidencia_bloqueada.fecha_resolucion:
-                            incidencia_bloqueada.fecha_resolucion = ahora
+                            incidencia_bloqueada.fecha_resolucion = (
+                                ahora
+                            )
 
-                        incidencia_bloqueada.fecha_cierre = ahora
-                        incidencia_bloqueada.estado = EstadoIncidencia.CERRADA
-                        incidencia_bloqueada.actualizado_por = request.user
+
+                        incidencia_bloqueada.fecha_cierre = (
+                            ahora
+                        )
+
+                        incidencia_bloqueada.estado = (
+                            EstadoIncidencia.CERRADA
+                        )
+
+                        incidencia_bloqueada.actualizado_por = (
+                            request.user
+                        )
+
                         incidencia_bloqueada.save()
 
-                        # Al cerrar ya no queda una asignación activa pendiente,
-                        # pero se conserva tecnico_asignado para trazabilidad.
+
+                        # ==============================================
+                        # DESACTIVAR ASIGNACIONES
+                        # ==============================================
+
                         AsignacionIncidencia.objects.filter(
                             incidencia=incidencia_bloqueada,
                             activo=True,
-                        ).update(activo=False)
+                        ).update(
+                            activo=False
+                        )
+
+
+                        # ==============================================
+                        # HISTORIAL DE CIERRE
+                        # ==============================================
 
                         HistorialIncidencia.objects.create(
                             incidencia=incidencia_bloqueada,
@@ -1889,27 +3284,73 @@ def incidencia_detalle(request, incidencia_id):
                             estado_nuevo=EstadoIncidencia.CERRADA,
                             descripcion=(
                                 "Incidencia cerrada. "
-                                f"Validación / solución final: {detalle}"
+                                f"Validación / solución final: "
+                                f"{detalle}"
                             ),
                             creado_por=request.user,
                             actualizado_por=request.user,
                         )
+
+
+                        # ==============================================
+                        # NOTIFICACIÓN DE CIERRE
+                        # ==============================================
+
+                        tecnico_cierre = (
+                            incidencia_bloqueada
+                            .tecnico_asignado
+                        )
+
+
+                        if tecnico_cierre:
+
+                            crear_notificacion_sistema(
+                                incidencia=incidencia_bloqueada,
+                                usuario_destino=tecnico_cierre,
+                                mensaje=(
+                                    f"La incidencia "
+                                    f"{incidencia_bloqueada.codigo} "
+                                    f"fue cerrada correctamente. "
+                                    f"Solución final: "
+                                    f"{detalle or incidencia_bloqueada.solucion or 'Sin detalle adicional.'}"
+                                ),
+                                creado_por=request.user,
+                            )
+
 
                         messages.success(
                             request,
                             "La incidencia fue cerrada correctamente.",
                         )
 
-                    # --------------------------------------------------
-                    # SEGUIMIENTO / DIAGNÓSTICO / SOLUCIÓN / OBSERVACIÓN
-                    # --------------------------------------------------
+
+                    # ==================================================
+                    # SEGUIMIENTO / DIAGNÓSTICO /
+                    # SOLUCIÓN / OBSERVACIÓN
+                    # ==================================================
+
                     else:
-                        # SOLUCION se conserva también en el campo principal
-                        # de Incidencia, pero no cambia el estado.
+
+                        # ----------------------------------------------
+                        # SOLUCIÓN
+                        # ----------------------------------------------
+
                         if tipo == TipoComentario.SOLUCION:
-                            incidencia_bloqueada.solucion = detalle
-                            incidencia_bloqueada.actualizado_por = request.user
+
+                            incidencia_bloqueada.solucion = (
+                                detalle
+                            )
+
+                            incidencia_bloqueada.actualizado_por = (
+                                request.user
+                            )
+
                             incidencia_bloqueada.save()
+
+
+                        # ----------------------------------------------
+                        # BITÁCORA
+                        # ----------------------------------------------
 
                         ComentarioIncidencia.objects.create(
                             incidencia=incidencia_bloqueada,
@@ -1920,28 +3361,56 @@ def incidencia_detalle(request, incidencia_id):
                             actualizado_por=request.user,
                         )
 
+
                         messages.success(
                             request,
                             "Avance registrado correctamente.",
                         )
+
+
+                # ======================================================
+                # REDIRECCIÓN DESPUÉS DEL POST
+                # ======================================================
 
                 return redirect(
                     "incidencias:incidencia_detalle",
                     incidencia_id=incidencia.id,
                 )
 
+
             except ValidationError as error:
-                form_avance.add_error(None, error)
+
+                form_avance.add_error(
+                    None,
+                    error,
+                )
+
 
             except Exception as error:
+
                 messages.error(
                     request,
-                    f"No se pudo registrar el avance: {error}",
+                    (
+                        "No se pudo registrar el avance: "
+                        f"{error}"
+                    ),
                 )
+
+
+    # ==========================================================
+    # GET
+    # ==========================================================
+
     else:
+
         form_avance = RegistroAvanceIncidenciaForm(
             incidencia=incidencia,
         )
+
+
+    # ==========================================================
+    # TEMPLATE
+    # ==========================================================
 
     return render(
         request,
@@ -1950,15 +3419,14 @@ def incidencia_detalle(request, incidencia_id):
             "incidencia": incidencia,
             "historial": historial,
             "form_avance": form_avance,
+
+            # Permisos para el template
+            "es_tecnico": es_tecnico,
+            "puede_editar": puede_editar,
         },
     )
 
 
-# =============================================================
-# RUTAS ANTIGUAS - COMPATIBILIDAD
-# =============================================================
-# Se conservan para que un urls.py anterior no genere errores.
-# La interfaz actual ya no usa estos botones.
 
 @login_required
 @require_POST
@@ -2020,9 +3488,16 @@ def incidencia_cerrar(request, incidencia_id):
 @login_required
 def reporte_incidencias(request):
     """
-    Reporte general y limpio de incidencias.
-    Respeta los filtros recibidos desde el listado.
+    PBI-096.
+    Reporte general de incidencias.
+
+    Utiliza exactamente los mismos filtros
+    que el listado y la exportación CSV.
     """
+
+    # ==========================================================
+    # CONSULTA BASE
+    # ==========================================================
 
     incidencias = (
         Incidencia.objects
@@ -2030,40 +3505,32 @@ def reporte_incidencias(request):
             "nodo_afectado",
             "componente_principal",
             "tecnico_asignado",
+            "registrado_por",
             "alerta_zabbix",
         )
         .order_by("-fecha_deteccion")
     )
 
-    query = request.GET.get("q", "").strip()
-    estado = request.GET.get("estado", "").strip()
-    severidad = request.GET.get("severidad", "").strip()
-    nodo_id = request.GET.get("nodo", "").strip()
+    # ==========================================================
+    # FILTROS COMUNES
+    # ==========================================================
 
-    if query:
-        incidencias = incidencias.filter(
-            Q(codigo__icontains=query)
-            | Q(titulo__icontains=query)
-            | Q(descripcion__icontains=query)
-            | Q(nodo_afectado__codigo__icontains=query)
-            | Q(nodo_afectado__nombre__icontains=query)
-            | Q(componente_principal__codigo__icontains=query)
-            | Q(componente_principal__nombre__icontains=query)
-            | Q(tecnico_asignado__username__icontains=query)
-        )
+    incidencias, filtros = aplicar_filtros_incidencias(
+        request,
+        incidencias,
+    )
 
-    if estado:
-        incidencias = incidencias.filter(estado=estado)
+    query = filtros["query"]
+    estado = filtros["estado_seleccionado"]
+    severidad = filtros["severidad_seleccionada"]
+    nodo_id = filtros["nodo_seleccionado"]
 
-    if severidad:
-        incidencias = incidencias.filter(severidad=severidad)
+    fecha_desde = filtros["fecha_desde"]
+    fecha_hasta = filtros["fecha_hasta"]
 
-    if nodo_id:
-        incidencias = incidencias.filter(nodo_afectado_id=nodo_id)
-
-    # ----------------------------------------------------------
-    # Resumen ejecutivo
-    # ----------------------------------------------------------
+    # ==========================================================
+    # RESUMEN EJECUTIVO
+    # ==========================================================
 
     total_incidencias = incidencias.count()
 
@@ -2083,12 +3550,15 @@ def reporte_incidencias(request):
     ).count()
 
     total_altas_criticas = incidencias.filter(
-        severidad__in=["ALTA", "CRITICA"],
+        severidad__in=[
+            "ALTA",
+            "CRITICA",
+        ],
     ).count()
 
-    # ----------------------------------------------------------
-    # Indicadores de tiempo
-    # ----------------------------------------------------------
+    # ==========================================================
+    # TIEMPOS
+    # ==========================================================
 
     tiempos_asignacion = [
         incidencia.tiempo_asignacion_min
@@ -2103,20 +3573,28 @@ def reporte_incidencias(request):
     ]
 
     promedio_asignacion_min = (
-        round(sum(tiempos_asignacion) / len(tiempos_asignacion), 2)
+        round(
+            sum(tiempos_asignacion)
+            / len(tiempos_asignacion),
+            2,
+        )
         if tiempos_asignacion
         else None
     )
 
     promedio_cierre_min = (
-        round(sum(tiempos_cierre) / len(tiempos_cierre), 2)
+        round(
+            sum(tiempos_cierre)
+            / len(tiempos_cierre),
+            2,
+        )
         if tiempos_cierre
         else None
     )
 
-    # ----------------------------------------------------------
-    # SLA de resolución
-    # ----------------------------------------------------------
+    # ==========================================================
+    # SLA
+    # ==========================================================
 
     sla_evaluadas = incidencias.filter(
         cumple_sla_resolucion__isnull=False,
@@ -2127,47 +3605,89 @@ def reporte_incidencias(request):
     ).count()
 
     porcentaje_sla = (
-        round((sla_cumplidas / sla_evaluadas) * 100, 2)
+        round(
+            (sla_cumplidas / sla_evaluadas) * 100,
+            2,
+        )
         if sla_evaluadas
         else None
     )
 
-    # ----------------------------------------------------------
-    # Texto de filtros para la cabecera
-    # ----------------------------------------------------------
+    # ==========================================================
+    # TEXTO DE FILTROS
+    # ==========================================================
 
     estado_texto = ""
+
     if estado:
-        estado_texto = dict(EstadoIncidencia.choices).get(
+        estado_texto = dict(
+            EstadoIncidencia.choices
+        ).get(
             estado,
             estado,
         )
 
     severidad_texto = ""
+
     if severidad:
-        severidad_texto = severidad.replace("_", " ").title()
+        severidad_texto = (
+            severidad
+            .replace("_", " ")
+            .title()
+        )
 
     nodo_texto = ""
+
     if nodo_id:
-        nodo = Nodo.objects.filter(pk=nodo_id).first()
+        nodo = Nodo.objects.filter(
+            pk=nodo_id,
+        ).first()
+
         if nodo:
-            nodo_texto = f"{nodo.codigo} - {nodo.nombre}"
+            nodo_texto = (
+                f"{nodo.codigo} - {nodo.nombre}"
+            )
+
+    # ==========================================================
+    # CONTEXTO
+    # ==========================================================
 
     context = {
+        # ==========================================================
+        # RESULTADOS
+        # ==========================================================
         "incidencias": incidencias,
         "fecha_generacion": timezone.localtime(),
 
+        # ==========================================================
+        # RESUMEN
+        # ==========================================================
         "total_incidencias": total_incidencias,
         "total_detectadas": total_detectadas,
         "total_en_atencion": total_en_atencion,
         "total_cerradas": total_cerradas,
         "total_altas_criticas": total_altas_criticas,
 
+        # ==========================================================
+        # INDICADORES
+        # ==========================================================
         "promedio_asignacion_min": promedio_asignacion_min,
         "promedio_cierre_min": promedio_cierre_min,
         "porcentaje_sla": porcentaje_sla,
 
+        # ==========================================================
+        # MANTENER FILTROS EN PANTALLA
+        # ==========================================================
         "query": query,
+        "estado_seleccionado": estado,
+        "severidad_seleccionada": severidad,
+        "nodo_seleccionado": nodo_id,
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
+
+        # ==========================================================
+        # TEXTOS PARA REPORTE / IMPRESIÓN
+        # ==========================================================
         "estado_texto": estado_texto,
         "severidad_texto": severidad_texto,
         "nodo_texto": nodo_texto,
@@ -2178,74 +3698,26 @@ def reporte_incidencias(request):
         "incidencias/reportes/reporte_incidencias.html",
         context,
     )
-    """
-    Reporte general de incidencias.
-    Respeta los filtros enviados desde el listado.
-    """
-
-    incidencias = (
-        Incidencia.objects
-        .select_related(
-            "nodo_afectado",
-            "componente_principal",
-            "tecnico_asignado",
-            "alerta_zabbix",
-        )
-        .order_by("-fecha_deteccion")
-    )
-
-    query = request.GET.get("q", "").strip()
-    estado = request.GET.get("estado", "").strip()
-    severidad = request.GET.get("severidad", "").strip()
-    nodo_id = request.GET.get("nodo", "").strip()
-
-    if query:
-        incidencias = incidencias.filter(
-            Q(codigo__icontains=query)
-            | Q(titulo__icontains=query)
-            | Q(descripcion__icontains=query)
-            | Q(nodo_afectado__codigo__icontains=query)
-            | Q(nodo_afectado__nombre__icontains=query)
-            | Q(tecnico_asignado__username__icontains=query)
-        )
-
-    if estado:
-        incidencias = incidencias.filter(
-            estado=estado
-        )
-
-    if severidad:
-        incidencias = incidencias.filter(
-            severidad=severidad
-        )
-
-    if nodo_id:
-        incidencias = incidencias.filter(
-            nodo_afectado_id=nodo_id
-        )
-
-    context = {
-        "incidencias": incidencias,
-        "total_incidencias": incidencias.count(),
-
-        "query": query,
-        "estado_seleccionado": estado,
-        "severidad_seleccionada": severidad,
-        "nodo_seleccionado": nodo_id,
-    }
-
-    return render(
-        request,
-        "incidencias/reportes/reporte_incidencias.html",
-        context,
-    )
-
 @login_required
 def exportar_incidencias_csv(request):
     """
-    Exporta las incidencias a CSV respetando los filtros
-    utilizados en el listado de incidencias.
+    PBI-096.
+
+    Exporta las incidencias filtradas en formato CSV.
+
+    Utiliza exactamente los mismos filtros que:
+    - listado de incidencias;
+    - reporte general;
+    - período desde / hasta;
+    - estado;
+    - severidad;
+    - nodo;
+    - búsqueda general.
     """
+
+    # ==========================================================
+    # CONSULTA BASE
+    # ==========================================================
 
     incidencias = (
         Incidencia.objects
@@ -2253,69 +3725,146 @@ def exportar_incidencias_csv(request):
             "nodo_afectado",
             "componente_principal",
             "tecnico_asignado",
+            "registrado_por",
             "alerta_zabbix",
         )
         .order_by("-fecha_deteccion")
     )
 
     # ==========================================================
-    # FILTROS
+    # FILTROS COMUNES
     # ==========================================================
 
-    query = request.GET.get("q", "").strip()
-    estado = request.GET.get("estado", "").strip()
-    severidad = request.GET.get("severidad", "").strip()
-    nodo_id = request.GET.get("nodo", "").strip()
+    incidencias, filtros = aplicar_filtros_incidencias(
+        request,
+        incidencias,
+    )
 
-    if query:
-        incidencias = incidencias.filter(
-            Q(codigo__icontains=query)
-            | Q(titulo__icontains=query)
-            | Q(descripcion__icontains=query)
-            | Q(nodo_afectado__codigo__icontains=query)
-            | Q(nodo_afectado__nombre__icontains=query)
-            | Q(componente_principal__codigo__icontains=query)
-            | Q(componente_principal__nombre__icontains=query)
-            | Q(tecnico_asignado__username__icontains=query)
+    # ==========================================================
+    # FUNCIONES AUXILIARES
+    # ==========================================================
+
+    def fecha_excel(valor):
+        """
+        Convierte un DateTimeField a fecha/hora local
+        para mostrar correctamente en Excel.
+        """
+
+        if not valor:
+            return ""
+
+        if timezone.is_naive(valor):
+            valor = timezone.make_aware(
+                valor,
+                timezone.get_current_timezone(),
+            )
+
+        return timezone.localtime(valor).strftime(
+            "%d/%m/%Y %H:%M:%S"
         )
 
-    if estado:
-        incidencias = incidencias.filter(
-            estado=estado
+    def sla_texto(valor):
+        """
+        Convierte valores booleanos SLA
+        a un texto legible.
+        """
+
+        if valor is True:
+            return "Sí"
+
+        if valor is False:
+            return "No"
+
+        return "No evaluado"
+
+    def minutos_texto(valor):
+        """
+        Mantiene correctamente el valor 0.
+
+        Evita usar:
+            valor or ""
+
+        porque 0 también sería convertido a vacío.
+        """
+
+        if valor is None:
+            return ""
+
+        return valor
+
+    # ==========================================================
+    # NOMBRE DEL ARCHIVO
+    # ==========================================================
+
+    fecha_actual = timezone.localdate().strftime(
+        "%Y-%m-%d"
+    )
+
+    fecha_desde = filtros.get(
+        "fecha_desde",
+        "",
+    )
+
+    fecha_hasta = filtros.get(
+        "fecha_hasta",
+        "",
+    )
+
+    # Si existe un período, se incluye en el nombre.
+    if fecha_desde or fecha_hasta:
+
+        desde_nombre = (
+            fecha_desde
+            if fecha_desde
+            else "inicio"
         )
 
-    if severidad:
-        incidencias = incidencias.filter(
-            severidad=severidad
+        hasta_nombre = (
+            fecha_hasta
+            if fecha_hasta
+            else "actual"
         )
 
-    if nodo_id:
-        incidencias = incidencias.filter(
-            nodo_afectado_id=nodo_id
+        nombre_archivo = (
+            f"incidencias_"
+            f"{desde_nombre}_"
+            f"{hasta_nombre}.csv"
+        )
+
+    else:
+
+        nombre_archivo = (
+            f"incidencias_{fecha_actual}.csv"
         )
 
     # ==========================================================
-    # ARCHIVO
+    # RESPUESTA HTTP
     # ==========================================================
-
-    fecha = timezone.localdate().strftime("%Y-%m-%d")
 
     response = HttpResponse(
         content_type="text/csv; charset=utf-8"
     )
 
     response["Content-Disposition"] = (
-        f'attachment; filename="incidencias_{fecha}.csv"'
+        f'attachment; filename="{nombre_archivo}"'
     )
 
-    # BOM UTF-8 para que Excel muestre correctamente tildes y ñ
+    # BOM UTF-8.
+    # Permite que Excel abra correctamente:
+    # - tildes;
+    # - ñ;
+    # - caracteres especiales.
     response.write("\ufeff")
 
-    # ; funciona mejor con Excel en configuraciones regionales ES
+    # ==========================================================
+    # WRITER CSV
+    # ==========================================================
+
     writer = csv.writer(
         response,
         delimiter=";",
         quoting=csv.QUOTE_MINIMAL,
+        lineterminator="\n",
     )
 
     # ==========================================================
@@ -2329,23 +3878,35 @@ def exportar_incidencias_csv(request):
         "Severidad",
         "Prioridad",
         "Origen",
+
         "Nodo",
         "Nombre nodo",
         "Componente",
+        "Nombre componente",
+
         "Técnico asignado",
+        "Usuario registrador",
+
         "Clientes afectados",
+
         "Fecha detección",
         "Fecha registro",
         "Fecha asignación",
         "Inicio atención",
+        "Fecha resolución",
         "Fecha cierre",
+
+        "Tiempo registro (min)",
         "Tiempo asignación (min)",
         "Tiempo inicio atención (min)",
+        "Tiempo resolución (min)",
         "Tiempo cierre (min)",
+
         "Cumple SLA registro",
         "Cumple SLA asignación",
         "Cumple SLA inicio atención",
         "Cumple SLA resolución",
+
         "Solución",
         "Causa raíz",
         "Observaciones",
@@ -2357,53 +3918,93 @@ def exportar_incidencias_csv(request):
 
     for incidencia in incidencias:
 
+        # ------------------------------------------------------
+        # TÉCNICO
+        # ------------------------------------------------------
+
         tecnico = ""
 
         if incidencia.tecnico_asignado:
+
             tecnico = (
                 incidencia.tecnico_asignado.get_full_name()
                 or incidencia.tecnico_asignado.username
             )
 
-        componente = ""
+        # ------------------------------------------------------
+        # USUARIO REGISTRADOR
+        # ------------------------------------------------------
+
+        registrador = ""
+
+        if incidencia.registrado_por:
+
+            registrador = (
+                incidencia.registrado_por.get_full_name()
+                or incidencia.registrado_por.username
+            )
+
+        # ------------------------------------------------------
+        # COMPONENTE
+        # ------------------------------------------------------
+
+        componente_codigo = ""
+        componente_nombre = ""
 
         if incidencia.componente_principal:
-            componente = (
+
+            componente_codigo = (
                 incidencia.componente_principal.codigo
             )
 
-        def fecha_excel(valor):
-            if not valor:
-                return ""
-
-            return timezone.localtime(valor).strftime(
-                "%d/%m/%Y %H:%M:%S"
+            componente_nombre = (
+                incidencia.componente_principal.nombre
             )
 
-        def sla_texto(valor):
-            if valor is True:
-                return "Sí"
-
-            if valor is False:
-                return "No"
-
-            return "No evaluado"
+        # ------------------------------------------------------
+        # FILA CSV
+        # ------------------------------------------------------
 
         writer.writerow([
+
+            # ==================================================
+            # IDENTIFICACIÓN
+            # ==================================================
+
             incidencia.codigo,
             incidencia.titulo,
+
             incidencia.get_estado_display(),
             incidencia.get_severidad_display(),
             incidencia.get_prioridad_display(),
             incidencia.get_origen_display(),
 
+            # ==================================================
+            # INFRAESTRUCTURA
+            # ==================================================
+
             incidencia.nodo_afectado.codigo,
             incidencia.nodo_afectado.nombre,
 
-            componente,
+            componente_codigo,
+            componente_nombre,
+
+            # ==================================================
+            # RESPONSABLES
+            # ==================================================
+
             tecnico,
+            registrador,
+
+            # ==================================================
+            # IMPACTO
+            # ==================================================
 
             incidencia.clientes_afectados_estimados,
+
+            # ==================================================
+            # FECHAS
+            # ==================================================
 
             fecha_excel(
                 incidencia.fecha_deteccion
@@ -2422,12 +4023,40 @@ def exportar_incidencias_csv(request):
             ),
 
             fecha_excel(
+                incidencia.fecha_resolucion
+            ),
+
+            fecha_excel(
                 incidencia.fecha_cierre
             ),
 
-            incidencia.tiempo_asignacion_min or "",
-            incidencia.tiempo_inicio_atencion_min or "",
-            incidencia.tiempo_cierre_min or "",
+            # ==================================================
+            # TIEMPOS
+            # ==================================================
+
+            minutos_texto(
+                incidencia.tiempo_registro_min
+            ),
+
+            minutos_texto(
+                incidencia.tiempo_asignacion_min
+            ),
+
+            minutos_texto(
+                incidencia.tiempo_inicio_atencion_min
+            ),
+
+            minutos_texto(
+                incidencia.tiempo_resolucion_min
+            ),
+
+            minutos_texto(
+                incidencia.tiempo_cierre_min
+            ),
+
+            # ==================================================
+            # SLA
+            # ==================================================
 
             sla_texto(
                 incidencia.cumple_sla_registro
@@ -2445,12 +4074,21 @@ def exportar_incidencias_csv(request):
                 incidencia.cumple_sla_resolucion
             ),
 
+            # ==================================================
+            # RESOLUCIÓN
+            # ==================================================
+
             incidencia.solucion or "",
             incidencia.causa_raiz or "",
             incidencia.observaciones or "",
         ])
 
+    # ==========================================================
+    # RESPUESTA
+    # ==========================================================
+
     return response
+
 
 @login_required
 def reporte_incidencia(request, incidencia_id):
@@ -2504,4 +4142,836 @@ def reporte_incidencia(request, incidencia_id):
         request,
         "incidencias/reportes/reporte_incidencia.html",
         context,
+    )
+
+@login_required
+@user_passes_test(
+    puede_ver_reportes,
+    login_url="/403/",
+)
+def reporte_tecnicos(request):
+
+    User = get_user_model()
+
+    tecnico_id = request.GET.get("tecnico", "").strip()
+    fecha_desde = request.GET.get("desde", "").strip()
+    fecha_hasta = request.GET.get("hasta", "").strip()
+
+    tecnicos = (
+        User.objects
+        .filter(
+            perfil_incidencias__rol="TECNICO",
+            is_active=True,
+        )
+        .order_by(
+            "first_name",
+            "last_name",
+            "username",
+        )
+    )
+
+    if tecnico_id:
+        tecnicos_reporte = tecnicos.filter(
+            id=tecnico_id
+        )
+    else:
+        tecnicos_reporte = tecnicos
+
+
+    resultados = []
+
+    total_asignadas_general = 0
+    total_cerradas_general = 0
+    total_activas_general = 0
+    total_reasignadas_general = 0
+
+    total_cerradas_sla = 0
+    total_cumple_sla = 0
+
+    tiempos_globales = []
+
+
+    for tecnico in tecnicos_reporte:
+
+        # ======================================================
+        # INCIDENCIAS EN LAS QUE PARTICIPÓ EL TÉCNICO
+        # ======================================================
+
+        asignaciones = (
+            AsignacionIncidencia.objects
+            .filter(
+                tecnico=tecnico,
+            )
+            .select_related(
+                "incidencia",
+            )
+        )
+
+        if fecha_desde:
+            asignaciones = asignaciones.filter(
+                incidencia__fecha_deteccion__date__gte=fecha_desde
+            )
+
+        if fecha_hasta:
+            asignaciones = asignaciones.filter(
+                incidencia__fecha_deteccion__date__lte=fecha_hasta
+            )
+
+
+        incidencias_participadas_ids = (
+            asignaciones
+            .values_list(
+                "incidencia_id",
+                flat=True,
+            )
+            .distinct()
+        )
+
+        total_asignadas = (
+            incidencias_participadas_ids.count()
+        )
+
+
+        # ======================================================
+        # INCIDENCIAS ACTUALMENTE A SU CARGO
+        # ======================================================
+
+        incidencias_actuales = (
+            Incidencia.objects
+            .filter(
+                tecnico_asignado=tecnico,
+            )
+        )
+
+        if fecha_desde:
+            incidencias_actuales = incidencias_actuales.filter(
+                fecha_deteccion__date__gte=fecha_desde
+            )
+
+        if fecha_hasta:
+            incidencias_actuales = incidencias_actuales.filter(
+                fecha_deteccion__date__lte=fecha_hasta
+            )
+
+
+        total_activas = (
+            incidencias_actuales
+            .exclude(
+                estado__in=[
+                    EstadoIncidencia.CERRADA,
+                    EstadoIncidencia.CANCELADA,
+                ]
+            )
+            .count()
+        )
+
+
+        # ======================================================
+        # INCIDENCIAS CERRADAS SIENDO RESPONSABLE FINAL
+        # ======================================================
+
+        cerradas = (
+            incidencias_actuales
+            .filter(
+                estado=EstadoIncidencia.CERRADA,
+            )
+        )
+
+        total_cerradas = cerradas.count()
+
+
+        # ======================================================
+        # INCIDENCIAS QUE FUERON REASIGNADAS A OTRO TÉCNICO
+        # ======================================================
+
+        incidencias_reasignadas = (
+            Incidencia.objects
+            .filter(
+                id__in=incidencias_participadas_ids,
+            )
+            .exclude(
+                tecnico_asignado=tecnico,
+            )
+        )
+
+        if fecha_desde:
+            incidencias_reasignadas = incidencias_reasignadas.filter(
+                fecha_deteccion__date__gte=fecha_desde
+            )
+
+        if fecha_hasta:
+            incidencias_reasignadas = incidencias_reasignadas.filter(
+                fecha_deteccion__date__lte=fecha_hasta
+            )
+
+        total_reasignadas = (
+            incidencias_reasignadas
+            .distinct()
+            .count()
+        )
+
+
+        # ======================================================
+        # CUMPLIMIENTO SLA DE RESOLUCIÓN
+        # ======================================================
+
+        cerradas_cumplen_sla = (
+            cerradas
+            .filter(
+                cumple_sla_resolucion=True,
+            )
+            .count()
+        )
+
+        if total_cerradas > 0:
+
+            porcentaje_sla = round(
+                (
+                    cerradas_cumplen_sla
+                    / total_cerradas
+                ) * 100,
+                1,
+            )
+
+        else:
+
+            porcentaje_sla = 0
+
+
+        # ======================================================
+        # TIEMPO PROMEDIO DE RESOLUCIÓN
+        # ======================================================
+
+        tiempos_resolucion = []
+
+        for incidencia in cerradas:
+
+            tiempo = (
+                incidencia.tiempo_resolucion_min
+            )
+
+            if tiempo is not None:
+
+                tiempos_resolucion.append(
+                    tiempo
+                )
+
+                tiempos_globales.append(
+                    tiempo
+                )
+
+
+        if tiempos_resolucion:
+
+            tiempo_promedio = round(
+                sum(tiempos_resolucion)
+                / len(tiempos_resolucion),
+                1,
+            )
+
+        else:
+
+            tiempo_promedio = None
+
+
+        resultados.append(
+            {
+                "tecnico": tecnico,
+                "total_asignadas": total_asignadas,
+                "total_activas": total_activas,
+                "total_cerradas": total_cerradas,
+                "total_reasignadas": total_reasignadas,
+                "cumple_sla": cerradas_cumplen_sla,
+                "porcentaje_sla": porcentaje_sla,
+                "tiempo_promedio": tiempo_promedio,
+            }
+        )
+
+
+        total_asignadas_general += total_asignadas
+        total_activas_general += total_activas
+        total_cerradas_general += total_cerradas
+        total_reasignadas_general += total_reasignadas
+
+        total_cerradas_sla += total_cerradas
+        total_cumple_sla += cerradas_cumplen_sla
+
+
+    # ==========================================================
+    # RESUMEN GENERAL
+    # ==========================================================
+
+    if total_cerradas_sla > 0:
+
+        cumplimiento_sla_general = round(
+            (
+                total_cumple_sla
+                / total_cerradas_sla
+            ) * 100,
+            1,
+        )
+
+    else:
+
+        cumplimiento_sla_general = 0
+
+
+    if tiempos_globales:
+
+        tiempo_promedio_general = round(
+            sum(tiempos_globales)
+            / len(tiempos_globales),
+            1,
+        )
+
+    else:
+
+        tiempo_promedio_general = None
+
+
+    return render(
+        request,
+        "incidencias/reportes/reporte_tecnicos.html",
+        {
+            "resultados": resultados,
+            "tecnicos": tecnicos,
+
+            "tecnico_id": tecnico_id,
+            "fecha_desde": fecha_desde,
+            "fecha_hasta": fecha_hasta,
+
+            "total_asignadas_general": total_asignadas_general,
+            "total_activas_general": total_activas_general,
+            "total_cerradas_general": total_cerradas_general,
+            "total_reasignadas_general": total_reasignadas_general,
+
+            "cumplimiento_sla_general": cumplimiento_sla_general,
+            "tiempo_promedio_general": tiempo_promedio_general,
+        },
+    )
+
+@login_required
+@user_passes_test(
+    es_administrador,
+    login_url="incidencias:acceso_denegado",
+)
+def sla_configuracion_lista(request):
+
+    slas = (
+        SLAIncidencia.objects
+        .annotate(
+            orden_severidad=Case(
+                When(severidad="CRITICA", then=Value(1)),
+                When(severidad="ALTA", then=Value(2)),
+                When(severidad="MEDIA", then=Value(3)),
+                When(severidad="BAJA", then=Value(4)),
+                When(severidad="INFORMATIVA", then=Value(5)),
+                default=Value(99),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by("orden_severidad")
+    )
+
+    return render(
+        request,
+        "incidencias/sla/configuracion_lista.html",
+        {
+            "slas": slas,
+        },
+    )
+
+@login_required
+@user_passes_test(
+    es_administrador,
+    login_url="incidencias:acceso_denegado",
+)
+def sla_configuracion_editar(request, sla_id):
+
+    sla = get_object_or_404(
+        SLAIncidencia,
+        pk=sla_id,
+    )
+
+    if request.method == "POST":
+
+        nombre = request.POST.get("nombre", "").strip()
+        descripcion = request.POST.get("descripcion", "").strip()
+
+        genera_incidencia_automatica = (
+            request.POST.get("genera_incidencia_automatica") == "on"
+        )
+
+        tiempo_confirmacion = request.POST.get(
+            "tiempo_confirmacion_zabbix_min"
+        )
+
+        tiempo_registro = request.POST.get(
+            "tiempo_max_registro_min"
+        )
+
+        tiempo_asignacion = request.POST.get(
+            "tiempo_max_asignacion_min"
+        )
+
+        tiempo_inicio = request.POST.get(
+            "tiempo_max_inicio_atencion_min"
+        )
+
+        tiempo_resolucion = request.POST.get(
+            "tiempo_max_resolucion_min"
+        )
+
+        activo = request.POST.get("activo") == "on"
+
+        errores = []
+
+        if not nombre:
+            errores.append(
+                "El nombre del SLA es obligatorio."
+            )
+
+        try:
+            tiempo_confirmacion = int(tiempo_confirmacion)
+
+            if tiempo_confirmacion <= 0:
+                raise ValueError
+
+        except (TypeError, ValueError):
+            errores.append(
+                "El tiempo de confirmación Zabbix debe ser mayor que 0."
+            )
+
+        try:
+            tiempo_registro = int(tiempo_registro)
+
+            if tiempo_registro <= 0:
+                raise ValueError
+
+        except (TypeError, ValueError):
+            errores.append(
+                "El tiempo máximo de registro debe ser mayor que 0."
+            )
+
+        try:
+            tiempo_asignacion = int(tiempo_asignacion)
+
+            if tiempo_asignacion <= 0:
+                raise ValueError
+
+        except (TypeError, ValueError):
+            errores.append(
+                "El tiempo máximo de asignación debe ser mayor que 0."
+            )
+
+        try:
+            tiempo_inicio = int(tiempo_inicio)
+
+            if tiempo_inicio <= 0:
+                raise ValueError
+
+        except (TypeError, ValueError):
+            errores.append(
+                "El tiempo máximo de inicio de atención debe ser mayor que 0."
+            )
+
+        try:
+            tiempo_resolucion = int(tiempo_resolucion)
+
+            if tiempo_resolucion <= 0:
+                raise ValueError
+
+        except (TypeError, ValueError):
+            errores.append(
+                "El tiempo máximo de resolución debe ser mayor que 0."
+            )
+
+        if errores:
+
+            for error in errores:
+
+                messages.error(
+                    request,
+                    error,
+                )
+
+            return render(
+                request,
+                "incidencias/sla/configuracion_editar.html",
+                {
+                    "sla": sla,
+                },
+            )
+
+        sla.nombre = nombre
+
+        sla.genera_incidencia_automatica = (
+            genera_incidencia_automatica
+        )
+
+        sla.tiempo_confirmacion_zabbix_min = (
+            tiempo_confirmacion
+        )
+
+        sla.tiempo_max_registro_min = (
+            tiempo_registro
+        )
+
+        sla.tiempo_max_asignacion_min = (
+            tiempo_asignacion
+        )
+
+        sla.tiempo_max_inicio_atencion_min = (
+            tiempo_inicio
+        )
+
+        sla.tiempo_max_resolucion_min = (
+            tiempo_resolucion
+        )
+
+        sla.descripcion = descripcion or None
+        sla.activo = activo
+
+        sla.save()
+
+        messages.success(
+            request,
+            (
+                f"SLA {sla.get_severidad_display()} "
+                f"actualizado correctamente."
+            ),
+        )
+
+        return redirect(
+            "incidencias:sla_configuracion_lista"
+        )
+
+    return render(
+        request,
+        "incidencias/sla/configuracion_editar.html",
+        {
+            "sla": sla,
+        },
+    )
+
+@login_required
+def notificaciones_lista(request):
+
+    perfil = getattr(
+        request.user,
+        "perfil_incidencias",
+        None,
+    )
+
+    es_noc = (
+        request.user.is_superuser
+        or (
+            perfil
+            and perfil.rol in [
+                "ADMINISTRADOR",
+                "GESTOR_NOC",
+                "SUPERVISOR",
+            ]
+        )
+    )
+
+    notificaciones = (
+        NotificacionIncidencia.objects
+        .filter(
+            medio=MedioNotificacion.SISTEMA,
+        )
+    )
+
+    # ==========================================================
+    # FILTRO SEGÚN ROL
+    # ==========================================================
+
+    if es_noc:
+
+        notificaciones = notificaciones.filter(
+            Q(usuario_destino=request.user)
+            | Q(usuario_destino__isnull=True)
+        )
+
+    else:
+
+        notificaciones = notificaciones.filter(
+            usuario_destino=request.user
+        )
+
+
+    # ==========================================================
+    # FILTRO TODAS / NO LEÍDAS / LEÍDAS
+    # ==========================================================
+
+    filtro = request.GET.get(
+        "filtro",
+        "todas",
+    )
+
+
+    # ==========================================================
+    # CONTADORES
+    # ==========================================================
+
+    total_notificaciones = (
+        notificaciones.count()
+    )
+
+    notificaciones_no_leidas = (
+        notificaciones
+        .filter(
+            leida=False
+        )
+        .count()
+    )
+
+    notificaciones_leidas = (
+        notificaciones
+        .filter(
+            leida=True
+        )
+        .count()
+    )
+
+
+    # ==========================================================
+    # APLICAR FILTRO DE BANDEJA
+    # ==========================================================
+
+    if filtro == "no_leidas":
+
+        notificaciones = (
+            notificaciones
+            .filter(
+                leida=False
+            )
+        )
+
+    elif filtro == "leidas":
+
+        notificaciones = (
+            notificaciones
+            .filter(
+                leida=True
+            )
+        )
+
+
+    # ==========================================================
+    # DATOS PARA MOSTRAR
+    # ==========================================================
+
+    notificaciones = (
+        notificaciones
+        .select_related(
+            "incidencia",
+            "usuario_destino",
+        )
+        .order_by(
+            "-creado_en"
+        )
+    )
+
+
+    return render(
+        request,
+        "incidencias/notificaciones/lista.html",
+        {
+            "notificaciones": notificaciones,
+            "total_notificaciones": total_notificaciones,
+            "notificaciones_no_leidas": notificaciones_no_leidas,
+            "notificaciones_leidas": notificaciones_leidas,
+            "filtro": filtro,
+        },
+    )
+
+@login_required
+def notificaciones_nuevas(request):
+
+    try:
+        ultimo_id = int(
+            request.GET.get("ultimo_id", 0)
+        )
+    except (TypeError, ValueError):
+        ultimo_id = 0
+
+
+    perfil = getattr(
+        request.user,
+        "perfil_incidencias",
+        None,
+    )
+
+    es_noc = (
+        request.user.is_superuser
+        or (
+            perfil
+            and perfil.rol in [
+                "ADMINISTRADOR",
+                "GESTOR_NOC",
+                "SUPERVISOR",
+            ]
+        )
+    )
+
+
+    notificaciones = (
+        NotificacionIncidencia.objects
+        .filter(
+            medio=MedioNotificacion.SISTEMA,
+            id__gt=ultimo_id,
+        )
+    )
+
+
+    if es_noc:
+
+        notificaciones = notificaciones.filter(
+            Q(usuario_destino=request.user)
+            | Q(usuario_destino__isnull=True)
+        )
+
+    else:
+
+        notificaciones = notificaciones.filter(
+            usuario_destino=request.user
+        )
+
+
+    notificaciones = (
+        notificaciones
+        .select_related("incidencia")
+        .order_by("id")[:10]
+    )
+
+
+    datos = []
+
+    for notificacion in notificaciones:
+
+        datos.append({
+            "id": notificacion.id,
+
+            "mensaje": notificacion.mensaje,
+
+            "codigo": (
+                notificacion.incidencia.codigo
+                if notificacion.incidencia
+                else None
+            ),
+
+            "incidencia_id": (
+                notificacion.incidencia.id
+                if notificacion.incidencia
+                else None
+            ),
+
+            "url": (
+                reverse(
+                    "incidencias:incidencia_detalle",
+                    kwargs={
+                        "incidencia_id":
+                            notificacion.incidencia.id
+                    },
+                )
+                if notificacion.incidencia
+                else None
+            ),
+
+            "fecha": timezone.localtime(
+                notificacion.creado_en
+            ).strftime("%d/%m/%Y %H:%M"),
+        })
+
+
+    return JsonResponse({
+        "notificaciones": datos,
+    })
+
+
+@login_required
+def notificacion_abrir(request, notificacion_id):
+
+    notificacion = get_object_or_404(
+        NotificacionIncidencia.objects.select_related(
+            "incidencia",
+            "usuario_destino",
+        ),
+        pk=notificacion_id,
+    )
+
+    # Seguridad:
+    # una notificación personal solo puede abrirla su destinatario
+    if (
+        notificacion.usuario_destino
+        and notificacion.usuario_destino != request.user
+    ):
+        return render(
+            request,
+            "incidencias/403.html",
+            status=403,
+        )
+
+    if not notificacion.leida:
+        notificacion.leida = True
+        notificacion.fecha_lectura = timezone.now()
+        notificacion.actualizado_por = request.user
+
+        notificacion.save(
+            update_fields=[
+                "leida",
+                "fecha_lectura",
+                "actualizado_por",
+            ]
+        )
+
+    return redirect(
+        "incidencias:incidencia_detalle",
+        incidencia_id=notificacion.incidencia_id,
+    )
+
+
+@login_required
+def notificaciones_marcar_todas_leidas(request):
+
+    rol = obtener_rol_usuario(request.user)
+
+    notificaciones = NotificacionIncidencia.objects.filter(
+        medio=MedioNotificacion.SISTEMA,
+        leida=False,
+    )
+
+    if (
+        request.user.is_superuser
+        or rol in [
+            "ADMINISTRADOR",
+            "GESTOR_NOC",
+            "SUPERVISOR",
+        ]
+    ):
+        notificaciones = notificaciones.filter(
+            Q(usuario_destino=request.user)
+            | Q(usuario_destino__isnull=True)
+        )
+    else:
+        notificaciones = notificaciones.filter(
+            usuario_destino=request.user
+        )
+
+    ahora = timezone.now()
+
+    notificaciones.update(
+        leida=True,
+        fecha_lectura=ahora,
+        actualizado_por=request.user,
+    )
+
+    messages.success(
+        request,
+        "Todas las notificaciones fueron marcadas como leídas.",
+    )
+
+    return redirect(
+        "incidencias:notificaciones_lista"
     )

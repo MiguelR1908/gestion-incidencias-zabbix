@@ -504,50 +504,107 @@ class CategoriaIncidencia(ModeloCatalogo):
 # =====================================================
 
 class SLAIncidencia(ModeloCatalogo):
+
     severidad = models.CharField(
         max_length=30,
         choices=Severidad.choices,
         unique=True
     )
-    nombre = models.CharField(max_length=100)
 
-    tiempo_max_registro_min = models.PositiveIntegerField(default=10)
-    tiempo_max_asignacion_min = models.PositiveIntegerField(default=15)
-    tiempo_max_inicio_atencion_min = models.PositiveIntegerField(default=30)
+    nombre = models.CharField(
+        max_length=100
+    )
+
+    # ==========================================================
+    # CREACIÓN AUTOMÁTICA DESDE ZABBIX
+    # ==========================================================
+
+    genera_incidencia_automatica = models.BooleanField(
+        default=True
+    )
+
+    tiempo_confirmacion_zabbix_min = models.PositiveIntegerField(
+        default=5
+    )
+
+    # ==========================================================
+    # SLA OPERATIVO
+    # ==========================================================
+
+    tiempo_max_registro_min = models.PositiveIntegerField(
+        default=10
+    )
+
+    tiempo_max_asignacion_min = models.PositiveIntegerField(
+        default=15
+    )
+
+    tiempo_max_inicio_atencion_min = models.PositiveIntegerField(
+        default=30
+    )
+
     tiempo_max_resolucion_min = models.PositiveIntegerField()
 
-    descripcion = models.TextField(blank=True, null=True)
+    descripcion = models.TextField(
+        blank=True,
+        null=True
+    )
 
     class Meta:
         verbose_name = "SLA de incidencia"
         verbose_name_plural = "SLAs de incidencias"
+
         ordering = ["severidad"]
+
         indexes = [
             models.Index(fields=["severidad"]),
             models.Index(fields=["activo"]),
         ]
+
         constraints = [
+
             models.CheckConstraint(
-                condition=Q(tiempo_max_registro_min__gt=0),
+                condition=Q(
+                    tiempo_confirmacion_zabbix_min__gt=0
+                ),
+                name="sla_confirmacion_zabbix_mayor_cero"
+            ),
+
+            models.CheckConstraint(
+                condition=Q(
+                    tiempo_max_registro_min__gt=0
+                ),
                 name="sla_registro_mayor_cero"
             ),
+
             models.CheckConstraint(
-                condition=Q(tiempo_max_asignacion_min__gt=0),
+                condition=Q(
+                    tiempo_max_asignacion_min__gt=0
+                ),
                 name="sla_asignacion_mayor_cero"
             ),
+
             models.CheckConstraint(
-                condition=Q(tiempo_max_inicio_atencion_min__gt=0),
+                condition=Q(
+                    tiempo_max_inicio_atencion_min__gt=0
+                ),
                 name="sla_inicio_atencion_mayor_cero"
             ),
+
             models.CheckConstraint(
-                condition=Q(tiempo_max_resolucion_min__gt=0),
+                condition=Q(
+                    tiempo_max_resolucion_min__gt=0
+                ),
                 name="sla_resolucion_mayor_cero"
             ),
+
         ]
 
     def __str__(self):
-        return f"{self.get_severidad_display()} - {self.nombre}"
-
+        return (
+            f"{self.get_severidad_display()} - "
+            f"{self.nombre}"
+        )
 # =====================================================
 # 7. CONFIGURACION ZABBIX
 # =====================================================
@@ -1346,6 +1403,16 @@ class NotificacionIncidencia(ModeloAuditoria):
 
     fecha_envio = models.DateTimeField(blank=True, null=True)
     error = models.TextField(blank=True, null=True)
+    leida = models.BooleanField(
+        default=False,
+        verbose_name="Leída",
+    )
+
+    fecha_lectura = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha de lectura",
+    )
 
     class Meta:
         verbose_name = "Notificación de incidencia"
