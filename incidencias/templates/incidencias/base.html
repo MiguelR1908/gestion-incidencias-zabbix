@@ -281,13 +281,17 @@
                                 <span>SLA y tiempos</span>
                             </a>
 
-                            <a
-                                href="{% url 'incidencias:reporte_tecnicos' %}"
-                                class="sidebar-subitem"
+                            <a 
+                                href="{% url 'incidencias:reporte_tecnicos' %}" 
+                                class="
+                                    {% if request.resolver_match.url_name == 'reporte_tecnicos' %}
+                                        active
+                                    {% endif %}
+                                "
                             >
-                                Rendimiento por técnico
+                                <span class="submenu-dot"></span>
+                                <span>Rendimiento por técnico</span>
                             </a>
-
                         </div>
 
                     </details>
