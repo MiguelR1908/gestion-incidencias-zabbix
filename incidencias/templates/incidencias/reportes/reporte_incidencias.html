@@ -551,13 +551,13 @@ Consulta histórica y exportación de incidencias registradas.
                     Exportar CSV
                 </a>
 
-                <button
-                    type="button"
+                <a
+                    href="{% url 'incidencias:reporte_incidencias_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                    target="_blank"
                     class="btn btn-primary"
-                    onclick="window.print();"
                 >
                     Imprimir / PDF
-                </button>
+                </a>
 
             </div>
 
@@ -664,7 +664,7 @@ Consulta histórica y exportación de incidencias registradas.
 
                                 {% if incidencia.tiempo_cierre_min is not None %}
 
-                                    {{ incidencia.tiempo_cierre_min }} min
+                                    {{ incidencia.tiempo_cierre_texto }} 
 
                                 {% else %}
 

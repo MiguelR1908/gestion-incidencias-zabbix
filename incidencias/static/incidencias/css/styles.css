@@ -7044,3 +7044,18 @@ input:checked
         grid-template-columns: 1fr;
     }
 }
+
+.report-filter-actions {
+    display: flex;
+    gap: 10px;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    cursor: pointer;
+}

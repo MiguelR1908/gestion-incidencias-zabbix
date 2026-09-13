@@ -226,17 +226,6 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                 </div>
 
 
-                {% if not es_tecnico %}
-                    <!-- Registrar incidencia manual -->
-                    <a
-                        href="#"
-                        class="btn btn-primary"
-                        title="Registrar una incidencia manual"
-                    >
-                        <span aria-hidden="true">＋</span>
-                        Nueva incidencia
-                    </a>
-                {% endif %}
 
 
                 <!-- Solo recarga cantidades y tabla desde la base de datos -->
@@ -282,28 +271,6 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                 {% endif %}
 
 
-                {% if not es_tecnico %}
-                <!-- REPORTE PDF -->
-                <a
-                    href="{% url 'incidencias:reporte_incidencias' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
-                    class="btn btn-primary"
-                    title="Generar reporte PDF de las incidencias filtradas"
-                >
-                    <span aria-hidden="true">▣</span>
-                    PDF
-                </a>
-
-
-                <!-- EXPORTAR CSV -->
-                <a
-                    href="{% url 'incidencias:exportar_incidencias_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
-                    class="btn btn-warning"
-                    title="Exportar las incidencias filtradas a CSV"
-                >
-                    <span aria-hidden="true">⇩</span>
-                    CSV
-                </a>
-                {% endif %}
 
             </div>
 

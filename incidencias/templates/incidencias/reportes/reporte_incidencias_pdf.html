@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <title>
+        Reporte de incidencias - Fiber Z NOC
+    </title>
+
+    <style>
+
+        @page {
+            size: A4 landscape;
+            margin: 12mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+
+            color: #111827;
+            background: #ffffff;
+        }
+
+        .report-container {
+            width: 100%;
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+
+            border-bottom: 2px solid #163b82;
+        }
+
+        .report-title h1 {
+            margin: 0 0 4px;
+
+            font-size: 20px;
+            color: #163b82;
+        }
+
+        .report-title p {
+            margin: 0;
+
+            font-size: 10px;
+            color: #6b7280;
+        }
+
+        .report-meta {
+            text-align: right;
+
+            font-size: 9px;
+            color: #4b5563;
+        }
+
+        .report-meta strong {
+            color: #111827;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+
+            margin-bottom: 14px;
+        }
+
+        .summary-card {
+            padding: 8px;
+
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+
+            background: #f8fafc;
+        }
+
+        .summary-card span {
+            display: block;
+
+            margin-bottom: 3px;
+
+            font-size: 8px;
+            font-weight: bold;
+
+            color: #6b7280;
+
+            text-transform: uppercase;
+        }
+
+        .summary-card strong {
+            font-size: 16px;
+            color: #163b82;
+        }
+
+        .filters-box {
+            margin-bottom: 14px;
+            padding: 8px 10px;
+
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+
+            background: #f9fafb;
+        }
+
+        .filters-title {
+            margin-bottom: 5px;
+
+            font-size: 10px;
+            font-weight: bold;
+
+            color: #163b82;
+        }
+
+        .filters-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+
+        .filter-item {
+            font-size: 9px;
+        }
+
+        .filter-item strong {
+            color: #374151;
+        }
+
+        table {
+            width: 100%;
+
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        thead {
+            display: table-header-group;
+        }
+
+        tr {
+            page-break-inside: avoid;
+        }
+
+        th {
+            padding: 6px 5px;
+
+            border: 1px solid #bfc5ce;
+
+            background: #163b82;
+            color: #ffffff;
+
+            font-size: 8px;
+            text-align: left;
+        }
+
+        td {
+            padding: 5px;
+
+            border: 1px solid #d1d5db;
+
+            font-size: 8px;
+            vertical-align: top;
+
+            word-wrap: break-word;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .severity-critical {
+            color: #b91c1c;
+            font-weight: bold;
+        }
+
+        .severity-high {
+            color: #b45309;
+            font-weight: bold;
+        }
+
+        .report-footer {
+            margin-top: 10px;
+
+            font-size: 8px;
+            color: #6b7280;
+
+            text-align: right;
+        }
+
+        .print-actions {
+            margin-bottom: 12px;
+            text-align: right;
+        }
+
+        .print-button {
+            display: inline-block;
+
+            padding: 7px 14px;
+
+            border: none;
+            border-radius: 5px;
+
+            background: #163b82;
+            color: white;
+
+            font-size: 10px;
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+        @media print {
+
+            .print-actions {
+                display: none;
+            }
+
+            body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="report-container">
+
+    <div class="print-actions">
+        <button
+            type="button"
+            class="print-button"
+            onclick="window.print();"
+        >
+            Imprimir / Guardar PDF
+        </button>
+    </div>
+
+
+    <!-- ======================================================
+         CABECERA
+         ====================================================== -->
+
+    <div class="report-header">
+
+        <div class="report-title">
+
+            <h1>
+                Fiber Z NOC
+            </h1>
+
+            <p>
+                Reporte general de incidencias
+            </p>
+
+        </div>
+
+
+        <div class="report-meta">
+
+            <div>
+                <strong>Generado:</strong>
+
+                {{ fecha_generacion|date:"d/m/Y H:i:s" }}
+            </div>
+
+            <div>
+                Sistema de gestión de incidencias
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+         RESUMEN
+         ====================================================== -->
+
+    <div class="summary-grid">
+
+        <div class="summary-card">
+            <span>Total</span>
+            <strong>
+                {{ total_incidencias|default:"0" }}
+            </strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Detectadas</span>
+            <strong>
+                {{ total_detectadas|default:"0" }}
+            </strong>
+        </div>
+
+        <div class="summary-card">
+            <span>En atención</span>
+            <strong>
+                {{ total_en_atencion|default:"0" }}
+            </strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Cerradas</span>
+            <strong>
+                {{ total_cerradas|default:"0" }}
+            </strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Alta / Crítica</span>
+            <strong>
+                {{ total_altas_criticas|default:"0" }}
+            </strong>
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+         FILTROS APLICADOS
+         ====================================================== -->
+
+    <div class="filters-box">
+
+        <div class="filters-title">
+            Filtros aplicados
+        </div>
+
+        <div class="filters-grid">
+
+            <div class="filter-item">
+
+                <strong>Búsqueda:</strong>
+
+                {% if query %}
+                    {{ query }}
+                {% else %}
+                    Todas
+                {% endif %}
+
+            </div>
+
+
+            <div class="filter-item">
+
+                <strong>Estado:</strong>
+
+                {% if estado_seleccionado %}
+                    {{ estado_seleccionado }}
+                {% else %}
+                    Todos
+                {% endif %}
+
+            </div>
+
+
+            <div class="filter-item">
+
+                <strong>Severidad:</strong>
+
+                {% if severidad_seleccionada %}
+                    {{ severidad_seleccionada }}
+                {% else %}
+                    Todas
+                {% endif %}
+
+            </div>
+
+
+            <div class="filter-item">
+
+                <strong>Desde:</strong>
+
+                {% if fecha_desde %}
+                    {{ fecha_desde }}
+                {% else %}
+                    -
+                {% endif %}
+
+            </div>
+
+
+            <div class="filter-item">
+
+                <strong>Hasta:</strong>
+
+                {% if fecha_hasta %}
+                    {{ fecha_hasta }}
+                {% else %}
+                    -
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+         TABLA
+         ====================================================== -->
+
+    <table>
+
+        <thead>
+
+            <tr>
+
+                <th style="width: 12%;">
+                    Código
+                </th>
+
+                <th style="width: 11%;">
+                    Fecha
+                </th>
+
+                <th style="width: 10%;">
+                    Nodo
+                </th>
+
+                <th style="width: 12%;">
+                    Componente
+                </th>
+
+                <th style="width: 10%;">
+                    Estado
+                </th>
+
+                <th style="width: 9%;">
+                    Severidad
+                </th>
+
+                <th style="width: 20%;">
+                    Técnico
+                </th>
+
+                <th style="width: 10%;">
+                    T. cierre
+                </th>
+
+            </tr>
+
+        </thead>
+
+
+        <tbody>
+
+            {% for incidencia in incidencias %}
+
+                <tr>
+
+                    <td>
+                        {{ incidencia.codigo }}
+                    </td>
+
+
+                    <td>
+                        {{ incidencia.fecha_deteccion|date:"d/m/Y H:i" }}
+                    </td>
+
+
+                    <td>
+
+                        {% if incidencia.nodo_afectado %}
+
+                            {{ incidencia.nodo_afectado.codigo }}
+
+                        {% else %}
+
+                            -
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <td>
+
+                        {% if incidencia.componente_principal %}
+
+                            {{ incidencia.componente_principal.codigo }}
+
+                        {% else %}
+
+                            -
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <td>
+                        {{ incidencia.get_estado_display }}
+                    </td>
+
+
+                    <td>
+
+                        {% if incidencia.severidad == "CRITICA" %}
+
+                            <span class="severity-critical">
+                                {{ incidencia.get_severidad_display }}
+                            </span>
+
+                        {% elif incidencia.severidad == "ALTA" %}
+
+                            <span class="severity-high">
+                                {{ incidencia.get_severidad_display }}
+                            </span>
+
+                        {% else %}
+
+                            {{ incidencia.get_severidad_display }}
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <td>
+
+                        {% if incidencia.tecnico_asignado %}
+
+                            {{ incidencia.tecnico_asignado.get_full_name|default:incidencia.tecnico_asignado.username }}
+
+                        {% else %}
+
+                            -
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <td>
+
+                        {% if incidencia.tiempo_cierre_min is not None %}
+
+                            {{ incidencia.tiempo_cierre_texto }}
+
+                        {% else %}
+
+                            -
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+
+            {% empty %}
+
+                <tr>
+
+                    <td colspan="8">
+                        No existen incidencias para los filtros seleccionados.
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+
+    <div class="report-footer">
+
+        Fiber Z Telecom S.R.L. · Sistema de gestión de incidencias NOC
+
+    </div>
+
+</div>
+
+
+</body>
+</html>

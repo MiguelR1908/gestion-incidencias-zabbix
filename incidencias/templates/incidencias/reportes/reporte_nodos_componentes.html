@@ -88,12 +88,18 @@ Análisis de concentración de incidencias por nodo y componente de red.
                         Aplicar filtros
                     </button>
 
-
                     <a
                         href="{% url 'incidencias:reporte_nodos_componentes' %}"
                         class="btn btn-secondary"
                     >
                         Limpiar
+                    </a>
+
+                    <a
+                        href="{% url 'incidencias:exportar_reporte_nodos_componentes_csv' %}?{{ request.GET.urlencode }}"
+                        class="btn btn-secondary"
+                    >
+                        Exportar CSV
                     </a>
 
                 </div>

@@ -279,6 +279,13 @@ Indicadores de atención y cumplimiento de niveles de servicio.
                         Limpiar
                     </a>
 
+                    <a
+                        href="{% url 'incidencias:exportar_reporte_sla_tiempos_csv' %}?{{ request.GET.urlencode }}"
+                        class="btn btn-secondary"
+                    >
+                        Exportar CSV
+                    </a>
+
                 </div>
 
 
@@ -620,6 +627,7 @@ Indicadores de atención y cumplimiento de niveles de servicio.
                         <th>Resultado</th>
                         <th>Resolución</th>
                         <th>Resultado</th>
+                        <th>Estado actual</th>
                     </tr>
                 </thead>
 
@@ -644,7 +652,7 @@ Indicadores de atención y cumplimiento de niveles de servicio.
                                 {% if incidencia.tiempo_registro_min is not None %}
                                     <div class="sla-time-limit-cell">
                                         <strong class="sla-time-table-value">
-                                            {{ incidencia.tiempo_registro_min }} min
+                                            {{ incidencia.tiempo_registro_texto }}
                                         </strong>
 
                                         {% if incidencia.sla_registro_max is not None %}
@@ -675,7 +683,7 @@ Indicadores de atención y cumplimiento de niveles de servicio.
                                 {% if incidencia.tiempo_asignacion_min is not None %}
                                     <div class="sla-time-limit-cell">
                                         <strong class="sla-time-table-value">
-                                            {{ incidencia.tiempo_asignacion_min }} min
+                                            {{ incidencia.tiempo_asignacion_texto }}
                                         </strong>
 
                                         {% if incidencia.sla_asignacion_max is not None %}
@@ -706,7 +714,7 @@ Indicadores de atención y cumplimiento de niveles de servicio.
                                 {% if incidencia.tiempo_inicio_atencion_min is not None %}
                                     <div class="sla-time-limit-cell">
                                         <strong class="sla-time-table-value">
-                                            {{ incidencia.tiempo_inicio_atencion_min }} min
+                                            {{ incidencia.tiempo_inicio_atencion_texto }}
                                         </strong>
 
                                         {% if incidencia.sla_inicio_max is not None %}
@@ -737,7 +745,7 @@ Indicadores de atención y cumplimiento de niveles de servicio.
                                 {% if incidencia.tiempo_resolucion_min is not None %}
                                     <div class="sla-time-limit-cell">
                                         <strong class="sla-time-table-value">
-                                            {{ incidencia.tiempo_resolucion_min }} min
+                                            {{ incidencia.tiempo_resolucion_texto }}
                                         </strong>
 
                                         {% if incidencia.sla_resolucion_max is not None %}
@@ -814,7 +822,7 @@ Indicadores de atención y cumplimiento de niveles de servicio.
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="10" class="sla-empty">
+                            <td colspan="11" class="sla-empty">
                                 No existen incidencias para los filtros seleccionados.
                             </td>
                         </tr>

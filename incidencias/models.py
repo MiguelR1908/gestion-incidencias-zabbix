@@ -1154,6 +1154,63 @@ class Incidencia(ModeloAuditoria):
         return calcular_minutos(self.fecha_deteccion, self.fecha_cierre)
 
 
+    def formatear_minutos(self, minutos):
+        if minutos is None:
+            return "-"
+
+        minutos = int(round(minutos))
+
+        dias = minutos // 1440
+        horas = (minutos % 1440) // 60
+        mins = minutos % 60
+
+        partes = []
+
+        if dias:
+            partes.append(f"{dias} d")
+
+        if horas:
+            partes.append(f"{horas} h")
+
+        if mins or not partes:
+            partes.append(f"{mins} min")
+
+        return " ".join(partes)
+
+
+    @property
+    def tiempo_registro_texto(self):
+        return self.formatear_minutos(
+            self.tiempo_registro_min
+        )
+
+
+    @property
+    def tiempo_asignacion_texto(self):
+        return self.formatear_minutos(
+            self.tiempo_asignacion_min
+        )
+
+
+    @property
+    def tiempo_inicio_atencion_texto(self):
+        return self.formatear_minutos(
+            self.tiempo_inicio_atencion_min
+        )
+
+
+    @property
+    def tiempo_resolucion_texto(self):
+        return self.formatear_minutos(
+            self.tiempo_resolucion_min
+        )
+
+
+    @property
+    def tiempo_cierre_texto(self):
+        return self.formatear_minutos(
+            self.tiempo_cierre_min
+        )
 # =====================================================
 # 10. INCIDENCIA COMPONENTE AFECTADO
 # =====================================================

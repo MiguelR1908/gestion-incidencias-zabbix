@@ -122,7 +122,7 @@ Indicadores operativos, cumplimiento SLA y tiempos de atención por técnico.
 
                 {% if tiempo_promedio_general != None %}
 
-                    {{ tiempo_promedio_general }} min
+                    {{ tiempo_promedio_general_texto }}
 
                 {% else %}
 
@@ -244,17 +244,23 @@ Indicadores operativos, cumplimiento SLA y tiempos de atención por técnico.
 
                 <button
                     type="submit"
-                    class="btn-primary"
+                    class="btn btn-primary"
                 >
                     Filtrar
                 </button>
 
-
                 <a
                     href="{% url 'incidencias:reporte_tecnicos' %}"
-                    class="btn-secondary"
+                    class="btn btn-secondary"
                 >
                     Limpiar
+                </a>
+
+                <a
+                    href="{% url 'incidencias:exportar_reporte_tecnicos_csv' %}?{{ request.GET.urlencode }}"
+                    class="btn btn-secondary"
+                >
+                    Exportar CSV
                 </a>
 
             </div>
@@ -417,7 +423,7 @@ Indicadores operativos, cumplimiento SLA y tiempos de atención por técnico.
 
                                 {% if fila.tiempo_promedio != None %}
 
-                                    {{ fila.tiempo_promedio }} min
+                                    {{ fila.tiempo_promedio_texto }}
 
                                 {% else %}
 
