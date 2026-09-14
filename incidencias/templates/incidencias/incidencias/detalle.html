@@ -1,22 +1,18 @@
 {% extends "incidencias/base.html" %}
-{% load tz %}
 
+{% load tz %}
 
 {% block title %}
 Detalle de incidencia | Fiber Z NOC
-
 {% endblock %}
-
 
 {% block page_title %}
 Detalle de incidencia
 {% endblock %}
 
-
 {% block page_subtitle %}
 Información operativa, seguimiento y bitácora de la incidencia.
 {% endblock %}
-
 
 {% block content %}
 
@@ -44,24 +40,20 @@ Información operativa, seguimiento y bitácora de la incidencia.
         gap: 22px;
     }
 
-
     /* ==========================================================
        TARJETAS
        ========================================================== */
 
     .detail-panel {
         overflow: hidden;
-
         border: 1px solid var(--detail-border);
         border-radius: 18px;
-
         background:
             linear-gradient(
                 145deg,
                 rgba(18, 48, 115, 0.88),
                 rgba(5, 19, 58, 0.92)
             );
-
         box-shadow:
             0 18px 45px rgba(0, 0, 0, 0.16);
     }
@@ -71,9 +63,7 @@ Información operativa, seguimiento y bitácora de la incidencia.
         align-items: flex-start;
         justify-content: space-between;
         gap: 18px;
-
         padding: 20px 22px;
-
         border-bottom: 1px solid var(--detail-border-soft);
     }
 
@@ -94,7 +84,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
         padding: 22px;
     }
 
-
     /* ==========================================================
        CABECERA DE LA INCIDENCIA
        ========================================================== */
@@ -114,9 +103,7 @@ Información operativa, seguimiento y bitácora de la incidencia.
         display: inline-flex;
         align-items: center;
         gap: 8px;
-
         margin-bottom: 10px;
-
         color: #93c5fd;
         font-size: 13px;
         font-weight: 800;
@@ -133,7 +120,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
     .incident-detail-description {
         max-width: 1000px;
         margin: 12px 0 0;
-
         color: #cbd5e1;
         font-size: 14px;
         line-height: 1.7;
@@ -157,7 +143,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
         white-space: nowrap;
     }
 
-
     /* ==========================================================
        BADGES
        ========================================================== */
@@ -166,16 +151,12 @@ Información operativa, seguimiento y bitácora de la incidencia.
         display: inline-flex;
         align-items: center;
         justify-content: center;
-
         min-height: 29px;
         padding: 6px 12px;
-
         border: 1px solid rgba(96, 165, 250, 0.35);
         border-radius: 999px;
-
         background: rgba(59, 130, 246, 0.13);
         color: #bfdbfe;
-
         font-size: 11px;
         font-weight: 800;
         letter-spacing: 0.4px;
@@ -237,7 +218,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
         color: #bbf7d0;
     }
 
-
     /* ==========================================================
        INFORMACIÓN GENERAL
        ========================================================== */
@@ -251,17 +231,14 @@ Información operativa, seguimiento y bitácora de la incidencia.
     .incident-detail-field {
         min-width: 0;
         padding: 16px;
-
         border: 1px solid var(--detail-border-soft);
         border-radius: 12px;
-
         background: rgba(3, 15, 48, 0.38);
     }
 
     .incident-detail-field-label {
         display: block;
         margin-bottom: 7px;
-
         color: var(--detail-muted);
         font-size: 11px;
         font-weight: 700;
@@ -271,7 +248,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
 
     .incident-detail-field-value {
         display: block;
-
         color: var(--detail-text);
         font-size: 14px;
         font-weight: 700;
@@ -282,12 +258,10 @@ Información operativa, seguimiento y bitácora de la incidencia.
     .incident-detail-field-note {
         display: block;
         margin-top: 4px;
-
         color: #94a3b8;
         font-size: 12px;
         line-height: 1.4;
     }
-
 
     /* ==========================================================
        INFORMACIÓN ZABBIX
@@ -301,17 +275,14 @@ Información operativa, seguimiento y bitácora de la incidencia.
 
     .zabbix-info-item {
         padding: 14px;
-
         border: 1px solid rgba(74, 222, 128, 0.18);
         border-radius: 11px;
-
         background: rgba(6, 78, 59, 0.12);
     }
 
     .zabbix-info-item small {
         display: block;
         margin-bottom: 5px;
-
         color: #86efac;
         font-size: 11px;
         text-transform: uppercase;
@@ -322,7 +293,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
         font-size: 13px;
         overflow-wrap: anywhere;
     }
-
 
     /* ==========================================================
        FORMULARIO Y BITÁCORA
@@ -350,8 +320,9 @@ Información operativa, seguimiento y bitácora de la incidencia.
     }
 
     .incident-log-form-group[hidden] {
-    display: none !important;
+        display: none !important;
     }
+
     .incident-log-form-group label {
         color: #dbeafe;
         font-size: 13px;
@@ -363,16 +334,12 @@ Información operativa, seguimiento y bitácora de la incidencia.
     .incident-log-form-group input {
         width: 100%;
         box-sizing: border-box;
-
         padding: 11px 13px;
-
         border: 1px solid rgba(96, 165, 250, 0.28);
         border-radius: 10px;
         outline: none;
-
         background: rgba(2, 12, 40, 0.62);
         color: #f8fafc;
-
         font: inherit;
     }
 
@@ -390,7 +357,8 @@ Información operativa, seguimiento y bitácora de la incidencia.
     .incident-log-form-group textarea:focus,
     .incident-log-form-group input:focus {
         border-color: #60a5fa;
-        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.12);
+        box-shadow:
+            0 0 0 3px rgba(96, 165, 250, 0.12);
     }
 
     .incident-log-form-group option {
@@ -410,17 +378,13 @@ Información operativa, seguimiento y bitácora de la incidencia.
 
     .incident-log-closed {
         padding: 16px;
-
         border: 1px solid rgba(148, 163, 184, 0.2);
         border-radius: 10px;
-
         background: rgba(148, 163, 184, 0.08);
         color: #cbd5e1;
-
         font-size: 13px;
         line-height: 1.5;
     }
-
 
     /* ==========================================================
        LÍNEA DE TIEMPO
@@ -437,9 +401,7 @@ Información operativa, seguimiento y bitácora de la incidencia.
         align-items: center;
         justify-content: flex-end;
         gap: 7px;
-
         margin-bottom: 18px;
-
         color: #94a3b8;
         font-size: 11px;
     }
@@ -454,7 +416,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
 
     .incident-history-entry {
         position: relative;
-
         display: grid;
         grid-template-columns: 42px minmax(0, 1fr);
         gap: 13px;
@@ -469,22 +430,16 @@ Información operativa, seguimiento y bitácora de la incidencia.
     .incident-history-icon {
         position: relative;
         z-index: 2;
-
         display: flex;
         align-items: center;
         justify-content: center;
-
         flex: 0 0 auto;
-
         width: 34px;
         height: 34px;
-
         border: 1px solid rgba(96, 165, 250, 0.48);
         border-radius: 50%;
-
         background: #122b6f;
         color: #bfdbfe;
-
         box-shadow:
             0 0 0 5px rgba(59, 130, 246, 0.08);
     }
@@ -492,7 +447,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
     .incident-history-icon svg {
         width: 17px;
         height: 17px;
-
         fill: none;
         stroke: currentColor;
         stroke-width: 2;
@@ -555,7 +509,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
         width: 2px;
         flex: 1;
         min-height: 24px;
-
         background:
             linear-gradient(
                 to bottom,
@@ -571,20 +524,16 @@ Información operativa, seguimiento y bitácora de la incidencia.
 
     .incident-history-content {
         min-width: 0;
-
         margin-bottom: 18px;
         padding: 16px;
-
         border: 1px solid var(--detail-border-soft);
         border-radius: 13px;
-
         background:
             linear-gradient(
                 145deg,
                 rgba(9, 27, 75, 0.82),
                 rgba(4, 17, 52, 0.7)
             );
-
         transition:
             border-color 0.2s ease,
             transform 0.2s ease;
@@ -600,25 +549,19 @@ Información operativa, seguimiento y bitácora de la incidencia.
         align-items: flex-start;
         justify-content: space-between;
         gap: 16px;
-
         padding-bottom: 12px;
         margin-bottom: 12px;
-
         border-bottom: 1px solid var(--detail-border-soft);
     }
 
     .incident-history-action {
         display: inline-flex;
         align-items: center;
-
         padding: 5px 10px;
-
         border: 1px solid rgba(96, 165, 250, 0.32);
         border-radius: 999px;
-
         background: rgba(59, 130, 246, 0.1);
         color: #bfdbfe;
-
         font-size: 10px;
         font-weight: 900;
         letter-spacing: 0.7px;
@@ -674,7 +617,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
         flex-direction: column;
         align-items: flex-end;
         gap: 2px;
-
         white-space: nowrap;
     }
 
@@ -692,7 +634,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
         display: flex;
         align-items: center;
         gap: 10px;
-
         margin-bottom: 12px;
     }
 
@@ -700,15 +641,11 @@ Información operativa, seguimiento y bitácora de la incidencia.
         display: flex;
         align-items: center;
         justify-content: center;
-
         width: 31px;
         height: 31px;
-
         border-radius: 50%;
-
         background: #facc15;
         color: #172554;
-
         font-size: 12px;
         font-weight: 900;
     }
@@ -732,16 +669,12 @@ Información operativa, seguimiento y bitácora de la incidencia.
 
     .incident-history-description {
         padding: 13px 14px;
-
         border-left: 3px solid #60a5fa;
         border-radius: 0 9px 9px 0;
-
         background: rgba(2, 12, 40, 0.48);
         color: #dbeafe;
-
         font-size: 13px;
         line-height: 1.65;
-
         overflow-wrap: anywhere;
     }
 
@@ -751,10 +684,8 @@ Información operativa, seguimiento y bitácora de la incidencia.
         justify-content: space-between;
         flex-wrap: wrap;
         gap: 12px;
-
         margin-top: 13px;
         padding-top: 13px;
-
         border-top: 1px solid var(--detail-border-soft);
     }
 
@@ -775,11 +706,8 @@ Información operativa, seguimiento y bitácora de la incidencia.
     .incident-state-value {
         display: inline-flex;
         align-items: center;
-
         padding: 5px 9px;
-
         border-radius: 999px;
-
         font-size: 10px;
         font-weight: 800;
     }
@@ -806,10 +734,8 @@ Información operativa, seguimiento y bitácora de la incidencia.
         flex-direction: column;
         align-items: center;
         justify-content: center;
-
         min-height: 180px;
         padding: 25px;
-
         color: #94a3b8;
         text-align: center;
     }
@@ -818,7 +744,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
         width: 38px;
         height: 38px;
         margin-bottom: 12px;
-
         fill: none;
         stroke: #60a5fa;
         stroke-width: 1.7;
@@ -828,7 +753,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
         margin-bottom: 5px;
         color: #f8fafc;
     }
-
 
     /* ==========================================================
        BOTONES FINALES
@@ -841,7 +765,6 @@ Información operativa, seguimiento y bitácora de la incidencia.
         flex-wrap: wrap;
         gap: 10px;
     }
-
 
     /* ==========================================================
        RESPONSIVE
@@ -904,93 +827,445 @@ Información operativa, seguimiento y bitácora de la incidencia.
     }
 </style>
 
-
 <div id="incident-detail-page">
 
+```
+<!-- ========================================================
+     CABECERA
+     ======================================================== -->
 
-    <!-- ========================================================
-         CABECERA
-         ======================================================== -->
+<section class="detail-panel incident-detail-hero">
 
-    <section class="detail-panel incident-detail-hero">
+    <div class="incident-detail-hero-top">
 
-        <div class="incident-detail-hero-top">
+        <div>
 
-            <div>
+            <div class="incident-detail-code">
+                <span aria-hidden="true">●</span>
+                {{ incidencia.codigo }}
+            </div>
 
-                <div class="incident-detail-code">
-                    <span aria-hidden="true">●</span>
+            <h2 class="incident-detail-title">
+                {{ incidencia.titulo }}
+            </h2>
+
+            <p class="incident-detail-description">
+                {{ incidencia.descripcion }}
+            </p>
+
+        </div>
+
+        <div class="incident-detail-actions">
+
+            {% if incidencia.estado == "DETECTADA" %}
+
+                <span class="detail-badge detail-badge--detected">
+                    Detectada
+                </span>
+
+                <a
+                    href="{% url 'incidencias:incidencia_asignar' incidencia.id %}"
+                    class="btn btn-primary"
+                >
+                    Asignar técnico
+                </a>
+
+            {% elif incidencia.estado == "ASIGNADA" or incidencia.estado == "EN_ATENCION" %}
+
+                <span class="detail-badge detail-badge--progress">
+                    En atención
+                </span>
+
+            {% elif incidencia.estado == "RESUELTA" %}
+
+                <span class="detail-badge detail-badge--resolved">
+                    Resuelta
+                </span>
+
+            {% elif incidencia.estado == "CERRADA" %}
+
+                <span class="detail-badge detail-badge--closed">
+                    Cerrada
+                </span>
+
+            {% elif incidencia.estado == "CANCELADA" %}
+
+                <span class="detail-badge detail-badge--closed">
+                    Cancelada
+                </span>
+
+            {% else %}
+
+                <span class="detail-badge">
+                    {{ incidencia.get_estado_display }}
+                </span>
+
+            {% endif %}
+
+            <!-- REPORTE INDIVIDUAL -->
+
+            <a
+                href="{% url 'incidencias:reporte_incidencia' incidencia.id %}"
+                class="btn btn-warning"
+                target="_blank"
+                title="Generar reporte completo de la incidencia"
+            >
+                <span aria-hidden="true">▣</span>
+                Reporte PDF
+            </a>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ========================================================
+     INFORMACIÓN GENERAL
+     ======================================================== -->
+
+<section class="detail-panel">
+
+    <header class="detail-panel-header">
+
+        <div>
+
+            <h3>
+                Información general
+            </h3>
+
+            <p>
+                Datos operativos y responsable actual de la incidencia.
+            </p>
+
+        </div>
+
+    </header>
+
+
+    <div class="detail-panel-body">
+
+        <div class="incident-detail-grid">
+
+            <div class="incident-detail-field">
+
+                <span class="incident-detail-field-label">
+                    Código
+                </span>
+
+                <span class="incident-detail-field-value">
                     {{ incidencia.codigo }}
-                </div>
-
-                <h2 class="incident-detail-title">
-                    {{ incidencia.titulo }}
-                </h2>
-
-                <p class="incident-detail-description">
-                    {{ incidencia.descripcion }}
-                </p>
+                </span>
 
             </div>
 
 
-            <div class="incident-detail-actions">
+            <div class="incident-detail-field">
 
-                {% if incidencia.estado == "DETECTADA" %}
+                <span class="incident-detail-field-label">
+                    Estado
+                </span>
 
-                    <span class="detail-badge detail-badge--detected">
-                        Detectada
-                    </span>
+                <span class="incident-detail-field-value">
+                    {{ incidencia.get_estado_display }}
+                </span>
 
-                    <a
-                        href="{% url 'incidencias:incidencia_asignar' incidencia.id %}"
-                        class="btn btn-primary"
-                    >
-                        Asignar técnico
-                    </a>
+            </div>
 
-                {% elif incidencia.estado == "ASIGNADA" or incidencia.estado == "EN_ATENCION" %}
 
-                    <span class="detail-badge detail-badge--progress">
-                        En atención
-                    </span>
+            <div class="incident-detail-field">
 
-                {% elif incidencia.estado == "RESUELTA" %}
+                <span class="incident-detail-field-label">
+                    Severidad
+                </span>
 
-                    <span class="detail-badge detail-badge--resolved">
-                        Resuelta
-                    </span>
+                <span class="incident-detail-field-value">
+                    {{ incidencia.get_severidad_display }}
+                </span>
 
-                {% elif incidencia.estado == "CERRADA" %}
+            </div>
 
-                    <span class="detail-badge detail-badge--closed">
-                        Cerrada
-                    </span>
 
-                {% elif incidencia.estado == "CANCELADA" %}
+            <div class="incident-detail-field">
 
-                    <span class="detail-badge detail-badge--closed">
-                        Cancelada
-                    </span>
+                <span class="incident-detail-field-label">
+                    Nodo afectado
+                </span>
 
-                {% else %}
+                <span class="incident-detail-field-value">
+                    {{ incidencia.nodo_afectado|default:"—" }}
+                </span>
 
-                    <span class="detail-badge">
-                        {{ incidencia.get_estado_display }}
-                    </span>
+            </div>
 
-                {% endif %}
 
-                <!-- REPORTE INDIVIDUAL DE LA INCIDENCIA -->
-                <a
-                    href="{% url 'incidencias:reporte_incidencia' incidencia.id %}"
-                    class="btn btn-warning"
-                    target="_blank"
-                    title="Generar reporte completo de la incidencia"
-                >
-                    <span aria-hidden="true">▣</span>
-                    Reporte PDF
-                </a>
+            <div class="incident-detail-field">
+
+                <span class="incident-detail-field-label">
+                    Componente principal
+                </span>
+
+                <span class="incident-detail-field-value">
+                    {{ incidencia.componente_principal|default:"—" }}
+                </span>
+
+            </div>
+
+
+            <div class="incident-detail-field">
+
+                <span class="incident-detail-field-label">
+                    Técnico responsable
+                </span>
+
+                <span class="incident-detail-field-value">
+
+                    {% if incidencia.tecnico_asignado %}
+
+                        {% if incidencia.tecnico_asignado.get_full_name %}
+
+                            {{ incidencia.tecnico_asignado.get_full_name }}
+
+                        {% else %}
+
+                            {{ incidencia.tecnico_asignado.username }}
+
+                        {% endif %}
+
+                    {% else %}
+
+                        Sin asignar
+
+                    {% endif %}
+
+                </span>
+
+            </div>
+
+
+            <div class="incident-detail-field">
+
+                <span class="incident-detail-field-label">
+                    Fecha de detección
+                </span>
+
+                <span class="incident-detail-field-value">
+
+                    {% if incidencia.fecha_deteccion %}
+
+                        {{ incidencia.fecha_deteccion|localtime|date:"d/m/Y H:i:s" }}
+
+                    {% else %}
+
+                        —
+
+                    {% endif %}
+
+                </span>
+
+            </div>
+
+
+            <div class="incident-detail-field">
+
+                <span class="incident-detail-field-label">
+                    Fecha de registro
+                </span>
+
+                <span class="incident-detail-field-value">
+
+                    {% if incidencia.fecha_registro %}
+
+                        {{ incidencia.fecha_registro|localtime|date:"d/m/Y H:i:s" }}
+
+                    {% else %}
+
+                        —
+
+                    {% endif %}
+
+                </span>
+
+            </div>
+
+
+            <div class="incident-detail-field">
+
+                <span class="incident-detail-field-label">
+                    Fecha de asignación
+                </span>
+
+                <span class="incident-detail-field-value">
+
+                    {% if incidencia.fecha_asignacion %}
+
+                        {{ incidencia.fecha_asignacion|localtime|date:"d/m/Y H:i:s" }}
+
+                    {% else %}
+
+                        —
+
+                    {% endif %}
+
+                </span>
+
+            </div>
+
+
+            <div class="incident-detail-field">
+
+                <span class="incident-detail-field-label">
+                    Fecha de resolución
+                </span>
+
+                <span class="incident-detail-field-value">
+
+                    {% if incidencia.fecha_resolucion %}
+
+                        {{ incidencia.fecha_resolucion|localtime|date:"d/m/Y H:i:s" }}
+
+                    {% else %}
+
+                        —
+
+                    {% endif %}
+
+                </span>
+
+            </div>
+
+
+            <div class="incident-detail-field">
+
+                <span class="incident-detail-field-label">
+                    Fecha de cierre
+                </span>
+
+                <span class="incident-detail-field-value">
+
+                    {% if incidencia.fecha_cierre %}
+
+                        {{ incidencia.fecha_cierre|localtime|date:"d/m/Y H:i:s" }}
+
+                    {% else %}
+
+                        —
+
+                    {% endif %}
+
+                </span>
+
+            </div>
+
+
+            <div class="incident-detail-field">
+
+                <span class="incident-detail-field-label">
+                    Registrado por
+                </span>
+
+                <span class="incident-detail-field-value">
+
+                    {% if incidencia.registrado_por %}
+
+                        {% if incidencia.registrado_por.get_full_name %}
+
+                            {{ incidencia.registrado_por.get_full_name }}
+
+                        {% else %}
+
+                            {{ incidencia.registrado_por.username }}
+
+                        {% endif %}
+
+                    {% else %}
+
+                        Sistema
+
+                    {% endif %}
+
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ========================================================
+     INFORMACIÓN ZABBIX
+     ======================================================== -->
+
+{% if incidencia.alerta_zabbix %}
+
+    <section class="detail-panel">
+
+        <header class="detail-panel-header">
+
+            <div>
+
+                <h3>
+                    Información de Zabbix
+                </h3>
+
+                <p>
+                    Datos técnicos de la alerta que originó la incidencia.
+                </p>
+
+            </div>
+
+            <span class="detail-badge detail-badge--resolved">
+                Integración activa
+            </span>
+
+        </header>
+
+
+        <div class="detail-panel-body">
+
+            <div class="zabbix-info-grid">
+
+                <div class="zabbix-info-item">
+
+                    <small>
+                        Event ID
+                    </small>
+
+                    <strong>
+                        {{ incidencia.alerta_zabbix.event_id }}
+                    </strong>
+
+                </div>
+
+
+                <div class="zabbix-info-item">
+
+                    <small>
+                        Trigger ID
+                    </small>
+
+                    <strong>
+                        {{ incidencia.alerta_zabbix.trigger_id|default:"—" }}
+                    </strong>
+
+                </div>
+
+
+                <div class="zabbix-info-item">
+
+                    <small>
+                        Host ID
+                    </small>
+
+                    <strong>
+                        {{ incidencia.alerta_zabbix.host_id|default:"—" }}
+                    </strong>
+
+                </div>
 
             </div>
 
@@ -998,21 +1273,34 @@ Información operativa, seguimiento y bitácora de la incidencia.
 
     </section>
 
+{% endif %}
 
-    <!-- ========================================================
-         INFORMACIÓN GENERAL
-         ======================================================== -->
 
-    <section class="detail-panel">
+<!-- ========================================================
+     OPERACIÓN Y BITÁCORA
+     ======================================================== -->
+
+<section class="incident-operation-layout">
+
+
+    <!-- ====================================================
+         REGISTRAR AVANCE
+         ==================================================== -->
+
+    <article class="detail-panel">
 
         <header class="detail-panel-header">
 
             <div>
-                <h3>Información general</h3>
+
+                <h3>
+                    Registrar avance
+                </h3>
 
                 <p>
-                    Datos operativos y responsable actual de la incidencia.
+                    Documente validaciones, diagnóstico y acciones realizadas.
                 </p>
+
             </div>
 
         </header>
@@ -1023,7 +1311,10 @@ Información operativa, seguimiento y bitácora de la incidencia.
             {% if not puede_editar %}
 
                 <div class="incident-log-closed">
-                    <strong>Modo consulta</strong>
+
+                    <strong>
+                        Modo consulta
+                    </strong>
 
                     <br><br>
 
@@ -1032,33 +1323,42 @@ Información operativa, seguimiento y bitácora de la incidencia.
 
                     Puedes consultar toda la información y la bitácora,
                     pero no registrar nuevos avances.
+
                 </div>
 
 
             {% elif incidencia.estado == "CERRADA" %}
 
                 <div class="incident-log-closed">
+
                     La incidencia está cerrada. El historial queda disponible
                     únicamente para consulta.
+
                 </div>
 
 
             {% elif incidencia.estado == "CANCELADA" %}
 
                 <div class="incident-log-closed">
+
                     La incidencia está cancelada y no admite nuevos registros.
+
                 </div>
 
 
             {% elif incidencia.estado == "DETECTADA" %}
 
                 <div class="incident-log-closed">
+
                     Primero debe asignar un técnico. Al realizar la asignación,
                     la incidencia empezará inmediatamente su atención.
+
                 </div>
 
 
             {% else %}
+
+                <!-- ÚNICO FORMULARIO DE AVANCE -->
 
                 <form
                     method="post"
@@ -1078,22 +1378,30 @@ Información operativa, seguimiento y bitácora de la incidencia.
                     {% endif %}
 
 
+                    <!-- TIPO DE REGISTRO -->
+
                     <div class="incident-log-form-group">
 
-                        <label for="{{ form_avance.tipo_registro.id_for_label }}">
+                        <label
+                            for="{{ form_avance.tipo_registro.id_for_label }}"
+                        >
                             {{ form_avance.tipo_registro.label }}
                         </label>
 
                         {{ form_avance.tipo_registro }}
 
                         {% for error in form_avance.tipo_registro.errors %}
+
                             <span class="incident-form-error">
                                 {{ error }}
                             </span>
+
                         {% endfor %}
 
                     </div>
 
+
+                    <!-- ESCALAMIENTO -->
 
                     <div
                         class="incident-log-form-group"
@@ -1101,26 +1409,68 @@ Información operativa, seguimiento y bitácora de la incidencia.
                         hidden
                     >
 
-                        <label for="{{ form_avance.nuevo_tecnico.id_for_label }}">
+                        <label
+                            for="{{ form_avance.nuevo_tecnico.id_for_label }}"
+                        >
                             Nuevo técnico responsable
                         </label>
 
                         {{ form_avance.nuevo_tecnico }}
 
                         {% for error in form_avance.nuevo_tecnico.errors %}
+
                             <span class="incident-form-error">
                                 {{ error }}
                             </span>
+
                         {% endfor %}
 
                         <span class="incident-detail-field-note">
+
                             Al registrar el escalamiento se desactivará la
                             asignación anterior y este usuario quedará como
                             técnico actual.
+
                         </span>
 
                     </div>
 
+
+                    <!-- FECHA Y HORA DE CIERRE -->
+
+                    <div
+                        class="incident-log-form-group"
+                        id="incident-close-fields"
+                        hidden
+                    >
+
+                        <label
+                            for="{{ form_avance.fecha_cierre.id_for_label }}"
+                        >
+                            {{ form_avance.fecha_cierre.label }}
+                        </label>
+
+                        {{ form_avance.fecha_cierre }}
+
+                        {% for error in form_avance.fecha_cierre.errors %}
+
+                            <span class="incident-form-error">
+                                {{ error }}
+                            </span>
+
+                        {% endfor %}
+
+                        <span class="incident-detail-field-note">
+
+                            Indique la fecha y hora en que se realizó
+                            el cierre definitivo de la incidencia.
+
+                        </span>
+
+                    </div>
+
+
+                    <!-- DETALLE -->
 
                     <div class="incident-log-form-group">
 
@@ -1134,13 +1484,17 @@ Información operativa, seguimiento y bitácora de la incidencia.
                         {{ form_avance.detalle }}
 
                         {% for error in form_avance.detalle.errors %}
+
                             <span class="incident-form-error">
                                 {{ error }}
                             </span>
+
                         {% endfor %}
 
                     </div>
 
+
+                    <!-- BOTÓN -->
 
                     <div class="incident-log-form-actions">
 
@@ -1160,526 +1514,504 @@ Información operativa, seguimiento y bitácora de la incidencia.
 
         </div>
 
-    </section>
+    </article>
 
 
-    <!-- ========================================================
-         INFORMACIÓN ZABBIX
-         ======================================================== -->
+    <!-- ====================================================
+         BITÁCORA
+         ==================================================== -->
 
-    {% if incidencia.alerta_zabbix %}
+    <article class="detail-panel">
 
-        <section class="detail-panel">
+        <header class="detail-panel-header">
 
-            <header class="detail-panel-header">
+            <div>
 
-                <div>
-                    <h3>Información de Zabbix</h3>
+                <h3>
+                    Bitácora de la incidencia
+                </h3>
 
-                    <p>
-                        Datos técnicos de la alerta que originó la incidencia.
-                    </p>
-                </div>
-
-                <span class="detail-badge detail-badge--resolved">
-                    Integración activa
-                </span>
-
-            </header>
-
-
-            <div class="detail-panel-body">
-
-                <div class="zabbix-info-grid">
-
-                    <div class="zabbix-info-item">
-                        <small>Event ID</small>
-
-                        <strong>
-                            {{ incidencia.alerta_zabbix.event_id }}
-                        </strong>
-                    </div>
-
-
-                    <div class="zabbix-info-item">
-                        <small>Trigger ID</small>
-
-                        <strong>
-                            {{ incidencia.alerta_zabbix.trigger_id|default:"—" }}
-                        </strong>
-                    </div>
-
-
-                    <div class="zabbix-info-item">
-                        <small>Host ID</small>
-
-                        <strong>
-                            {{ incidencia.alerta_zabbix.host_id|default:"—" }}
-                        </strong>
-                    </div>
-
-                </div>
+                <p>
+                    Historial de acciones, responsables y cambios de estado.
+                </p>
 
             </div>
 
-        </section>
-
-    {% endif %}
+        </header>
 
 
-    <!-- ========================================================
-         OPERACIÓN Y BITÁCORA
-         ======================================================== -->
+        <div class="detail-panel-body">
 
-    <section class="incident-operation-layout">
+            <div class="incident-history-order">
 
+                <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                >
+                    <path d="M4 6h16M8 12h12M12 18h8"></path>
+                </svg>
 
-        <!-- REGISTRAR AVANCE -->
+                Más reciente primero
 
-        <article class="detail-panel">
-
-            <header class="detail-panel-header">
-
-                <div>
-                    <h3>Registrar avance</h3>
-
-                    <p>
-                        Documente validaciones, diagnóstico y acciones realizadas.
-                    </p>
-                </div>
-
-            </header>
+            </div>
 
 
-            <div class="detail-panel-body">
+            <div class="incident-history-list">
 
-                {% if incidencia.estado == "CERRADA" %}
+                {% for evento in historial %}
 
-                    <div class="incident-log-closed">
-                        La incidencia está cerrada. El historial queda disponible
-                        únicamente para consulta.
-                    </div>
-
-                {% elif incidencia.estado == "CANCELADA" %}
-
-                    <div class="incident-log-closed">
-                        La incidencia está cancelada y no admite nuevos registros.
-                    </div>
-
-                {% elif incidencia.estado == "DETECTADA" %}
-
-                    <div class="incident-log-closed">
-                        Primero debe asignar un técnico. Al realizar la asignación,
-                        la incidencia empezará inmediatamente su atención.
-                    </div>
-
-                {% else %}
-
-                    <form
-                        method="post"
-                        class="incident-log-form"
-                        id="incident-progress-form"
+                    <article
+                        class="
+                            incident-history-entry
+                            incident-history-entry--{{ evento.accion|lower }}
+                        "
                     >
-                        {% csrf_token %}
+
+                        <!-- EJE -->
+
+                        <div class="incident-history-axis">
+
+                            <div class="incident-history-icon">
+
+                                {% if evento.accion == "CREACION" %}
+
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path d="M12 5v14M5 12h14"></path>
+                                    </svg>
 
 
-                        {% if form_avance.non_field_errors %}
+                                {% elif evento.accion == "ASIGNACION" %}
 
-                            <div class="alert alert-danger">
-                                {{ form_avance.non_field_errors }}
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <circle
+                                            cx="9"
+                                            cy="8"
+                                            r="4"
+                                        ></circle>
+
+                                        <path
+                                            d="M2.5 21c.7-4 3-6 6.5-6"
+                                        ></path>
+
+                                        <path
+                                            d="M18 13v8M14 17h8"
+                                        ></path>
+                                    </svg>
+
+
+                                {% elif evento.accion == "REASIGNACION" %}
+
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <circle
+                                            cx="8"
+                                            cy="8"
+                                            r="3"
+                                        ></circle>
+
+                                        <circle
+                                            cx="17"
+                                            cy="8"
+                                            r="3"
+                                        ></circle>
+
+                                        <path
+                                            d="M2 20c.5-3.3 2.5-5 6-5"
+                                        ></path>
+
+                                        <path
+                                            d="M13 15h8"
+                                        ></path>
+
+                                        <path
+                                            d="m18 12 3 3-3 3"
+                                        ></path>
+                                    </svg>
+
+
+                                {% elif evento.accion == "DIAGNOSTICO" %}
+
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <circle
+                                            cx="10"
+                                            cy="10"
+                                            r="6"
+                                        ></circle>
+
+                                        <path
+                                            d="m15 15 5 5"
+                                        ></path>
+                                    </svg>
+
+
+                                {% elif evento.accion == "COMENTARIO" %}
+
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M4 5h16v11H8l-4 4V5Z"
+                                        ></path>
+
+                                        <path
+                                            d="M8 9h8M8 12h5"
+                                        ></path>
+                                    </svg>
+
+
+                                {% elif evento.accion == "EVIDENCIA" %}
+
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="m8 12 5-5a3 3 0 0 1 4 4l-7 7a5 5 0 0 1-7-7l7-7"
+                                        ></path>
+                                    </svg>
+
+
+                                {% elif evento.accion == "ATENCION" %}
+
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M8 5v14l11-7-11-7Z"
+                                        ></path>
+                                    </svg>
+
+
+                                {% elif evento.accion == "RESOLUCION" %}
+
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="m5 12 4 4L19 6"
+                                        ></path>
+                                    </svg>
+
+
+                                {% elif evento.accion == "CIERRE" %}
+
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <rect
+                                            x="5"
+                                            y="10"
+                                            width="14"
+                                            height="10"
+                                            rx="2"
+                                        ></rect>
+
+                                        <path
+                                            d="M8 10V7a4 4 0 0 1 8 0v3"
+                                        ></path>
+                                    </svg>
+
+
+                                {% elif evento.accion == "CANCELACION" %}
+
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M6 6l12 12M18 6 6 18"
+                                        ></path>
+                                    </svg>
+
+
+                                {% else %}
+
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="8"
+                                        ></circle>
+
+                                        <path
+                                            d="M12 8v5M12 16h.01"
+                                        ></path>
+                                    </svg>
+
+                                {% endif %}
+
                             </div>
 
-                        {% endif %}
+
+                            <div class="incident-history-line"></div>
+
+                        </div>
 
 
-                        <div class="incident-log-form-group">
+                        <!-- CONTENIDO -->
 
-                            <label for="{{ form_avance.tipo_registro.id_for_label }}">
-                                {{ form_avance.tipo_registro.label }}
-                            </label>
+                        <div class="incident-history-content">
 
-                            {{ form_avance.tipo_registro }}
+                            <header class="incident-history-header">
 
-                            {% for error in form_avance.tipo_registro.errors %}
-                                <span class="incident-form-error">
-                                    {{ error }}
+                                <span class="incident-history-action">
+
+                                    {{ evento.get_accion_display }}
+
                                 </span>
-                            {% endfor %}
-
-                        </div>
 
 
-                        <div
-                            class="incident-log-form-group"
-                            id="incident-escalation-fields"
-                            hidden
-                        >
+                                <time class="incident-history-date">
 
-                            <label for="{{ form_avance.nuevo_tecnico.id_for_label }}">
-                                Nuevo técnico responsable
-                            </label>
+                                    <strong>
 
-                            {{ form_avance.nuevo_tecnico }}
+                                        {{ evento.fecha_evento|localtime|date:"d/m/Y" }}
 
-                            {% for error in form_avance.nuevo_tecnico.errors %}
-                                <span class="incident-form-error">
-                                    {{ error }}
-                                </span>
-                            {% endfor %}
+                                    </strong>
 
-                            <span class="incident-detail-field-note">
-                                Al registrar el escalamiento se desactivará la
-                                asignación anterior y este usuario quedará como
-                                técnico actual.
-                            </span>
+                                    <span>
 
-                        </div>
+                                        {{ evento.fecha_evento|localtime|date:"H:i:s" }}
+
+                                    </span>
+
+                                </time>
+
+                            </header>
 
 
-                        <div class="incident-log-form-group">
+                            <!-- USUARIO -->
 
-                            <label
-                                for="{{ form_avance.detalle.id_for_label }}"
-                                id="incident-detail-label"
-                            >
-                                {{ form_avance.detalle.label }}
-                            </label>
+                            <div class="incident-history-user">
 
-                            {{ form_avance.detalle }}
+                                <span class="incident-history-avatar">
 
-                            {% for error in form_avance.detalle.errors %}
-                                <span class="incident-form-error">
-                                    {{ error }}
-                                </span>
-                            {% endfor %}
+                                    {% if evento.usuario %}
 
-                        </div>
-
-
-                        <div class="incident-log-form-actions">
-
-                            <button
-                                type="submit"
-                                class="btn btn-primary"
-                                id="incident-progress-submit"
-                            >
-                                Registrar en bitácora
-                            </button>
-
-                        </div>
-
-                    </form>
-
-                {% endif %}
-
-            </div>
-
-        </article>
-
-
-        <!-- BITÁCORA -->
-
-        <article class="detail-panel">
-
-            <header class="detail-panel-header">
-
-                <div>
-                    <h3>Bitácora de la incidencia</h3>
-
-                    <p>
-                        Historial de acciones, responsables y cambios de estado.
-                    </p>
-                </div>
-
-            </header>
-
-
-            <div class="detail-panel-body">
-
-                <div class="incident-history-order">
-
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M4 6h16M8 12h12M12 18h8"></path>
-                    </svg>
-
-                    Más reciente primero
-
-                </div>
-
-
-                <div class="incident-history-list">
-
-                    {% for evento in historial %}
-
-                        <article
-                            class="
-                                incident-history-entry
-                                incident-history-entry--{{ evento.accion|lower }}
-                            "
-                        >
-
-                            <div class="incident-history-axis">
-
-                                <div class="incident-history-icon">
-
-                                    {% if evento.accion == "CREACION" %}
-
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M12 5v14M5 12h14"></path>
-                                        </svg>
-
-                                    {% elif evento.accion == "ASIGNACION" %}
-
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <circle cx="9" cy="8" r="4"></circle>
-                                            <path d="M2.5 21c.7-4 3-6 6.5-6"></path>
-                                            <path d="M18 13v8M14 17h8"></path>
-                                        </svg>
-
-                                    {% elif evento.accion == "REASIGNACION" %}
-
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <circle cx="8" cy="8" r="3"></circle>
-                                            <circle cx="17" cy="8" r="3"></circle>
-                                            <path d="M2 20c.5-3.3 2.5-5 6-5"></path>
-                                            <path d="M13 15h8"></path>
-                                            <path d="m18 12 3 3-3 3"></path>
-                                        </svg>
-
-                                    {% elif evento.accion == "DIAGNOSTICO" %}
-
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <circle cx="10" cy="10" r="6"></circle>
-                                            <path d="m15 15 5 5"></path>
-                                        </svg>
-
-                                    {% elif evento.accion == "COMENTARIO" %}
-
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M4 5h16v11H8l-4 4V5Z"></path>
-                                            <path d="M8 9h8M8 12h5"></path>
-                                        </svg>
-
-                                    {% elif evento.accion == "EVIDENCIA" %}
-
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="m8 12 5-5a3 3 0 0 1 4 4l-7 7a5 5 0 0 1-7-7l7-7"></path>
-                                        </svg>
-
-                                    {% elif evento.accion == "ATENCION" %}
-
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M8 5v14l11-7-11-7Z"></path>
-                                        </svg>
-
-                                    {% elif evento.accion == "RESOLUCION" %}
-
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="m5 12 4 4L19 6"></path>
-                                        </svg>
-
-                                    {% elif evento.accion == "CIERRE" %}
-
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <rect x="5" y="10" width="14" height="10" rx="2"></rect>
-                                            <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
-                                        </svg>
-
-                                    {% elif evento.accion == "CANCELACION" %}
-
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M6 6l12 12M18 6 6 18"></path>
-                                        </svg>
+                                        {{ evento.usuario.username|first|upper }}
 
                                     {% else %}
 
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <circle cx="12" cy="12" r="8"></circle>
-                                            <path d="M12 8v5M12 16h.01"></path>
-                                        </svg>
+                                        S
 
                                     {% endif %}
 
-                                </div>
-
-                                <div class="incident-history-line"></div>
-
-                            </div>
+                                </span>
 
 
-                            <div class="incident-history-content">
+                                <div class="incident-history-user-data">
 
-                                <header class="incident-history-header">
+                                    <small>
+                                        Registrado por
+                                    </small>
 
-                                    <span class="incident-history-action">
-                                        {{ evento.get_accion_display }}
-                                    </span>
-
-
-                                    <time class="incident-history-date">
-
-                                        <strong>
-                                            {{ evento.fecha_evento|localtime|date:"d/m/Y" }}
-                                        </strong>
-
-                                        <span>
-                                            {{ evento.fecha_evento|localtime|date:"H:i:s" }}
-                                        </span>
-
-                                    </time>
-
-                                </header>
-
-
-                                <div class="incident-history-user">
-
-                                    <span class="incident-history-avatar">
+                                    <strong>
 
                                         {% if evento.usuario %}
-                                            {{ evento.usuario.username|first|upper }}
+
+                                            {% if evento.usuario.get_full_name %}
+
+                                                {{ evento.usuario.get_full_name }}
+
+                                            {% else %}
+
+                                                {{ evento.usuario.username }}
+
+                                            {% endif %}
+
                                         {% else %}
-                                            S
+
+                                            Sistema
+
                                         {% endif %}
+
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- DESCRIPCIÓN -->
+
+                            {% if evento.descripcion %}
+
+                                <div class="incident-history-description">
+
+                                    {{ evento.descripcion|linebreaksbr }}
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- CAMBIO DE ESTADO -->
+
+                            {% if evento.estado_anterior or evento.estado_nuevo %}
+
+                                <div class="incident-history-transition">
+
+                                    <span class="incident-history-transition-label">
+
+                                        Cambio de estado
 
                                     </span>
 
 
-                                    <div class="incident-history-user-data">
+                                    <div class="incident-history-transition-values">
 
-                                        <small>Registrado por</small>
+                                        {% if evento.estado_anterior %}
 
-                                        <strong>
+                                            <span
+                                                class="
+                                                    incident-state-value
+                                                    incident-state-value--before
+                                                "
+                                            >
+                                                {{ evento.get_estado_anterior_display }}
+                                            </span>
 
-                                            {% if evento.usuario %}
+                                        {% endif %}
 
-                                                {% if evento.usuario.get_full_name %}
-                                                    {{ evento.usuario.get_full_name }}
-                                                {% else %}
-                                                    {{ evento.usuario.username }}
-                                                {% endif %}
 
-                                            {% else %}
-                                                Sistema
-                                            {% endif %}
+                                        {% if evento.estado_anterior and evento.estado_nuevo %}
 
-                                        </strong>
+                                            <span class="incident-state-arrow">
+                                                →
+                                            </span>
+
+                                        {% endif %}
+
+
+                                        {% if evento.estado_nuevo %}
+
+                                            <span
+                                                class="
+                                                    incident-state-value
+                                                    incident-state-value--after
+                                                "
+                                            >
+                                                {{ evento.get_estado_nuevo_display }}
+                                            </span>
+
+                                        {% endif %}
 
                                     </div>
 
                                 </div>
 
-
-                                {% if evento.descripcion %}
-
-                                    <div class="incident-history-description">
-                                        {{ evento.descripcion|linebreaksbr }}
-                                    </div>
-
-                                {% endif %}
-
-
-                                {% if evento.estado_anterior or evento.estado_nuevo %}
-
-                                    <div class="incident-history-transition">
-
-                                        <span class="incident-history-transition-label">
-                                            Cambio de estado
-                                        </span>
-
-
-                                        <div class="incident-history-transition-values">
-
-                                            {% if evento.estado_anterior %}
-
-                                                <span class="incident-state-value incident-state-value--before">
-                                                    {{ evento.get_estado_anterior_display }}
-                                                </span>
-
-                                            {% endif %}
-
-
-                                            {% if evento.estado_anterior and evento.estado_nuevo %}
-
-                                                <span class="incident-state-arrow">
-                                                    →
-                                                </span>
-
-                                            {% endif %}
-
-
-                                            {% if evento.estado_nuevo %}
-
-                                                <span class="incident-state-value incident-state-value--after">
-                                                    {{ evento.get_estado_nuevo_display }}
-                                                </span>
-
-                                            {% endif %}
-
-                                        </div>
-
-                                    </div>
-
-                                {% endif %}
-                                
-
-                            </div>
-
-                        </article>
-
-                    {% empty %}
-
-                        <div class="incident-history-empty">
-
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <circle cx="12" cy="12" r="9"></circle>
-                                <path d="M12 7v5l3 2"></path>
-                            </svg>
-
-                            <strong>Sin movimientos registrados</strong>
-
-                            <span>
-                                La bitácora se actualizará conforme se atienda
-                                la incidencia.
-                            </span>
+                            {% endif %}
 
                         </div>
 
-                    {% endfor %}
+                    </article>
 
-                </div>
+
+                {% empty %}
+
+                    <div class="incident-history-empty">
+
+                        <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <circle
+                                cx="12"
+                                cy="12"
+                                r="9"
+                            ></circle>
+
+                            <path
+                                d="M12 7v5l3 2"
+                            ></path>
+
+                        </svg>
+
+                        <strong>
+                            Sin movimientos registrados
+                        </strong>
+
+                        <span>
+                            La bitácora se actualizará conforme se atienda
+                            la incidencia.
+                        </span>
+
+                    </div>
+
+                {% endfor %}
 
             </div>
 
-        </article>
+        </div>
 
-    </section>
+    </article>
+
+</section>
 
 
-    <!-- ========================================================
-         ACCIONES INFERIORES
-         ======================================================== -->
+<!-- ========================================================
+     ACCIONES INFERIORES
+     ======================================================== -->
 
-    <div class="incident-detail-footer">
+<div class="incident-detail-footer">
 
-        <a
-            href="{% url 'incidencias:incidencias' %}"
-            class="btn btn-secondary"
-        >
-            Volver a incidencias
-        </a>
+    <a
+        href="{% url 'incidencias:incidencias' %}"
+        class="btn btn-secondary"
+    >
+        Volver a incidencias
+    </a>
 
-    </div>
+</div>
+```
 
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-    const tipo = document.getElementById("id_tipo_registro");
-    const escalamiento = document.getElementById("incident-escalation-fields");
-    const detalleLabel = document.getElementById("incident-detail-label");
-    const boton = document.getElementById("incident-progress-submit");
-    const formulario = document.getElementById("incident-progress-form");
+    const tipo = document.getElementById(
+        "id_tipo_registro"
+    );
+
+    const escalamiento = document.getElementById(
+        "incident-escalation-fields"
+    );
+
+    const cierre = document.getElementById(
+        "incident-close-fields"
+    );
+
+    const detalleLabel = document.getElementById(
+        "incident-detail-label"
+    );
+
+    const boton = document.getElementById(
+        "incident-progress-submit"
+    );
+
+    const formulario = document.getElementById(
+        "incident-progress-form"
+    );
+
 
     function actualizarFormulario() {
 
@@ -1687,32 +2019,76 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+
+        /* Ocultar campos especiales */
+
         if (escalamiento) {
             escalamiento.hidden = true;
         }
 
-        detalleLabel.textContent = "Detalle del avance";
-        boton.textContent = "Registrar en bitácora";
+        if (cierre) {
+            cierre.hidden = true;
+        }
+
+
+        /* Valores por defecto */
+
+        detalleLabel.textContent =
+            "Detalle del avance";
+
+        boton.textContent =
+            "Registrar en bitácora";
+
+
+        /* SEGUIMIENTO */
 
         if (tipo.value === "SEGUIMIENTO") {
-            detalleLabel.textContent = "Detalle del seguimiento";
-            boton.textContent = "Registrar seguimiento";
+
+            detalleLabel.textContent =
+                "Detalle del seguimiento";
+
+            boton.textContent =
+                "Registrar seguimiento";
         }
+
+
+        /* DIAGNÓSTICO */
 
         if (tipo.value === "DIAGNOSTICO") {
-            detalleLabel.textContent = "Detalle del diagnóstico";
-            boton.textContent = "Registrar diagnóstico";
+
+            detalleLabel.textContent =
+                "Detalle del diagnóstico";
+
+            boton.textContent =
+                "Registrar diagnóstico";
         }
+
+
+        /* SOLUCIÓN */
 
         if (tipo.value === "SOLUCION") {
-            detalleLabel.textContent = "Detalle de la solución aplicada";
-            boton.textContent = "Registrar solución";
+
+            detalleLabel.textContent =
+                "Detalle de la solución aplicada";
+
+            boton.textContent =
+                "Registrar solución";
         }
 
+
+        /* OBSERVACIÓN */
+
         if (tipo.value === "OBSERVACION") {
-            detalleLabel.textContent = "Observación";
-            boton.textContent = "Registrar observación";
+
+            detalleLabel.textContent =
+                "Observación";
+
+            boton.textContent =
+                "Registrar observación";
         }
+
+
+        /* ESCALAMIENTO */
 
         if (tipo.value === "ESCALAMIENTO") {
 
@@ -1720,34 +2096,75 @@ document.addEventListener("DOMContentLoaded", function () {
                 escalamiento.hidden = false;
             }
 
-            detalleLabel.textContent = "Motivo del escalamiento";
-            boton.textContent = "Escalar y reasignar";
+            detalleLabel.textContent =
+                "Motivo del escalamiento";
+
+            boton.textContent =
+                "Escalar y reasignar";
         }
+
+
+        /* CIERRE */
 
         if (tipo.value === "CIERRE") {
-            detalleLabel.textContent = "Solución / validación final";
-            boton.textContent = "Cerrar incidencia";
+
+            if (cierre) {
+                cierre.hidden = false;
+            }
+
+            detalleLabel.textContent =
+                "Solución / validación final";
+
+            boton.textContent =
+                "Cerrar incidencia";
         }
+
     }
 
+
+    /* Cambio del tipo de registro */
+
     if (tipo) {
-        tipo.addEventListener("change", actualizarFormulario);
+
+        tipo.addEventListener(
+            "change",
+            actualizarFormulario
+        );
+
         actualizarFormulario();
     }
 
-    if (formulario) {
-        formulario.addEventListener("submit", function (event) {
-            if (tipo && tipo.value === "CIERRE") {
-                const confirmar = window.confirm(
-                    "¿Confirma el cierre definitivo de esta incidencia? " +
-                    "Después del cierre quedará en modo de solo lectura."
-                );
 
-                if (!confirmar) {
-                    event.preventDefault();
+    /* Confirmación de cierre */
+
+    if (formulario) {
+
+        formulario.addEventListener(
+            "submit",
+            function (event) {
+
+                if (
+                    tipo &&
+                    tipo.value === "CIERRE"
+                ) {
+
+                    const confirmar =
+                        window.confirm(
+                            "¿Confirma el cierre definitivo de esta incidencia? " +
+                            "Después del cierre quedará en modo de solo lectura."
+                        );
+
+                    if (!confirmar) {
+
+                        event.preventDefault();
+
+                    }
+
                 }
+
             }
-        });
+        );
+
     }
 
 });

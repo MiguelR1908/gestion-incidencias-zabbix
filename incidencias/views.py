@@ -2504,6 +2504,15 @@ def incidencia_detalle(request, incidencia_id):
                 or ""
             ).strip()
 
+            fecha_cierre = form_avance.cleaned_data.get(
+                "fecha_cierre"
+            )
+
+            if fecha_cierre and timezone.is_naive(fecha_cierre):
+                fecha_cierre = timezone.make_aware(
+                    fecha_cierre,
+                    timezone.get_current_timezone(),
+                )
 
             try:
 
@@ -2646,31 +2655,43 @@ def incidencia_detalle(request, incidencia_id):
                             )
 
 
-                        estado_anterior = (
-                            incidencia_bloqueada.estado
-                        )
+                        estado_anterior = incidencia_bloqueada.estado
 
-                        ahora = timezone.now()
+                        # ==========================================================
+                        # FECHA Y HORA DE CIERRE INGRESADA POR EL USUARIO
+                        # ==========================================================
+                        fecha_cierre = form_avance.cleaned_data.get("fecha_cierre")
+
+                        if not fecha_cierre:
+                            messages.error(
+                                request,
+                                "Debe ingresar la fecha y hora de cierre.",
+                            )
+
+                            return redirect(
+                                "incidencias:incidencia_detalle",
+                                incidencia_id=incidencia_bloqueada.id,
+                            )
 
 
-                        # El modelo exige fecha_resolucion y solucion
-                        # antes de guardar una incidencia CERRADA.
-
+                        # ==========================================================
+                        # SOLUCIÓN FINAL
+                        # ==========================================================
                         if not incidencia_bloqueada.solucion:
-                            incidencia_bloqueada.solucion = (
-                                detalle
-                            )
+                            incidencia_bloqueada.solucion = detalle
 
 
+                        # ==========================================================
+                        # FECHA DE RESOLUCIÓN
+                        # ==========================================================
                         if not incidencia_bloqueada.fecha_resolucion:
-                            incidencia_bloqueada.fecha_resolucion = (
-                                ahora
-                            )
+                            incidencia_bloqueada.fecha_resolucion = fecha_cierre
 
 
-                        incidencia_bloqueada.fecha_cierre = (
-                            ahora
-                        )
+                        # ==========================================================
+                        # FECHA DE CIERRE
+                        # ==========================================================
+                        incidencia_bloqueada.fecha_cierre = fecha_cierre
 
                         incidencia_bloqueada.estado = (
                             EstadoIncidencia.CERRADA
@@ -2681,7 +2702,6 @@ def incidencia_detalle(request, incidencia_id):
                         )
 
                         incidencia_bloqueada.save()
-
 
                         # ==============================================
                         # DESACTIVAR ASIGNACIONES
@@ -5808,37 +5828,4 @@ def exportar_reporte_tecnicos_csv(request):
 # ==========================================================
 
 
-@login_required
-def alertas_zabbix_page(request):
-    return render(request, "incidencias/modulo.html", {
-        "titulo": "Alertas Zabbix",
-        "subtitulo": "Alertas sincronizadas desde la plataforma de monitoreo Zabbix.",
-        "pbi": "EP03 - Integración con Zabbix",
-    })
 
-
-@login_required
-def ubicaciones_page(request):
-    return render(request, "incidencias/modulo.html", {
-        "titulo": "Ubicaciones",
-        "subtitulo": "Administración de las ubicaciones donde opera la infraestructura de red.",
-        "pbi": "EP02 - Gestión de infraestructura de red",
-    })
-
-
-@login_required
-def nodos_page(request):
-    return render(request, "incidencias/modulo.html", {
-        "titulo": "Nodos",
-        "subtitulo": "Administración de nodos principales de la red de Fiber Z Telecom.",
-        "pbi": "EP02 - Gestión de infraestructura de red",
-    })
-
-
-@login_required
-def componentes_page(request):
-    return render(request, "incidencias/modulo.html", {
-        "titulo": "Componentes de Red",
-        "subtitulo": "Gestión de routers, radios AP, switches, UPS y demás equipos asociados a nodos.",
-        "pbi": "EP02 - Gestión de infraestructura de red",
-    })

@@ -331,9 +331,23 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--fiber-yellow), var(--fiber-yellow-2));
-    color: var(--fiber-blue);
-    box-shadow: 0 0 22px rgba(236, 234, 83, 0.32);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;                  /* Espaciado entre el icono ▣ y el texto */
+    background-color: #facc15;     /* Amarillo de tu diseño */
+    color: #0f172a !important;     /* Forzar texto oscuro */
+    padding: 0.5rem 1.25rem;
+    border-radius: 9999px;         /* Forma de píldora */
+    text-decoration: none !important;
+    font-weight: 600;
+}
+
+/* Evitar que enlaces visitados o target="_blank" cambien a azul */
+.btn-primary:visited,
+.btn-primary:active,
+.btn-primary span {
+    color: #0f172a !important;
 }
 
 .btn-primary:hover {
@@ -7059,3 +7073,4 @@ input:checked
     text-decoration: none;
     cursor: pointer;
 }
+

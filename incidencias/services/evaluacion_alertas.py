@@ -214,6 +214,70 @@ def evaluar_alerta_para_incidencia(alerta, usuario=None):
                 "minutos_activa": None,
                 "minutos_requeridos": None,
             }
+        ###
+        # ============================================================
+        # 4.1. VERIFICAR INCIDENCIA ACTIVA EN EL MISMO COMPONENTE
+        # ============================================================
+        # Evita duplicar tickets si el componente ya tiene un problema
+        # en curso. Registra la alerta como reincidencia en el historial.
+        
+        estados_activos = [
+            EstadoIncidencia.DETECTADA,
+            EstadoIncidencia.REGISTRADA,
+            EstadoIncidencia.ASIGNADA,
+            EstadoIncidencia.EN_ATENCION,
+            EstadoIncidencia.RESUELTA,
+        ]
+
+        incidencia_activa = (
+            Incidencia.objects
+            .filter(
+                componente_principal=componente,
+                estado__in=estados_activos,
+            )
+            .first()
+        )
+
+        if incidencia_activa:
+            # Si el ticket estaba en RESUELTA pero el problema persiste/reincide
+            if incidencia_activa.estado == EstadoIncidencia.RESUELTA:
+                incidencia_activa.estado = EstadoIncidencia.EN_ATENCION
+                if usuario_valido:
+                    incidencia_activa.actualizado_por = usuario_valido
+                incidencia_activa.save()
+
+            # Marcar la nueva alerta como procesada
+            alerta.procesada = True
+            if usuario_valido:
+                alerta.actualizado_por = usuario_valido
+            alerta.save()
+
+            # Registrar la reincidencia en el historial
+            HistorialIncidencia.objects.create(
+                incidencia=incidencia_activa,
+                usuario=usuario_valido,
+                accion=AccionHistorial.REINCIDENCIA_ALERTA, # Ajustar a tu Choice (ej. REINCIDENCIA)
+                estado_nuevo=incidencia_activa.estado,
+                descripcion=(
+                    f"Alerta reincidente o adicional recibida desde Zabbix: '{alerta.nombre_alerta}' "
+                    f"(Event ID: {alerta.event_id}). Registrada en el ticket activo."
+                ),
+                creado_por=usuario_valido,
+                actualizado_por=usuario_valido,
+            )
+
+            return {
+                "creada": False,
+                "estado": "REINCIDENCIA_REGISTRADA",
+                "motivo": (
+                    f"El componente {componente.codigo} ya posee la incidencia activa "
+                    f"{incidencia_activa.codigo}. Se registró el evento como reincidencia."
+                ),
+                "incidencia": incidencia_activa,
+                "minutos_activa": None,
+                "minutos_requeridos": None,
+            }
+
 
         # ============================================================
         # 5. OBTENER CONFIGURACIÓN DE CREACIÓN AUTOMÁTICA

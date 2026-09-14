@@ -168,6 +168,7 @@ class EstadoNotificacion(models.TextChoices):
 
 class AccionHistorial(models.TextChoices):
     CREACION = "CREACION", "Creación"
+    REINCIDENCIA_ALERTA = "REINCIDENCIA_ALERTA", "Reincidencia de Alerta"
     ASIGNACION = "ASIGNACION", "Asignación"
     REASIGNACION = "REASIGNACION", "Reasignación"
     NOTIFICACION = "NOTIFICACION", "Notificación"

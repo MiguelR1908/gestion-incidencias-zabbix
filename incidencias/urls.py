@@ -220,6 +220,7 @@ urlpatterns = [
     # ZABBIX - CONFIGURACIÓN
     # ==========================================================
 
+
     path(
         "zabbix/configuracion/",
         views.configuracion_zabbix_lista,

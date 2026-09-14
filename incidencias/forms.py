@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
-
+from django.utils import timezone
 from .models import (
     PerfilUsuario,
     RolUsuario,
@@ -732,6 +732,19 @@ class RegistroAvanceIncidenciaForm(forms.Form):
         ),
     )
 
+    fecha_cierre = forms.DateTimeField(
+        label="Fecha y hora de cierre",
+        required=False,
+        input_formats=["%Y-%m-%dT%H:%M"],
+        widget=forms.DateTimeInput(
+            format="%Y-%m-%dT%H:%M",
+            attrs={
+                "class": "form-control",
+                "type": "datetime-local",
+            },
+        ),
+    )
+
     def __init__(self, *args, incidencia=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.incidencia = incidencia
@@ -779,6 +792,7 @@ class RegistroAvanceIncidenciaForm(forms.Form):
         tipo = cleaned_data.get("tipo_registro")
         detalle = (cleaned_data.get("detalle") or "").strip()
         nuevo_tecnico = cleaned_data.get("nuevo_tecnico")
+        fecha_cierre = cleaned_data.get("fecha_cierre")
 
         if not tipo:
             return cleaned_data
@@ -808,9 +822,9 @@ class RegistroAvanceIncidenciaForm(forms.Form):
 
         if tipo == self.TIPO_CIERRE:
             estados_cerrables = {
-                "ASIGNADA",      # compatibilidad con datos anteriores
+                "ASIGNADA",
                 "EN_ATENCION",
-                "RESUELTA",      # compatibilidad con el flujo anterior
+                "RESUELTA",
             }
 
             if (
@@ -822,4 +836,36 @@ class RegistroAvanceIncidenciaForm(forms.Form):
                     "La incidencia no se encuentra en un estado que permita el cierre.",
                 )
 
+            # Validación de fecha y hora de cierre
+            if not fecha_cierre:
+                self.add_error(
+                    "fecha_cierre",
+                    "Debe ingresar la fecha y hora de cierre.",
+                )
+            else:
+                if timezone.is_naive(fecha_cierre):
+                    fecha_cierre = timezone.make_aware(
+                        fecha_cierre,
+                        timezone.get_current_timezone(),
+                    )
+
+                ahora = timezone.now()
+
+                if fecha_cierre > ahora:
+                    self.add_error(
+                        "fecha_cierre",
+                        "La fecha y hora de cierre no puede ser futura.",
+                    )
+
+                if (
+                    self.incidencia
+                    and self.incidencia.fecha_deteccion
+                    and fecha_cierre < self.incidencia.fecha_deteccion
+                ):
+                    self.add_error(
+                        "fecha_cierre",
+                        "La fecha y hora de cierre no puede ser anterior a la detección.",
+                    )
+
         return cleaned_data
+ 
