@@ -1,8 +1,12 @@
 {% extends "incidencias/base.html" %}
 
-{% block title %}Inventario | Fiber Z NOC{% endblock %}
+{% block title %}
+Inventario | Fiber Z NOC
+{% endblock %}
 
-{% block page_title %}Inventario de Infraestructura{% endblock %}
+{% block page_title %}
+Inventario de Infraestructura
+{% endblock %}
 
 {% block page_subtitle %}
 Vista consolidada de ubicaciones, nodos y componentes de red registrados.
@@ -10,342 +14,357 @@ Vista consolidada de ubicaciones, nodos y componentes de red registrados.
 
 {% block content %}
 
-<style>
-    .inventory-kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 12px;
-        margin-bottom: 18px;
-    }
+<div id="inventory-page" class="page-layout">
 
-    .inventory-kpi-card {
-        min-height: 82px;
-        padding: 14px 16px;
-        border-radius: 16px;
-        background:
-            linear-gradient(135deg, rgba(1, 60, 180, 0.34), rgba(7, 26, 82, 0.78));
-        border: 1px solid rgba(156, 170, 204, 0.25);
-        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
-        position: relative;
-        overflow: hidden;
-    }
+    <!-- =====================================================
+         RESUMEN
+         ===================================================== -->
 
-    .inventory-kpi-card::after {
-        content: "";
-        position: absolute;
-        right: -22px;
-        top: -22px;
-        width: 64px;
-        height: 64px;
-        border-radius: 50%;
-        background: rgba(236, 234, 83, 0.10);
-    }
+    <section class="inventory-kpi-grid">
 
-    .inventory-kpi-label {
-        display: block;
-        font-size: 11px;
-        color: var(--text-muted);
-        margin-bottom: 6px;
-        position: relative;
-        z-index: 1;
-    }
+        <article class="inventory-kpi-card">
+            <span class="inventory-kpi-label">Ubicaciones</span>
+            <strong class="inventory-kpi-value">{{ total_ubicaciones }}</strong>
+            <small class="inventory-kpi-note">Sedes registradas</small>
+        </article>
 
-    .inventory-kpi-value {
-        display: block;
-        font-size: 28px;
-        line-height: 1;
-        color: var(--fiber-yellow);
-        margin-bottom: 6px;
-        position: relative;
-        z-index: 1;
-    }
+        <article class="inventory-kpi-card">
+            <span class="inventory-kpi-label">Nodos</span>
+            <strong class="inventory-kpi-value">{{ total_nodos }}</strong>
+            <small class="inventory-kpi-note">Nodos registrados</small>
+        </article>
 
-    .inventory-kpi-note {
-        display: block;
-        font-size: 10px;
-        color: var(--text-muted);
-        position: relative;
-        z-index: 1;
-    }
+        <article class="inventory-kpi-card">
+            <span class="inventory-kpi-label">Componentes</span>
+            <strong class="inventory-kpi-value">{{ total_componentes }}</strong>
+            <small class="inventory-kpi-note">Equipos inventariados</small>
+        </article>
 
-    .inventory-card-title {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-    }
+        <article class="inventory-kpi-card">
+            <span class="inventory-kpi-label">Activos</span>
+            <strong class="inventory-kpi-value">{{ componentes_activos }}</strong>
+            <small class="inventory-kpi-note">Componentes activos</small>
+        </article>
 
-    .inventory-location-title h3 {
-        margin-bottom: 4px;
-    }
+        <article class="inventory-kpi-card">
+            <span class="inventory-kpi-label">Caídos</span>
+            <strong class="inventory-kpi-value">{{ componentes_caidos }}</strong>
+            <small class="inventory-kpi-note">Estado caído</small>
+        </article>
 
-    .inventory-node {
-        margin-top: 18px;
-        padding: 18px;
-        border-radius: 18px;
-        border: 1px solid rgba(156, 170, 204, 0.25);
-        background: rgba(255, 255, 255, 0.03);
-    }
+        <article class="inventory-kpi-card">
+            <span class="inventory-kpi-label">Mantenimiento</span>
+            <strong class="inventory-kpi-value">{{ componentes_mantenimiento }}</strong>
+            <small class="inventory-kpi-note">En mantenimiento</small>
+        </article>
 
-    .inventory-node-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-        margin-bottom: 16px;
-    }
+    </section>
 
-    .inventory-node-header h4 {
-        margin: 0 0 6px;
-        color: var(--white);
-        font-size: 15px;
-    }
 
-    .inventory-node-header p {
-        margin: 0;
-        color: var(--text-muted);
-        font-size: 13px;
-    }
+    <!-- =====================================================
+         BÚSQUEDA
+         ===================================================== -->
 
-    .inventory-component-name strong {
-        display: block;
-        color: var(--white);
-        margin-bottom: 3px;
-    }
+    <section class="page-card">
 
-    .inventory-component-name small {
-        color: var(--text-muted);
-        font-size: 12px;
-    }
-
-    .inventory-empty {
-        color: var(--text-muted);
-        padding: 12px 0;
-    }
-
-    @media (max-width: 1300px) {
-        .inventory-kpi-grid {
-            grid-template-columns: repeat(3, 1fr);
-        }
-    }
-
-    @media (max-width: 760px) {
-        .inventory-kpi-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .inventory-node-header,
-        .inventory-card-title {
-            flex-direction: column;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .inventory-kpi-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
-
-<section class="inventory-kpi-grid">
-
-    <div class="inventory-kpi-card">
-        <span class="inventory-kpi-label">Ubicaciones</span>
-        <strong class="inventory-kpi-value">{{ total_ubicaciones }}</strong>
-        <small class="inventory-kpi-note">Sedes registradas</small>
-    </div>
-
-    <div class="inventory-kpi-card">
-        <span class="inventory-kpi-label">Nodos</span>
-        <strong class="inventory-kpi-value">{{ total_nodos }}</strong>
-        <small class="inventory-kpi-note">Nodos registrados</small>
-    </div>
-
-    <div class="inventory-kpi-card">
-        <span class="inventory-kpi-label">Componentes</span>
-        <strong class="inventory-kpi-value">{{ total_componentes }}</strong>
-        <small class="inventory-kpi-note">Equipos inventariados</small>
-    </div>
-
-    <div class="inventory-kpi-card">
-        <span class="inventory-kpi-label">Activos</span>
-        <strong class="inventory-kpi-value">{{ componentes_activos }}</strong>
-        <small class="inventory-kpi-note">Componentes activos</small>
-    </div>
-
-    <div class="inventory-kpi-card">
-        <span class="inventory-kpi-label">Caídos</span>
-        <strong class="inventory-kpi-value">{{ componentes_caidos }}</strong>
-        <small class="inventory-kpi-note">Estado caído</small>
-    </div>
-
-    <div class="inventory-kpi-card">
-        <span class="inventory-kpi-label">Mantenimiento</span>
-        <strong class="inventory-kpi-value">{{ componentes_mantenimiento }}</strong>
-        <small class="inventory-kpi-note">En mantenimiento</small>
-    </div>
-
-</section>
-
-<section class="card">
-    <div class="card-header">
-        <div>
-            <h3>Infraestructura registrada</h3>
-            <p>Relación jerárquica entre ubicaciones, nodos y componentes.</p>
-        </div>
-    </div>
-
-    <form method="get" class="search-box">
-        <input
-            type="text"
-            name="q"
-            value="{{ query }}"
-            placeholder="Buscar por ubicación, nodo, componente, IP, fabricante o modelo..."
-        >
-
-        <button type="submit" class="btn btn-secondary">
-            Buscar
-        </button>
-
-        {% if query %}
-            <a href="{% url 'incidencias:infraestructura_inventario' %}" class="btn btn-danger">
-                Limpiar
-            </a>
-        {% endif %}
-    </form>
-</section>
-
-{% for ubicacion in ubicaciones %}
-    <section class="card">
-
-        <div class="inventory-card-title">
-            <div class="inventory-location-title">
-                <h3>{{ ubicacion.nombre }}</h3>
-                <p>
-                    {{ ubicacion.departamento|default:"-" }} /
-                    {{ ubicacion.provincia|default:"-" }} /
-                    {{ ubicacion.distrito|default:"-" }}
-                </p>
+        <header class="page-card-header">
+            <div class="page-card-heading">
+                <h3>Infraestructura registrada</h3>
+                <p>Relación jerárquica entre ubicaciones, nodos y componentes.</p>
             </div>
+        </header>
 
-            {% if ubicacion.activo %}
-                <span class="badge badge-success">Ubicación activa</span>
-            {% else %}
-                <span class="badge badge-danger">Ubicación inactiva</span>
-            {% endif %}
-        </div>
+        <div class="page-card-body">
 
-        {% for nodo in ubicacion.nodos.all %}
-            <div class="inventory-node">
+            <form method="get" class="search-toolbar">
 
-                <div class="inventory-node-header">
-                    <div>
-                        <h4>{{ nodo.codigo }} - {{ nodo.nombre }}</h4>
-                        <p>
-                            Criticidad: {{ nodo.get_criticidad_display }} |
-                            Estado: {{ nodo.get_estado_display }} |
-                            Clientes estimados: {{ nodo.clientes_estimados }}
-                        </p>
-                    </div>
+                <div class="search-toolbar-field">
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ query }}"
+                        placeholder="Buscar por ubicación, nodo, componente, IP, fabricante o modelo..."
+                    >
+                </div>
 
-                    {% if nodo.activo %}
-                        <span class="badge badge-success">Nodo activo</span>
-                    {% else %}
-                        <span class="badge badge-danger">Nodo inactivo</span>
+                <div class="search-toolbar-actions">
+                    <button type="submit" class="btn btn-secondary">
+                        Buscar
+                    </button>
+
+                    {% if query %}
+                        <a
+                            href="{% url 'incidencias:infraestructura_inventario' %}"
+                            class="btn btn-danger"
+                        >
+                            Limpiar
+                        </a>
                     {% endif %}
                 </div>
 
-                <div class="table-wrapper">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Componente</th>
-                                <th>Tipo</th>
-                                <th>Función</th>
-                                <th>IP</th>
-                                <th>Fabricante</th>
-                                <th>Modelo</th>
-                                <th>Zabbix</th>
-                                <th>Estado</th>
-                                <th>Criticidad</th>
-                                <th>Activo</th>
-                            </tr>
-                        </thead>
+            </form>
 
-                        <tbody>
-                            {% for componente in nodo.componentes_red.all %}
-                                <tr>
-                                    <td class="inventory-component-name">
-                                        <strong>{{ componente.codigo }}</strong>
-                                        <small>{{ componente.nombre }}</small>
-                                    </td>
+        </div>
 
-                                    <td>{{ componente.get_tipo_display }}</td>
-                                    <td>{{ componente.get_funcion_display }}</td>
-                                    <td>{{ componente.ip_gestion|default:"-" }}</td>
-                                    <td>{{ componente.fabricante|default:"-" }}</td>
-                                    <td>{{ componente.modelo|default:"-" }}</td>
+    </section>
 
-                                    <td>
-                                        {% if componente.es_monitoreado_zabbix %}
-                                            <span class="badge badge-success">Sí</span>
-                                            <small>{{ componente.host_id_zabbix|default:"-" }}</small>
-                                        {% else %}
-                                            <span class="badge badge-warning">No</span>
-                                        {% endif %}
-                                    </td>
 
-                                    <td>
-                                        {% if componente.estado_operativo == "OPERATIVO" %}
-                                            <span class="badge badge-success">{{ componente.get_estado_operativo_display }}</span>
-                                        {% elif componente.estado_operativo == "MANTENIMIENTO" %}
-                                            <span class="badge badge-warning">{{ componente.get_estado_operativo_display }}</span>
-                                        {% else %}
-                                            <span class="badge badge-danger">{{ componente.get_estado_operativo_display }}</span>
-                                        {% endif %}
-                                    </td>
+    <!-- =====================================================
+         INVENTARIO JERÁRQUICO
+         ===================================================== -->
 
-                                    <td>
-                                        {% if componente.criticidad == "CRITICA" %}
-                                            <span class="badge badge-danger">{{ componente.get_criticidad_display }}</span>
-                                        {% elif componente.criticidad == "ALTA" %}
-                                            <span class="badge badge-warning">{{ componente.get_criticidad_display }}</span>
-                                        {% elif componente.criticidad == "MEDIA" %}
-                                            <span class="badge badge-info">{{ componente.get_criticidad_display }}</span>
-                                        {% else %}
-                                            <span class="badge badge-success">{{ componente.get_criticidad_display }}</span>
-                                        {% endif %}
-                                    </td>
+    {% for ubicacion in ubicaciones %}
 
-                                    <td>
-                                        {% if componente.activo %}
-                                            <span class="badge badge-success">Sí</span>
-                                        {% else %}
-                                            <span class="badge badge-danger">No</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="10" class="inventory-empty">
-                                        Este nodo no tiene componentes registrados.
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <section class="page-card">
+
+            <header class="page-card-header inventory-card-title">
+
+                <div class="page-card-heading inventory-location-title">
+                    <h3>{{ ubicacion.nombre }}</h3>
+
+                    <p>
+                        {{ ubicacion.departamento|default:"-" }} /
+                        {{ ubicacion.provincia|default:"-" }} /
+                        {{ ubicacion.distrito|default:"-" }}
+                    </p>
+                </div>
+
+                <div class="page-card-actions">
+                    {% if ubicacion.activo %}
+                        <span class="badge badge-success">
+                            Ubicación activa
+                        </span>
+                    {% else %}
+                        <span class="badge badge-danger">
+                            Ubicación inactiva
+                        </span>
+                    {% endif %}
+                </div>
+
+            </header>
+
+            <div class="page-card-body">
+
+                {% for nodo in ubicacion.nodos.all %}
+
+                    <div class="inventory-node">
+
+                        <div class="inventory-node-header">
+
+                            <div>
+                                <h4>{{ nodo.codigo }} - {{ nodo.nombre }}</h4>
+
+                                <p>
+                                    Criticidad: {{ nodo.get_criticidad_display }} |
+                                    Estado: {{ nodo.get_estado_display }} |
+                                    Clientes estimados: {{ nodo.clientes_estimados }}
+                                </p>
+                            </div>
+
+                            {% if nodo.activo %}
+                                <span class="badge badge-success">
+                                    Nodo activo
+                                </span>
+                            {% else %}
+                                <span class="badge badge-danger">
+                                    Nodo inactivo
+                                </span>
+                            {% endif %}
+
+                        </div>
+
+                        <div class="table-wrapper">
+
+                            <table class="table data-table">
+
+                                <thead>
+                                    <tr>
+                                        <th>Componente</th>
+                                        <th>Tipo</th>
+                                        <th>Función</th>
+                                        <th>IP</th>
+                                        <th>Fabricante</th>
+                                        <th>Modelo</th>
+                                        <th>Zabbix</th>
+                                        <th>Estado</th>
+                                        <th>Criticidad</th>
+                                        <th>Activo</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                    {% for componente in nodo.componentes_red.all %}
+
+                                        <tr>
+
+                                            <td class="inventory-component-name">
+                                                <strong>{{ componente.codigo }}</strong>
+                                                <small>{{ componente.nombre }}</small>
+                                            </td>
+
+                                            <td>{{ componente.get_tipo_display }}</td>
+
+                                            <td>{{ componente.get_funcion_display }}</td>
+
+                                            <td>
+                                                {% if componente.ip_gestion %}
+                                                    <span class="table-mono">
+                                                        {{ componente.ip_gestion }}
+                                                    </span>
+                                                {% else %}
+                                                    —
+                                                {% endif %}
+                                            </td>
+
+                                            <td>{{ componente.fabricante|default:"-" }}</td>
+
+                                            <td>{{ componente.modelo|default:"-" }}</td>
+
+                                            <td>
+                                                {% if componente.es_monitoreado_zabbix %}
+
+                                                    <div class="table-status-stack">
+                                                        <span class="badge badge-success">
+                                                            Sí
+                                                        </span>
+
+                                                        {% if componente.host_id_zabbix %}
+                                                            <small class="table-secondary-value">
+                                                                {{ componente.host_id_zabbix }}
+                                                            </small>
+                                                        {% endif %}
+                                                    </div>
+
+                                                {% else %}
+                                                    <span class="badge badge-warning">
+                                                        No
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+
+                                            <td>
+                                                {% if componente.estado_operativo == "OPERATIVO" %}
+
+                                                    <span class="badge badge-success">
+                                                        {{ componente.get_estado_operativo_display }}
+                                                    </span>
+
+                                                {% elif componente.estado_operativo == "MANTENIMIENTO" %}
+
+                                                    <span class="badge badge-warning">
+                                                        {{ componente.get_estado_operativo_display }}
+                                                    </span>
+
+                                                {% else %}
+
+                                                    <span class="badge badge-danger">
+                                                        {{ componente.get_estado_operativo_display }}
+                                                    </span>
+
+                                                {% endif %}
+                                            </td>
+
+                                            <td>
+                                                {% if componente.criticidad == "CRITICA" %}
+
+                                                    <span class="badge badge-danger">
+                                                        {{ componente.get_criticidad_display }}
+                                                    </span>
+
+                                                {% elif componente.criticidad == "ALTA" %}
+
+                                                    <span class="badge badge-warning">
+                                                        {{ componente.get_criticidad_display }}
+                                                    </span>
+
+                                                {% elif componente.criticidad == "MEDIA" %}
+
+                                                    <span class="badge badge-info">
+                                                        {{ componente.get_criticidad_display }}
+                                                    </span>
+
+                                                {% else %}
+
+                                                    <span class="badge badge-success">
+                                                        {{ componente.get_criticidad_display }}
+                                                    </span>
+
+                                                {% endif %}
+                                            </td>
+
+                                            <td>
+                                                {% if componente.activo %}
+                                                    <span class="badge badge-success">
+                                                        Sí
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge badge-danger">
+                                                        No
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+
+                                        </tr>
+
+                                    {% empty %}
+
+                                        <tr>
+                                            <td colspan="10" class="table-empty">
+
+                                                <div class="page-empty-state">
+                                                    <strong>Sin componentes registrados</strong>
+                                                    <p>
+                                                        Este nodo todavía no tiene componentes asociados.
+                                                    </p>
+                                                </div>
+
+                                            </td>
+                                        </tr>
+
+                                    {% endfor %}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                {% empty %}
+
+                    <div class="page-empty-state">
+                        <strong>Sin nodos registrados</strong>
+                        <p>
+                            No hay nodos asociados a esta ubicación.
+                        </p>
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </section>
+
+    {% empty %}
+
+        <section class="page-card">
+            <div class="page-card-body">
+
+                <div class="page-empty-state">
+                    <strong>No se encontró infraestructura registrada</strong>
+                    <p>
+                        No existen ubicaciones, nodos o componentes
+                        para los criterios actuales.
+                    </p>
                 </div>
 
             </div>
-        {% empty %}
-            <p class="inventory-empty">No hay nodos registrados en esta ubicación.</p>
-        {% endfor %}
+        </section>
 
-    </section>
-{% empty %}
-    <section class="card">
-        <p class="inventory-empty">No se encontró infraestructura registrada.</p>
-    </section>
-{% endfor %}
+    {% endfor %}
+
+</div>
 
 {% endblock %}

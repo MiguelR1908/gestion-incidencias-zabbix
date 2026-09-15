@@ -11,7 +11,7 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
 
 {% block content %}
 
-<div id="incidents-page">
+<div id="incidents-page" class="page-layout">
 
     <!-- =====================================================
          RESUMEN DE INCIDENCIAS
@@ -141,14 +141,8 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
              BANDEJA PERSONAL DEL TÉCNICO
              ===================================================== -->
 
-        <section
-            class="card"
-            style="margin-bottom: 18px;"
-        >
-            <div
-                class="incident-toolbar-actions"
-                style="justify-content: flex-start; padding: 14px 16px;"
-            >
+        <section class="card incident-technician-nav">
+            <div class="incident-toolbar-actions incident-technician-nav-actions">
 
                 <a
                     href="{% url 'incidencias:incidencias' %}?vista=activas"
@@ -166,10 +160,7 @@ Registro, seguimiento, asignación y cierre de incidencias operativas.
                     <strong>({{ total_historial_tecnico }})</strong>
                 </a>
 
-                <span
-                    class="incident-empty-value"
-                    style="margin-left: 8px;"
-                >
+                <span class="incident-empty-value incident-technician-nav-note">
                     {% if vista_tecnico == 'historial' %}
                         Incidencias que estuvieron bajo tu responsabilidad.
                     {% else %}

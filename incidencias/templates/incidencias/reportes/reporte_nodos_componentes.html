@@ -1,304 +1,343 @@
 {% extends "incidencias/base.html" %}
 
 {% block title %}
-Recurrencia | Fiber Z NOC
+Incidencias | Reportes
 {% endblock %}
-
 
 {% block page_title %}
-Recurrencia de incidencias
+Incidencias
 {% endblock %}
-
 
 {% block page_subtitle %}
-Análisis de concentración de incidencias por nodo y componente de red.
+Consulta histórica y exportación de incidencias registradas.
 {% endblock %}
-
 
 {% block content %}
 
-<div id="recurrence-report-page">
+<div id="incident-report-page" class="page-layout">
 
 
-    <!-- ======================================================
+    <!-- ========================================================
          FILTROS
-         ====================================================== -->
+         ======================================================== -->
 
-    <section class="card recurrence-filter-card">
+    <form method="get" class="report-toolbar">
 
-        <div class="recurrence-section-header">
+        <div class="report-filter-group">
 
-            <div>
-                <h3>Período de análisis</h3>
+            <label for="q">
+                Buscar
+            </label>
 
-                <p>
-                    Seleccione el rango de fechas que desea evaluar.
-                </p>
-            </div>
+            <input
+                id="q"
+                type="text"
+                name="q"
+                value="{{ query }}"
+                placeholder="Código, título, nodo..."
+            >
 
         </div>
 
 
-        <form
-            method="get"
-            class="recurrence-filter-form"
+        <div class="report-filter-group">
+
+            <label for="estado">
+                Estado
+            </label>
+
+            <select
+                id="estado"
+                name="estado"
+            >
+
+                <option value="">
+                    Todos
+                </option>
+
+                <option
+                    value="DETECTADA"
+                    {% if estado_seleccionado == "DETECTADA" %}selected{% endif %}
+                >
+                    Detectada
+                </option>
+
+                <option
+                    value="REGISTRADA"
+                    {% if estado_seleccionado == "REGISTRADA" %}selected{% endif %}
+                >
+                    Registrada
+                </option>
+
+                <option
+                    value="ASIGNADA"
+                    {% if estado_seleccionado == "ASIGNADA" %}selected{% endif %}
+                >
+                    Asignada
+                </option>
+
+                <option
+                    value="EN_ATENCION"
+                    {% if estado_seleccionado == "EN_ATENCION" %}selected{% endif %}
+                >
+                    En atención
+                </option>
+
+                <option
+                    value="RESUELTA"
+                    {% if estado_seleccionado == "RESUELTA" %}selected{% endif %}
+                >
+                    Resuelta
+                </option>
+
+                <option
+                    value="CERRADA"
+                    {% if estado_seleccionado == "CERRADA" %}selected{% endif %}
+                >
+                    Cerrada
+                </option>
+
+                <option
+                    value="CANCELADA"
+                    {% if estado_seleccionado == "CANCELADA" %}selected{% endif %}
+                >
+                    Cancelada
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="report-filter-group">
+
+            <label for="severidad">
+                Severidad
+            </label>
+
+            <select
+                id="severidad"
+                name="severidad"
+            >
+
+                <option value="">
+                    Todas
+                </option>
+
+                <option
+                    value="CRITICA"
+                    {% if severidad_seleccionada == "CRITICA" %}selected{% endif %}
+                >
+                    Crítica
+                </option>
+
+                <option
+                    value="ALTA"
+                    {% if severidad_seleccionada == "ALTA" %}selected{% endif %}
+                >
+                    Alta
+                </option>
+
+                <option
+                    value="MEDIA"
+                    {% if severidad_seleccionada == "MEDIA" %}selected{% endif %}
+                >
+                    Media
+                </option>
+
+                <option
+                    value="BAJA"
+                    {% if severidad_seleccionada == "BAJA" %}selected{% endif %}
+                >
+                    Baja
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="report-filter-group">
+
+            <label for="fecha_desde">
+                Desde
+            </label>
+
+            <input
+                id="fecha_desde"
+                type="date"
+                name="fecha_desde"
+                value="{{ fecha_desde }}"
+            >
+
+        </div>
+
+
+        <div class="report-filter-group">
+
+            <label for="fecha_hasta">
+                Hasta
+            </label>
+
+            <input
+                id="fecha_hasta"
+                type="date"
+                name="fecha_hasta"
+                value="{{ fecha_hasta }}"
+            >
+
+        </div>
+
+
+        <button
+            type="submit"
+            class="btn btn-primary"
         >
-
-            <div class="recurrence-filter-grid">
-
-
-                <div class="recurrence-filter-group">
-
-                    <label for="fecha_desde">
-                        Desde
-                    </label>
-
-                    <input
-                        id="fecha_desde"
-                        type="date"
-                        name="fecha_desde"
-                        value="{{ fecha_desde }}"
-                    >
-
-                </div>
+            Consultar
+        </button>
 
 
-                <div class="recurrence-filter-group">
+        <a
+            href="{% url 'incidencias:reporte_incidencias' %}"
+            class="btn btn-secondary"
+        >
+            Limpiar
+        </a>
 
-                    <label for="fecha_hasta">
-                        Hasta
-                    </label>
-
-                    <input
-                        id="fecha_hasta"
-                        type="date"
-                        name="fecha_hasta"
-                        value="{{ fecha_hasta }}"
-                    >
-
-                </div>
+    </form>
 
 
-                <div class="recurrence-filter-actions">
-
-                    <button
-                        type="submit"
-                        class="btn btn-primary"
-                    >
-                        Aplicar filtros
-                    </button>
-
-                    <a
-                        href="{% url 'incidencias:reporte_nodos_componentes' %}"
-                        class="btn btn-secondary"
-                    >
-                        Limpiar
-                    </a>
-
-                    <a
-                        href="{% url 'incidencias:exportar_reporte_nodos_componentes_csv' %}?{{ request.GET.urlencode }}"
-                        class="btn btn-secondary"
-                    >
-                        Exportar CSV
-                    </a>
-
-                </div>
-
-
-            </div>
-
-        </form>
-
-    </section>
-
-
-
-    <!-- ======================================================
+    <!-- ========================================================
          RESUMEN
-         ====================================================== -->
+         ======================================================== -->
 
-    <section class="recurrence-summary-grid">
+    <section class="report-summary">
 
+        <article class="report-summary-card">
 
-        <article class="recurrence-summary-card">
+            <span class="report-summary-label">
+                Total
+            </span>
 
-            <div class="recurrence-summary-icon">
-                ▤
-            </div>
-
-            <div>
-
-                <span class="recurrence-summary-label">
-                    Incidencias
-                </span>
-
-                <strong class="recurrence-summary-value">
-                    {{ total_incidencias|default:"0" }}
-                </strong>
-
-                <small class="recurrence-summary-note">
-                    Registros analizados
-                </small>
-
-            </div>
+            <strong class="report-summary-value">
+                {{ total_incidencias|default:"0" }}
+            </strong>
 
         </article>
 
 
+        <article class="report-summary-card">
 
-        <article class="recurrence-summary-card">
+            <span class="report-summary-label">
+                Detectadas
+            </span>
 
-            <div class="recurrence-summary-icon">
-                ◆
-            </div>
-
-            <div>
-
-                <span class="recurrence-summary-label">
-                    Nodos afectados
-                </span>
-
-                <strong class="recurrence-summary-value">
-                    {{ total_nodos|default:"0" }}
-                </strong>
-
-                <small class="recurrence-summary-note">
-                    Infraestructura con incidencias
-                </small>
-
-            </div>
+            <strong class="report-summary-value">
+                {{ total_detectadas|default:"0" }}
+            </strong>
 
         </article>
 
 
+        <article class="report-summary-card">
 
-        <article class="recurrence-summary-card">
+            <span class="report-summary-label">
+                En atención
+            </span>
 
-            <div class="recurrence-summary-icon">
-                ◇
-            </div>
-
-            <div>
-
-                <span class="recurrence-summary-label">
-                    Componentes
-                </span>
-
-                <strong class="recurrence-summary-value">
-                    {{ total_componentes|default:"0" }}
-                </strong>
-
-                <small class="recurrence-summary-note">
-                    Componentes afectados
-                </small>
-
-            </div>
+            <strong class="report-summary-value">
+                {{ total_en_atencion|default:"0" }}
+            </strong>
 
         </article>
 
 
+        <article class="report-summary-card">
 
-        <article class="recurrence-summary-card recurrence-summary-critical">
+            <span class="report-summary-label">
+                Cerradas
+            </span>
 
-            <div class="recurrence-summary-icon">
-                !
-            </div>
-
-            <div>
-
-                <span class="recurrence-summary-label">
-                    Críticas
-                </span>
-
-                <strong class="recurrence-summary-value">
-                    {{ total_criticas|default:"0" }}
-                </strong>
-
-                <small class="recurrence-summary-note">
-                    Incidencias de mayor severidad
-                </small>
-
-            </div>
+            <strong class="report-summary-value">
+                {{ total_cerradas|default:"0" }}
+            </strong>
 
         </article>
 
+
+        <article class="report-summary-card">
+
+            <span class="report-summary-label">
+                Alta / Crítica
+            </span>
+
+            <strong class="report-summary-value">
+                {{ total_altas_criticas|default:"0" }}
+            </strong>
+
+        </article>
 
     </section>
 
 
+    <!-- ========================================================
+         RESULTADOS
+         ======================================================== -->
 
-    <!-- ======================================================
-         RANKING DE NODOS
-         ====================================================== -->
+    <section class="report-section">
 
-    <section class="card recurrence-table-card">
-
-
-        <div class="recurrence-section-header">
+        <div class="report-section-header">
 
             <div>
 
                 <h3>
-                    Nodos con mayor recurrencia
+                    Resultados
                 </h3>
 
                 <p>
-                    Ordenados por cantidad de incidencias registradas.
+                    Incidencias correspondientes a los filtros seleccionados.
                 </p>
 
             </div>
 
 
-            <span class="recurrence-result-count">
+            <div class="report-actions">
 
-                {{ total_nodos|default:"0" }}
+                <a
+                    href="{% url 'incidencias:exportar_incidencias_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                    class="btn btn-secondary"
+                >
+                    Exportar CSV
+                </a>
 
-                {% if total_nodos == 1 %}
-                    nodo
-                {% else %}
-                    nodos
-                {% endif %}
+                <a
+                    href="{% url 'incidencias:reporte_incidencias_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                    target="_blank"
+                    class="btn btn-primary"
+                >
+                    Imprimir / PDF
+                </a>
 
-            </span>
+            </div>
 
         </div>
 
 
+        <div class="table-wrap">
 
-        <div class="recurrence-table-wrapper">
-
-            <table class="recurrence-table">
+            <table class="report-table">
 
                 <thead>
 
                     <tr>
-                        <th class="recurrence-column-rank">
-                            #
-                        </th>
-
-                        <th>
-                            Nodo
-                        </th>
-
-                        <th>
-                            Nombre
-                        </th>
-
-                        <th class="recurrence-column-number">
-                            Incidencias
-                        </th>
-
-                        <th class="recurrence-column-number">
-                            Críticas
-                        </th>
-
-                        <th class="recurrence-column-number">
-                            Altas
-                        </th>
-
-                        <th class="recurrence-column-number">
-                            Cerradas
-                        </th>
+                        <th>Código</th>
+                        <th>Fecha</th>
+                        <th>Nodo</th>
+                        <th>Componente</th>
+                        <th>Estado</th>
+                        <th>Severidad</th>
+                        <th>Técnico</th>
+                        <th>Tiempo cierre</th>
                     </tr>
 
                 </thead>
@@ -306,386 +345,108 @@ Análisis de concentración de incidencias por nodo y componente de red.
 
                 <tbody>
 
-                    {% for nodo in ranking_nodos %}
+                    {% for incidencia in incidencias %}
 
                         <tr>
 
-
                             <td>
-
-                                <span class="recurrence-rank">
-
-                                    {{ forloop.counter }}
-
-                                </span>
-
+                                {{ incidencia.codigo }}
                             </td>
 
-
                             <td>
-
-                                <strong class="recurrence-code">
-
-                                    {{ nodo.nodo_afectado__codigo|default:"-" }}
-
-                                </strong>
-
+                                {{ incidencia.fecha_deteccion|date:"d/m/Y H:i" }}
                             </td>
 
-
                             <td>
-
-                                <span class="recurrence-name">
-
-                                    {{ nodo.nodo_afectado__nombre|default:"Sin nombre" }}
-
-                                </span>
-
+                                {{ incidencia.nodo_afectado.codigo }}
                             </td>
 
-
                             <td>
 
-                                <strong class="recurrence-total">
+                                {% if incidencia.componente_principal %}
 
-                                    {{ nodo.total }}
-
-                                </strong>
-
-                            </td>
-
-
-                            <td>
-
-                                {% if nodo.criticas %}
-
-                                    <span class="recurrence-badge recurrence-badge-critical">
-                                        {{ nodo.criticas }}
-                                    </span>
+                                    {{ incidencia.componente_principal.codigo }}
 
                                 {% else %}
 
-                                    <span class="recurrence-zero">
-                                        0
-                                    </span>
+                                    -
 
                                 {% endif %}
 
                             </td>
 
+                            <td>
+
+                                <span class="status-badge">
+                                    {{ incidencia.get_estado_display }}
+                                </span>
+
+                            </td>
 
                             <td>
 
-                                {% if nodo.altas %}
+                                {% if incidencia.severidad == "CRITICA" %}
 
-                                    <span class="recurrence-badge recurrence-badge-high">
-                                        {{ nodo.altas }}
+                                    <span class="severity-critical">
+                                        {{ incidencia.get_severidad_display }}
+                                    </span>
+
+                                {% elif incidencia.severidad == "ALTA" %}
+
+                                    <span class="severity-high">
+                                        {{ incidencia.get_severidad_display }}
                                     </span>
 
                                 {% else %}
 
-                                    <span class="recurrence-zero">
-                                        0
-                                    </span>
+                                    {{ incidencia.get_severidad_display }}
 
                                 {% endif %}
 
                             </td>
 
-
                             <td>
 
-                                <span class="recurrence-badge recurrence-badge-closed">
+                                {% if incidencia.tecnico_asignado %}
 
-                                    {{ nodo.cerradas }}
+                                    {{ incidencia.tecnico_asignado.get_full_name|default:incidencia.tecnico_asignado.username }}
 
-                                </span>
+                                {% else %}
+
+                                    -
+
+                                {% endif %}
 
                             </td>
 
+                            <td>
+
+                                {% if incidencia.tiempo_cierre_min is not None %}
+
+                                    {{ incidencia.tiempo_cierre_texto }} 
+
+                                {% else %}
+
+                                    -
+
+                                {% endif %}
+
+                            </td>
 
                         </tr>
-
 
                     {% empty %}
-
-
-                        <tr>
-
-                            <td
-                                colspan="7"
-                                class="recurrence-empty"
-                            >
-
-                                <div class="recurrence-empty-content">
-
-                                    <strong>
-                                        Sin resultados
-                                    </strong>
-
-                                    <span>
-                                        No existen incidencias para el período seleccionado.
-                                    </span>
-
-                                </div>
-
-                            </td>
-
-                        </tr>
-
-
-                    {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-
-    </section>
-
-
-
-    <!-- ======================================================
-         RANKING DE COMPONENTES
-         ====================================================== -->
-
-    <section class="card recurrence-table-card">
-
-
-        <div class="recurrence-section-header">
-
-            <div>
-
-                <h3>
-                    Componentes con mayor recurrencia
-                </h3>
-
-                <p>
-                    Componentes que concentran la mayor cantidad de incidencias.
-                </p>
-
-            </div>
-
-
-            <span class="recurrence-result-count">
-
-                {{ total_componentes|default:"0" }}
-
-                {% if total_componentes == 1 %}
-                    componente
-                {% else %}
-                    componentes
-                {% endif %}
-
-            </span>
-
-        </div>
-
-
-
-        <div class="recurrence-table-wrapper">
-
-            <table class="recurrence-table">
-
-                <thead>
-
-                    <tr>
-
-                        <th class="recurrence-column-rank">
-                            #
-                        </th>
-
-                        <th>
-                            Componente
-                        </th>
-
-                        <th>
-                            Nombre
-                        </th>
-
-                        <th>
-                            Nodo
-                        </th>
-
-                        <th class="recurrence-column-number">
-                            Incidencias
-                        </th>
-
-                        <th class="recurrence-column-number">
-                            Críticas
-                        </th>
-
-                        <th class="recurrence-column-number">
-                            Altas
-                        </th>
-
-                        <th class="recurrence-column-number">
-                            Cerradas
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-
-                <tbody>
-
-                    {% for componente in ranking_componentes %}
-
-                        <tr>
-
-
-                            <td>
-
-                                <span class="recurrence-rank">
-                                    {{ forloop.counter }}
-                                </span>
-
-                            </td>
-
-
-                            <td>
-
-                                <strong class="recurrence-code">
-
-                                    {{ componente.componente_principal__codigo|default:"-" }}
-
-                                </strong>
-
-                            </td>
-
-
-                            <td>
-
-                                <span class="recurrence-name">
-
-                                    {{ componente.componente_principal__nombre|default:"Sin nombre" }}
-
-                                </span>
-
-                            </td>
-
-
-                            <td>
-
-                                <div class="recurrence-node-cell">
-
-                                    <strong>
-
-                                        {{ componente.nodo_afectado__codigo|default:"-" }}
-
-                                    </strong>
-
-                                    {% if componente.nodo_afectado__nombre %}
-
-                                        <small>
-
-                                            {{ componente.nodo_afectado__nombre }}
-
-                                        </small>
-
-                                    {% endif %}
-
-                                </div>
-
-                            </td>
-
-
-                            <td>
-
-                                <strong class="recurrence-total">
-
-                                    {{ componente.total }}
-
-                                </strong>
-
-                            </td>
-
-
-                            <td>
-
-                                {% if componente.criticas %}
-
-                                    <span class="recurrence-badge recurrence-badge-critical">
-
-                                        {{ componente.criticas }}
-
-                                    </span>
-
-                                {% else %}
-
-                                    <span class="recurrence-zero">
-                                        0
-                                    </span>
-
-                                {% endif %}
-
-                            </td>
-
-
-                            <td>
-
-                                {% if componente.altas %}
-
-                                    <span class="recurrence-badge recurrence-badge-high">
-
-                                        {{ componente.altas }}
-
-                                    </span>
-
-                                {% else %}
-
-                                    <span class="recurrence-zero">
-                                        0
-                                    </span>
-
-                                {% endif %}
-
-                            </td>
-
-
-                            <td>
-
-                                <span class="recurrence-badge recurrence-badge-closed">
-
-                                    {{ componente.cerradas }}
-
-                                </span>
-
-                            </td>
-
-
-                        </tr>
-
-
-                    {% empty %}
-
 
                         <tr>
 
                             <td
                                 colspan="8"
-                                class="recurrence-empty"
+                                class="report-empty"
                             >
-
-                                <div class="recurrence-empty-content">
-
-                                    <strong>
-                                        Sin resultados
-                                    </strong>
-
-                                    <span>
-                                        No existen componentes afectados para el período seleccionado.
-                                    </span>
-
-                                </div>
-
+                                No se encontraron incidencias para los filtros seleccionados.
                             </td>
 
                         </tr>
-
 
                     {% endfor %}
 
@@ -694,7 +455,6 @@ Análisis de concentración de incidencias por nodo y componente de red.
             </table>
 
         </div>
-
 
     </section>
 

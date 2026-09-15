@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Estilos globales -->
-    <link rel="stylesheet" href="{% static 'incidencias/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'incidencias/css/styles.css' %}?v=20260915-1">
 </head>
 <body>
 
@@ -90,7 +90,7 @@
                     {% endfor %}
                 {% endif %}
 
-                <form method="post" autocomplete="off">
+                <form method="post" autocomplete="off" class="login-form">
                     {% csrf_token %}
 
                     <div class="form-group">

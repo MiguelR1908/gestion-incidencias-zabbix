@@ -1,8 +1,12 @@
 {% extends "incidencias/base.html" %}
 
-{% block title %}Configuración Zabbix | Fiber Z NOC{% endblock %}
+{% block title %}
+Configuración Zabbix | Fiber Z NOC
+{% endblock %}
 
-{% block page_title %}Configuración Zabbix{% endblock %}
+{% block page_title %}
+Configuración Zabbix
+{% endblock %}
 
 {% block page_subtitle %}
 Administración de la conexión entre el sistema web y la API de Zabbix.
@@ -10,96 +14,176 @@ Administración de la conexión entre el sistema web y la API de Zabbix.
 
 {% block content %}
 
-<section class="card">
-    <div class="card-header">
-        <div>
-            <h3>Configuraciones registradas</h3>
-            <p>Datos de conexión utilizados para consultar hosts, alertas y eventos desde Zabbix.</p>
+<div id="zabbix-config-page" class="page-layout">
+
+    <section class="page-card">
+
+        <header class="page-card-header">
+
+            <div class="page-card-heading">
+                <h3>Configuraciones registradas</h3>
+                <p>
+                    Datos de conexión utilizados para consultar hosts,
+                    alertas y eventos desde Zabbix.
+                </p>
+            </div>
+
+            <div class="page-card-actions">
+                <a
+                    href="{% url 'incidencias:configuracion_zabbix_crear' %}"
+                    class="btn btn-primary"
+                >
+                    <span aria-hidden="true">+</span>
+                    Nueva configuración
+                </a>
+            </div>
+
+        </header>
+
+    </section>
+
+
+    <section class="page-card">
+
+        <div class="page-card-body page-card-body--flush">
+
+            <div class="table-wrapper">
+
+                <table class="table data-table">
+
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>URL API</th>
+                            <th>Autenticación</th>
+                            <th>Conexión</th>
+                            <th>Última prueba</th>
+                            <th>Activo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for configuracion in configuraciones %}
+
+                            <tr>
+
+                                <td>
+                                    <strong class="table-primary-value">
+                                        {{ configuracion.nombre }}
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    <span class="table-mono">
+                                        {{ configuracion.url_api }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    {% if configuracion.usar_token %}
+                                        <span class="badge badge-info">
+                                            Token API
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-warning">
+                                            Usuario / contraseña
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if configuracion.conexion_exitosa %}
+                                        <span class="badge badge-success">
+                                            Exitosa
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-danger">
+                                            No validada
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <div class="table-status-stack">
+                                        <span>
+                                            {{ configuracion.ultima_prueba_conexion|date:"d/m/Y H:i"|default:"-" }}
+                                        </span>
+
+                                        {% if configuracion.mensaje_ultima_prueba %}
+                                            <small class="table-secondary-value">
+                                                {{ configuracion.mensaje_ultima_prueba }}
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    {% if configuracion.activo %}
+                                        <span class="badge badge-success">
+                                            Sí
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-danger">
+                                            No
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <div class="table-actions">
+
+                                        <a
+                                            href="{% url 'incidencias:configuracion_zabbix_editar' configuracion.id %}"
+                                            class="btn btn-secondary btn-sm"
+                                        >
+                                            Editar
+                                        </a>
+
+                                        <a
+                                            href="{% url 'incidencias:configuracion_zabbix_probar' configuracion.id %}"
+                                            class="btn btn-primary btn-sm"
+                                        >
+                                            Probar conexión
+                                        </a>
+
+                                    </div>
+                                </td>
+
+                            </tr>
+
+                        {% empty %}
+
+                            <tr>
+                                <td colspan="7" class="table-empty">
+
+                                    <div class="page-empty-state">
+                                        <strong>
+                                            No hay configuraciones Zabbix registradas
+                                        </strong>
+
+                                        <p>
+                                            Cree una configuración para comenzar a consultar
+                                            hosts, eventos y alertas.
+                                        </p>
+                                    </div>
+
+                                </td>
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
         </div>
 
-        <a href="{% url 'incidencias:configuracion_zabbix_crear' %}" class="btn btn-primary">
-            + Nueva configuración
-        </a>
-    </div>
-</section>
+    </section>
 
-<section class="card">
-    <div class="table-wrapper">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>URL API</th>
-                    <th>Autenticación</th>
-                    <th>Conexión</th>
-                    <th>Última prueba</th>
-                    <th>Activo</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for configuracion in configuraciones %}
-                    <tr>
-                        <td><strong>{{ configuracion.nombre }}</strong></td>
-                        <td>{{ configuracion.url_api }}</td>
-
-                        <td>
-                            {% if configuracion.usar_token %}
-                                <span class="badge badge-info">Token API</span>
-                            {% else %}
-                                <span class="badge badge-warning">Usuario / contraseña</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if configuracion.conexion_exitosa %}
-                                <span class="badge badge-success">Exitosa</span>
-                            {% else %}
-                                <span class="badge badge-danger">No validada</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {{ configuracion.ultima_prueba_conexion|date:"d/m/Y H:i"|default:"-" }}
-                        </td>
-
-                        <td>
-                            {% if configuracion.activo %}
-                                <span class="badge badge-success">Sí</span>
-                            {% else %}
-                                <span class="badge badge-danger">No</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            <div class="action-buttons">
-                                <a href="{% url 'incidencias:configuracion_zabbix_editar' configuracion.id %}" class="btn btn-secondary">
-                                    Editar
-                                </a>
-
-                                <a href="{% url 'incidencias:configuracion_zabbix_probar' configuracion.id %}" class="btn btn-primary">
-                                    Probar conexión
-                                </a>
-                            </div>
-                        </td>
-                        <td>
-                            {{ configuracion.ultima_prueba_conexion|date:"d/m/Y H:i"|default:"-" }}
-
-                            {% if configuracion.mensaje_ultima_prueba %}
-                                <br>
-                                <small>{{ configuracion.mensaje_ultima_prueba }}</small>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="7">No hay configuraciones Zabbix registradas.</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</section>
+</div>
 
 {% endblock %}

@@ -1,1271 +1,452 @@
-{% load static %}
-{% load tz %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% extends "incidencias/base.html" %}
 
-    <title>
-        Reporte {{ incidencia.codigo }} | Fiber Z NOC
-    </title>
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+{% block title %}
+Rendimiento por técnico | Fiber Z NOC
+{% endblock %}
 
-        :root {
-            --brand: #173f8f;
-            --brand-dark: #0d2d6d;
-            --brand-soft: #eaf1ff;
-            --text: #172033;
-            --muted: #64748b;
-            --line: #dbe2ea;
-            --soft: #f7f9fc;
-            --success: #166534;
-            --success-bg: #dcfce7;
-            --warning: #92400e;
-            --warning-bg: #fef3c7;
-            --danger: #b91c1c;
-            --danger-bg: #fee2e2;
-            --info: #1d4ed8;
-            --info-bg: #dbeafe;
-        }
 
-        body {
-            margin: 0;
-            background: #eef2f7;
-            color: var(--text);
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 12px;
-            line-height: 1.45;
-        }
+{% block page_title %}
+Rendimiento por técnico
+{% endblock %}
 
-        .toolbar {
-            max-width: 930px;
-            margin: 18px auto 0;
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
 
-        .toolbar a,
-        .toolbar button {
-            border: 0;
-            border-radius: 7px;
-            padding: 10px 15px;
-            font: inherit;
-            font-weight: 700;
-            cursor: pointer;
-            text-decoration: none;
-        }
+{% block page_subtitle %}
+Indicadores operativos, cumplimiento SLA y tiempos de atención por técnico.
+{% endblock %}
 
-        .btn-back {
-            background: #e2e8f0;
-            color: var(--text);
-        }
 
-        .btn-pdf {
-            background: var(--brand);
-            color: #fff;
-        }
+{% block content %}
 
-        .report-page {
-            width: calc(100% - 30px);
-            max-width: 930px;
-            margin: 14px auto 35px;
-            background: #fff;
-            border: 1px solid var(--line);
-            box-shadow: 0 12px 35px rgba(15, 23, 42, .09);
-        }
-
-        .report-topline {
-            height: 7px;
-            background: linear-gradient(
-                90deg,
-                var(--brand-dark),
-                var(--brand),
-                #3b82f6
-            );
-        }
-
-        .report-header {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 26px;
-            padding: 24px 28px 20px;
-            border-bottom: 1px solid var(--line);
-        }
-
-        .brand-wrap {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .brand-logo {
-            width: 82px;
-            height: 58px;
-            object-fit: contain;
-            object-position: left center;
-        }
-
-        .brand-fallback {
-            display: none;
-            width: 64px;
-            height: 52px;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            background: var(--brand);
-            color: #fff;
-            font-size: 20px;
-            font-weight: 900;
-            letter-spacing: .5px;
-        }
-
-        .brand-company {
-            color: var(--brand);
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: .55px;
-            text-transform: uppercase;
-        }
-
-        .report-title {
-            margin: 4px 0 0;
-            font-size: 23px;
-            line-height: 1.2;
-            color: #0f172a;
-        }
-
-        .report-subtitle {
-            margin: 5px 0 0;
-            color: var(--muted);
-            font-size: 11px;
-        }
-
-        .report-meta {
-            min-width: 230px;
-            padding-left: 20px;
-            border-left: 1px solid var(--line);
-        }
-
-        .meta-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 14px;
-            margin-bottom: 6px;
-        }
-
-        .meta-label {
-            color: var(--muted);
-        }
-
-        .meta-value {
-            color: var(--text);
-            font-weight: 700;
-            text-align: right;
-        }
-
-        .hero {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 20px;
-            align-items: start;
-            padding: 22px 28px;
-            background: linear-gradient(
-                135deg,
-                #f8fbff,
-                #eef4ff
-            );
-            border-bottom: 1px solid var(--line);
-        }
-
-        .incident-code {
-            margin-bottom: 7px;
-            color: var(--brand);
-            font-size: 13px;
-            font-weight: 900;
-            letter-spacing: .45px;
-        }
-
-        .incident-title {
-            margin: 0;
-            color: #0f172a;
-            font-size: 19px;
-            line-height: 1.3;
-        }
-
-        .incident-description {
-            margin: 9px 0 0;
-            color: #475569;
-            line-height: 1.55;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 105px;
-            padding: 7px 11px;
-            border-radius: 999px;
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: .4px;
-        }
-
-        .status-closed {
-            color: var(--success);
-            background: var(--success-bg);
-        }
-
-        .status-attention {
-            color: var(--info);
-            background: var(--info-bg);
-        }
-
-        .status-detected {
-            color: var(--warning);
-            background: var(--warning-bg);
-        }
-
-        .status-cancelled {
-            color: #475569;
-            background: #e2e8f0;
-        }
-
-        .status-other {
-            color: var(--brand);
-            background: var(--brand-soft);
-        }
-
-        .section {
-            padding: 20px 28px;
-            border-bottom: 1px solid #e8edf3;
-        }
-
-        .section:last-child {
-            border-bottom: 0;
-        }
-
-        .section-heading {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 13px;
-        }
-
-        .section-title {
-            margin: 0;
-            color: var(--brand);
-            font-size: 13px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: .55px;
-        }
-
-        .section-note {
-            color: var(--muted);
-            font-size: 10px;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        .info-box {
-            min-width: 0;
-            padding: 11px 12px;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            background: #fff;
-        }
-
-        .info-label {
-            display: block;
-            margin-bottom: 4px;
-            color: var(--muted);
-            font-size: 9px;
-            font-weight: 800;
-            letter-spacing: .35px;
-            text-transform: uppercase;
-        }
-
-        .info-value {
-            color: var(--text);
-            font-weight: 700;
-            overflow-wrap: anywhere;
-        }
-
-        .info-note {
-            display: block;
-            margin-top: 2px;
-            color: var(--muted);
-            font-size: 10px;
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        .metric {
-            padding: 12px;
-            border-radius: 8px;
-            background: var(--soft);
-            border-left: 4px solid var(--brand);
-        }
-
-        .metric-label {
-            color: var(--muted);
-            font-size: 9px;
-            font-weight: 800;
-            text-transform: uppercase;
-        }
-
-        .metric-value {
-            margin-top: 5px;
-            color: #0f172a;
-            font-size: 15px;
-            font-weight: 900;
-        }
-
-        .sla-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 8px;
-        }
-
-        .sla-item {
-            padding: 9px 10px;
-            border: 1px solid var(--line);
-            border-radius: 7px;
-            background: #fff;
-        }
-
-        .sla-name {
-            display: block;
-            margin-bottom: 5px;
-            color: var(--muted);
-            font-size: 9px;
-            text-transform: uppercase;
-            font-weight: 800;
-        }
-
-        .sla-ok {
-            color: var(--success);
-            font-weight: 900;
-        }
-
-        .sla-no {
-            color: var(--danger);
-            font-weight: 900;
-        }
-
-        .sla-pending {
-            color: var(--muted);
-            font-weight: 700;
-        }
-
-        .solution-box {
-            padding: 13px 15px;
-            border: 1px solid #bbf7d0;
-            border-left: 4px solid #22c55e;
-            border-radius: 7px;
-            background: #f0fdf4;
-        }
-
-        .solution-label {
-            display: block;
-            margin-bottom: 4px;
-            color: #166534;
-            font-size: 9px;
-            font-weight: 900;
-            text-transform: uppercase;
-        }
-
-        .solution-text {
-            color: #14532d;
-            white-space: pre-wrap;
-        }
-
-        .zabbix-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        .zabbix-item {
-            padding: 10px 11px;
-            border-radius: 7px;
-            background: #f0fdf4;
-            border: 1px solid #dcfce7;
-        }
-
-        .zabbix-item span {
-            display: block;
-            color: #15803d;
-            font-size: 9px;
-            font-weight: 800;
-            text-transform: uppercase;
-        }
-
-        .zabbix-item strong {
-            display: block;
-            margin-top: 3px;
-            color: #14532d;
-            overflow-wrap: anywhere;
-        }
-
-        .assignment-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .assignment-table th {
-            padding: 7px 8px;
-            background: #f1f5f9;
-            border-bottom: 1px solid var(--line);
-            color: #475569;
-            font-size: 9px;
-            text-align: left;
-            text-transform: uppercase;
-        }
-
-        .assignment-table td {
-            padding: 8px;
-            border-bottom: 1px solid #edf1f5;
-            vertical-align: top;
-        }
-
-        .assignment-table tr:last-child td {
-            border-bottom: 0;
-        }
-
-        .timeline {
-            position: relative;
-            margin-top: 5px;
-        }
-
-        .timeline::before {
-            content: "";
-            position: absolute;
-            left: 14px;
-            top: 8px;
-            bottom: 8px;
-            width: 2px;
-            background: #dbe4ef;
-        }
-
-        .timeline-item {
-            position: relative;
-            display: grid;
-            grid-template-columns: 30px minmax(0, 1fr);
-            gap: 11px;
-            margin-bottom: 13px;
-            break-inside: avoid;
-            page-break-inside: avoid;
-        }
-
-        .timeline-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .timeline-dot {
-            position: relative;
-            z-index: 2;
-            width: 29px;
-            height: 29px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #93b4e7;
-            border-radius: 50%;
-            background: #fff;
-            color: var(--brand);
-            font-size: 9px;
-            font-weight: 900;
-        }
-
-        .timeline-card {
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            background: #fff;
-            overflow: hidden;
-        }
-
-        .timeline-head {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-            padding: 9px 11px;
-            background: #f8fafc;
-            border-bottom: 1px solid #e8edf3;
-        }
-
-        .timeline-action {
-            color: var(--brand);
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-        }
-
-        .timeline-date {
-            color: var(--muted);
-            font-size: 10px;
-            white-space: nowrap;
-        }
-
-        .timeline-body {
-            padding: 10px 11px;
-        }
-
-        .timeline-user {
-            margin-bottom: 6px;
-            color: #475569;
-            font-size: 10px;
-        }
-
-        .timeline-user strong {
-            color: var(--text);
-        }
-
-        .timeline-description {
-            color: #334155;
-            white-space: normal;
-            overflow-wrap: anywhere;
-        }
-
-        .transition {
-            margin-top: 8px;
-            padding-top: 7px;
-            border-top: 1px dashed #dbe2ea;
-            color: var(--muted);
-            font-size: 10px;
-        }
-
-        .transition strong {
-            color: var(--text);
-        }
-
-        .report-footer {
-            display: flex;
-            justify-content: space-between;
-            gap: 20px;
-            padding: 15px 28px;
-            background: #f8fafc;
-            color: var(--muted);
-            font-size: 9px;
-        }
-
-        @media (max-width: 760px) {
-            .report-header,
-            .hero {
-                grid-template-columns: 1fr;
-            }
-
-            .report-meta {
-                border-left: 0;
-                border-top: 1px solid var(--line);
-                padding: 12px 0 0;
-            }
-
-            .info-grid,
-            .metrics-grid,
-            .sla-grid,
-            .zabbix-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-        }
-
-        @media print {
-            @page {
-                size: A4 portrait;
-                margin: 10mm;
-            }
-
-            body {
-                background: #fff;
-                font-size: 10px;
-            }
-
-            .toolbar {
-                display: none !important;
-            }
-
-            .report-page {
-                width: 100%;
-                max-width: none;
-                margin: 0;
-                border: 0;
-                box-shadow: none;
-            }
-
-            .report-topline {
-                height: 5px;
-            }
-
-            .report-header {
-                padding: 13px 0 11px;
-            }
-
-            .hero,
-            .section {
-                padding: 12px 0;
-            }
-
-            .report-footer {
-                padding: 10px 0 0;
-                background: #fff;
-            }
-
-            .brand-logo {
-                width: 70px;
-                height: 48px;
-            }
-
-            .report-title {
-                font-size: 19px;
-            }
-
-            .incident-title {
-                font-size: 16px;
-            }
-
-            .info-box,
-            .metric,
-            .sla-item,
-            .zabbix-item,
-            .solution-box,
-            .timeline-card {
-                break-inside: avoid;
-                page-break-inside: avoid;
-            }
-
-            .timeline-item {
-                margin-bottom: 8px;
-            }
-
-            .timeline-head {
-                padding: 6px 8px;
-            }
-
-            .timeline-body {
-                padding: 7px 8px;
-            }
-        }
-    </style>
-</head>
-
-<body>
-
-<div class="toolbar">
-
-    <a
-        href="{% url 'incidencias:incidencia_detalle' incidencia.id %}"
-        class="btn-back"
-    >
-        Volver al detalle
-    </a>
-
-    <button
-        type="button"
-        class="btn-pdf"
-        onclick="window.print()"
-    >
-        Imprimir / Guardar PDF
-    </button>
-
-</div>
-
-
-<main class="report-page">
-
-    <div class="report-topline"></div>
-
-
-    <!-- ======================================================
-         CABECERA
-         ====================================================== -->
-
-    <header class="report-header">
-
-        <div class="brand-wrap">
-
-            <img
-                src="{% static 'incidencias/images/logo.png' %}"
-                alt="Fiber Z Telecom"
-                class="brand-logo"
-                onerror="
-                    this.style.display='none';
-                    this.nextElementSibling.style.display='flex';
-                "
-            >
-
-            <div class="brand-fallback">
-                FZ
-            </div>
-
-            <div>
-
-                <div class="brand-company">
-                    Fiber Z Telecom S.R.L. · NOC
-                </div>
-
-                <h1 class="report-title">
-                    Reporte técnico de incidencia
-                </h1>
-
-                <p class="report-subtitle">
-                    Gestión, atención y trazabilidad operativa
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <div class="report-meta">
-
-            <div class="meta-row">
-                <span class="meta-label">Generado</span>
-                <span class="meta-value">
-                    {{ fecha_generacion|date:"d/m/Y H:i" }}
-                </span>
-            </div>
-
-            <div class="meta-row">
-                <span class="meta-label">Usuario</span>
-                <span class="meta-value">
-                    {{ request.user.get_full_name|default:request.user.username }}
-                </span>
-            </div>
-
-            <div class="meta-row">
-                <span class="meta-label">Documento</span>
-                <span class="meta-value">
-                    {{ incidencia.codigo }}
-                </span>
-            </div>
-
-        </div>
-
-    </header>
+<div id="technician-report-page" class="report-page page-layout">
 
 
     <!-- ======================================================
          RESUMEN
          ====================================================== -->
 
-    <section class="hero">
+    <section class="report-summary-grid">
 
-        <div>
+        <article class="report-summary-card">
 
-            <div class="incident-code">
-                {{ incidencia.codigo }}
-            </div>
-
-            <h2 class="incident-title">
-                {{ incidencia.titulo }}
-            </h2>
-
-            {% if incidencia.descripcion %}
-                <p class="incident-description">
-                    {{ incidencia.descripcion }}
-                </p>
-            {% endif %}
-
-        </div>
-
-
-        <div>
-
-            {% if incidencia.estado == "CERRADA" %}
-
-                <span class="status-badge status-closed">
-                    Cerrada
-                </span>
-
-            {% elif incidencia.estado == "EN_ATENCION" or incidencia.estado == "ASIGNADA" %}
-
-                <span class="status-badge status-attention">
-                    En atención
-                </span>
-
-            {% elif incidencia.estado == "DETECTADA" %}
-
-                <span class="status-badge status-detected">
-                    Detectada
-                </span>
-
-            {% elif incidencia.estado == "CANCELADA" %}
-
-                <span class="status-badge status-cancelled">
-                    Cancelada
-                </span>
-
-            {% else %}
-
-                <span class="status-badge status-other">
-                    {{ incidencia.get_estado_display }}
-                </span>
-
-            {% endif %}
-
-        </div>
-
-    </section>
-
-
-    <!-- ======================================================
-         DATOS GENERALES
-         ====================================================== -->
-
-    <section class="section">
-
-        <div class="section-heading">
-            <h3 class="section-title">
-                Información general
-            </h3>
-
-            <span class="section-note">
-                Datos principales del caso
+            <span>
+                Asignadas
             </span>
-        </div>
+
+            <strong>
+                {{ total_asignadas_general }}
+            </strong>
+
+            <small>
+                Participaciones registradas
+            </small>
+
+        </article>
 
 
-        <div class="info-grid">
+        <article class="report-summary-card">
 
-            <div class="info-box">
-                <span class="info-label">Nodo afectado</span>
-                <span class="info-value">
-                    {{ incidencia.nodo_afectado.codigo }}
-                </span>
-                <span class="info-note">
-                    {{ incidencia.nodo_afectado.nombre }}
-                </span>
-            </div>
+            <span>
+                Activas
+            </span>
 
+            <strong>
+                {{ total_activas_general }}
+            </strong>
 
-            <div class="info-box">
-                <span class="info-label">Componente principal</span>
+            <small>
+                Actualmente en atención
+            </small>
 
-                {% if incidencia.componente_principal %}
-                    <span class="info-value">
-                        {{ incidencia.componente_principal.codigo }}
-                    </span>
-                    <span class="info-note">
-                        {{ incidencia.componente_principal.nombre }}
-                    </span>
-                {% else %}
-                    <span class="info-value">
-                        Sin componente
-                    </span>
-                {% endif %}
-            </div>
+        </article>
 
 
-            <div class="info-box">
-                <span class="info-label">Técnico actual</span>
+        <article class="report-summary-card">
 
-                {% if incidencia.tecnico_asignado %}
-                    <span class="info-value">
-                        {{ incidencia.tecnico_asignado.get_full_name|default:incidencia.tecnico_asignado.username }}
-                    </span>
-                    <span class="info-note">
-                        {{ incidencia.tecnico_asignado.username }}
-                    </span>
-                {% else %}
-                    <span class="info-value">
-                        Sin asignar
-                    </span>
-                {% endif %}
-            </div>
+            <span>
+                Cerradas
+            </span>
 
+            <strong>
+                {{ total_cerradas_general }}
+            </strong>
 
-            <div class="info-box">
-                <span class="info-label">Severidad</span>
-                <span class="info-value">
-                    {{ incidencia.get_severidad_display }}
-                </span>
-            </div>
+            <small>
+                Atenciones finalizadas
+            </small>
+
+        </article>
 
 
-            <div class="info-box">
-                <span class="info-label">Prioridad</span>
-                <span class="info-value">
-                    {{ incidencia.get_prioridad_display }}
-                </span>
-            </div>
+        <article class="report-summary-card">
+
+            <span>
+                Reasignadas
+            </span>
+
+            <strong>
+                {{ total_reasignadas_general }}
+            </strong>
+
+            <small>
+                Transferidas a otro técnico
+            </small>
+
+        </article>
 
 
-            <div class="info-box">
-                <span class="info-label">Origen</span>
-                <span class="info-value">
-                    {{ incidencia.get_origen_display }}
-                </span>
-            </div>
+        <article class="report-summary-card">
 
-
-            <div class="info-box">
-                <span class="info-label">Tipo de afectación</span>
-                <span class="info-value">
-                    {{ incidencia.get_tipo_afectacion_display }}
-                </span>
-            </div>
-
-
-            <div class="info-box">
-                <span class="info-label">Clientes afectados</span>
-                <span class="info-value">
-                    {{ incidencia.clientes_afectados_estimados|default:"0" }}
-                </span>
-            </div>
-
-
-            <div class="info-box">
-                <span class="info-label">Registrado por</span>
-
-                {% if incidencia.registrado_por %}
-                    <span class="info-value">
-                        {{ incidencia.registrado_por.get_full_name|default:incidencia.registrado_por.username }}
-                    </span>
-                {% else %}
-                    <span class="info-value">
-                        Sistema
-                    </span>
-                {% endif %}
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- ======================================================
-         FECHAS Y TIEMPOS
-         ====================================================== -->
-
-    <section class="section">
-
-        <div class="section-heading">
-            <h3 class="section-title">
-                Línea de tiempos
-            </h3>
-        </div>
-
-
-        <div class="info-grid">
-
-            <div class="info-box">
-                <span class="info-label">Detección</span>
-                <span class="info-value">
-                    {{ incidencia.fecha_deteccion|localtime|date:"d/m/Y H:i:s" }}
-                </span>
-            </div>
-
-
-            <div class="info-box">
-                <span class="info-label">Registro</span>
-                <span class="info-value">
-                    {{ incidencia.fecha_registro|localtime|date:"d/m/Y H:i:s" }}
-                </span>
-            </div>
-
-
-            <div class="info-box">
-                <span class="info-label">Asignación</span>
-
-                {% if incidencia.fecha_asignacion %}
-                    <span class="info-value">
-                        {{ incidencia.fecha_asignacion|localtime|date:"d/m/Y H:i:s" }}
-                    </span>
-                {% else %}
-                    <span class="info-value">Pendiente</span>
-                {% endif %}
-            </div>
-
-
-            <div class="info-box">
-                <span class="info-label">Inicio atención</span>
-
-                {% if incidencia.fecha_inicio_atencion %}
-                    <span class="info-value">
-                        {{ incidencia.fecha_inicio_atencion|localtime|date:"d/m/Y H:i:s" }}
-                    </span>
-                {% else %}
-                    <span class="info-value">Pendiente</span>
-                {% endif %}
-            </div>
-
-
-            <div class="info-box">
-                <span class="info-label">Cierre</span>
-
-                {% if incidencia.fecha_cierre %}
-                    <span class="info-value">
-                        {{ incidencia.fecha_cierre|localtime|date:"d/m/Y H:i:s" }}
-                    </span>
-                {% else %}
-                    <span class="info-value">Pendiente</span>
-                {% endif %}
-            </div>
-
-
-            <div class="info-box">
-                <span class="info-label">Última actualización</span>
-                <span class="info-value">
-                    {{ incidencia.actualizado_en|localtime|date:"d/m/Y H:i:s" }}
-                </span>
-            </div>
-
-        </div>
-
-
-        <div style="height: 11px;"></div>
-
-
-        <div class="metrics-grid">
-
-            <div class="metric">
-                <div class="metric-label">
-                    Registro
-                </div>
-                <div class="metric-value">
-                    {% if incidencia.tiempo_registro_min is not None %}
-                        {{ incidencia.tiempo_registro_min }} min
-                    {% else %}
-                        —
-                    {% endif %}
-                </div>
-            </div>
-
-
-            <div class="metric">
-                <div class="metric-label">
-                    Asignación
-                </div>
-                <div class="metric-value">
-                    {% if incidencia.tiempo_asignacion_min is not None %}
-                        {{ incidencia.tiempo_asignacion_min }} min
-                    {% else %}
-                        —
-                    {% endif %}
-                </div>
-            </div>
-
-
-            <div class="metric">
-                <div class="metric-label">
-                    Inicio atención
-                </div>
-                <div class="metric-value">
-                    {% if incidencia.tiempo_inicio_atencion_min is not None %}
-                        {{ incidencia.tiempo_inicio_atencion_min }} min
-                    {% else %}
-                        —
-                    {% endif %}
-                </div>
-            </div>
-
-
-            <div class="metric">
-                <div class="metric-label">
-                    Tiempo total
-                </div>
-                <div class="metric-value">
-                    {% if incidencia.tiempo_cierre_min is not None %}
-                        {{ incidencia.tiempo_cierre_texto }} 
-                    {% else %}
-                        En curso
-                    {% endif %}
-                </div>
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- ======================================================
-         SLA
-         ====================================================== -->
-
-    <section class="section">
-
-        <div class="section-heading">
-            <h3 class="section-title">
+            <span>
                 Cumplimiento SLA
-            </h3>
-        </div>
+            </span>
+
+            <strong>
+                {{ cumplimiento_sla_general }}%
+            </strong>
+
+            <small>
+                SLA de resolución
+            </small>
+
+        </article>
 
 
-        <div class="sla-grid">
+        <article class="report-summary-card">
 
-            <div class="sla-item">
-                <span class="sla-name">Registro</span>
+            <span>
+                Tiempo promedio
+            </span>
 
-                {% if incidencia.cumple_sla_registro is True %}
-                    <span class="sla-ok">Cumple</span>
-                {% elif incidencia.cumple_sla_registro is False %}
-                    <span class="sla-no">No cumple</span>
+            <strong>
+
+                {% if tiempo_promedio_general != None %}
+
+                    {{ tiempo_promedio_general_texto }}
+
                 {% else %}
-                    <span class="sla-pending">No evaluado</span>
+
+                    —
+
                 {% endif %}
-            </div>
 
+            </strong>
 
-            <div class="sla-item">
-                <span class="sla-name">Asignación</span>
+            <small>
+                Resolución de incidencias
+            </small>
 
-                {% if incidencia.cumple_sla_asignacion is True %}
-                    <span class="sla-ok">Cumple</span>
-                {% elif incidencia.cumple_sla_asignacion is False %}
-                    <span class="sla-no">No cumple</span>
-                {% else %}
-                    <span class="sla-pending">No evaluado</span>
-                {% endif %}
-            </div>
-
-
-            <div class="sla-item">
-                <span class="sla-name">Inicio atención</span>
-
-                {% if incidencia.cumple_sla_inicio_atencion is True %}
-                    <span class="sla-ok">Cumple</span>
-                {% elif incidencia.cumple_sla_inicio_atencion is False %}
-                    <span class="sla-no">No cumple</span>
-                {% else %}
-                    <span class="sla-pending">No evaluado</span>
-                {% endif %}
-            </div>
-
-
-            <div class="sla-item">
-                <span class="sla-name">Resolución</span>
-
-                {% if incidencia.cumple_sla_resolucion is True %}
-                    <span class="sla-ok">Cumple</span>
-                {% elif incidencia.cumple_sla_resolucion is False %}
-                    <span class="sla-no">No cumple</span>
-                {% else %}
-                    <span class="sla-pending">No evaluado</span>
-                {% endif %}
-            </div>
-
-        </div>
+        </article>
 
     </section>
 
 
-    <!-- ======================================================
-         ZABBIX
-         ====================================================== -->
-
-    {% if incidencia.alerta_zabbix %}
-
-        <section class="section">
-
-            <div class="section-heading">
-                <h3 class="section-title">
-                    Información de Zabbix
-                </h3>
-
-                <span class="section-note">
-                    Incidencia generada desde monitoreo
-                </span>
-            </div>
-
-
-            <div class="zabbix-grid">
-
-                <div class="zabbix-item">
-                    <span>Event ID</span>
-                    <strong>
-                        {{ incidencia.alerta_zabbix.event_id }}
-                    </strong>
-                </div>
-
-                <div class="zabbix-item">
-                    <span>Trigger ID</span>
-                    <strong>
-                        {{ incidencia.alerta_zabbix.trigger_id|default:"—" }}
-                    </strong>
-                </div>
-
-                <div class="zabbix-item">
-                    <span>Host ID</span>
-                    <strong>
-                        {{ incidencia.alerta_zabbix.host_id|default:"—" }}
-                    </strong>
-                </div>
-
-            </div>
-
-        </section>
-
-    {% endif %}
-
 
     <!-- ======================================================
-         ASIGNACIONES
+         FILTROS
          ====================================================== -->
 
-    {% if asignaciones %}
+    <section class="card report-filter-card">
 
-        <section class="section">
+        <div class="report-section-header">
 
-            <div class="section-heading">
-                <h3 class="section-title">
-                    Historial de asignaciones
+            <div>
+
+                <h3>
+                    Filtros
                 </h3>
+
+                <p>
+                    Consulta el desempeño por técnico y período.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <form
+            method="get"
+            class="report-filter-form"
+        >
+
+            <div class="form-group">
+
+                <label>
+                    Técnico
+                </label>
+
+                <select name="tecnico">
+
+                    <option value="">
+                        Todos los técnicos
+                    </option>
+
+                    {% for tecnico in tecnicos %}
+
+                        <option
+                            value="{{ tecnico.id }}"
+                            {% if tecnico_id == tecnico.id|stringformat:"s" %}
+                                selected
+                            {% endif %}
+                        >
+
+                            {% if tecnico.get_full_name %}
+
+                                {{ tecnico.get_full_name }}
+
+                            {% else %}
+
+                                {{ tecnico.username }}
+
+                            {% endif %}
+
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
             </div>
 
 
-            <table class="assignment-table">
+            <div class="form-group">
+
+                <label>
+                    Desde
+                </label>
+
+                <input
+                    type="date"
+                    name="desde"
+                    value="{{ fecha_desde }}"
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>
+                    Hasta
+                </label>
+
+                <input
+                    type="date"
+                    name="hasta"
+                    value="{{ fecha_hasta }}"
+                >
+
+            </div>
+
+
+            <div class="report-filter-actions">
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Filtrar
+                </button>
+
+                <a
+                    href="{% url 'incidencias:reporte_tecnicos' %}"
+                    class="btn btn-secondary"
+                >
+                    Limpiar
+                </a>
+
+                <a
+                    href="{% url 'incidencias:exportar_reporte_tecnicos_csv' %}?{{ request.GET.urlencode }}"
+                    class="btn btn-secondary"
+                >
+                    Exportar CSV
+                </a>
+
+            </div>
+
+        </form>
+
+    </section>
+
+
+
+    <!-- ======================================================
+         TABLA
+         ====================================================== -->
+
+    <section class="card report-table-card">
+
+        <div class="report-section-header">
+
+            <div>
+
+                <h3>
+                    Rendimiento de técnicos
+                </h3>
+
+                <p>
+                    Indicadores calculados sobre las incidencias registradas.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="table-responsive">
+
+            <table class="report-table">
 
                 <thead>
+
                     <tr>
-                        <th>Fecha</th>
-                        <th>Técnico</th>
-                        <th>Asignado por</th>
-                        <th>Observación</th>
+
+                        <th>
+                            Técnico
+                        </th>
+
+                        <th>
+                            Asignadas
+                        </th>
+
+                        <th>
+                            Activas
+                        </th>
+
+                        <th>
+                            Cerradas
+                        </th>
+
+                        <th>
+                            Reasignadas
+                        </th>
+
+                        <th>
+                            SLA
+                        </th>
+
+                        <th>
+                            Tiempo promedio
+                        </th>
+
                     </tr>
+
                 </thead>
+
 
                 <tbody>
 
-                    {% for asignacion in asignaciones %}
+                    {% for fila in resultados %}
 
                         <tr>
 
                             <td>
-                                {{ asignacion.fecha_asignacion|localtime|date:"d/m/Y H:i:s" }}
+
+                                <div class="technician-cell">
+
+                                    <strong>
+
+                                        {% if fila.tecnico.get_full_name %}
+
+                                            {{ fila.tecnico.get_full_name }}
+
+                                        {% else %}
+
+                                            {{ fila.tecnico.username }}
+
+                                        {% endif %}
+
+                                    </strong>
+
+                                    <small>
+                                        {{ fila.tecnico.username }}
+                                    </small>
+
+                                </div>
+
                             </td>
 
-                            <td>
-                                <strong>
-                                    {{ asignacion.tecnico.get_full_name|default:asignacion.tecnico.username }}
-                                </strong>
-                            </td>
 
                             <td>
-                                {% if asignacion.asignado_por %}
-                                    {{ asignacion.asignado_por.get_full_name|default:asignacion.asignado_por.username }}
+                                {{ fila.total_asignadas }}
+                            </td>
+
+
+                            <td>
+                                {{ fila.total_activas }}
+                            </td>
+
+
+                            <td>
+                                {{ fila.total_cerradas }}
+                            </td>
+
+
+                            <td>
+                                {{ fila.total_reasignadas }}
+                            </td>
+
+
+                            <td>
+
+                                {% if fila.porcentaje_sla >= 90 %}
+
+                                    <span class="sla-performance sla-good">
+
+                                        {{ fila.porcentaje_sla }}%
+
+                                    </span>
+
+                                {% elif fila.porcentaje_sla >= 70 %}
+
+                                    <span class="sla-performance sla-warning">
+
+                                        {{ fila.porcentaje_sla }}%
+
+                                    </span>
+
                                 {% else %}
-                                    Sistema
+
+                                    <span class="sla-performance sla-bad">
+
+                                        {{ fila.porcentaje_sla }}%
+
+                                    </span>
+
                                 {% endif %}
+
                             </td>
 
+
                             <td>
-                                {{ asignacion.comentario|default:"—" }}
+
+                                {% if fila.tiempo_promedio != None %}
+
+                                    {{ fila.tiempo_promedio_texto }}
+
+                                {% else %}
+
+                                    —
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+
+                    {% empty %}
+
+                        <tr>
+
+                            <td
+                                colspan="7"
+                                class="table-empty"
+                            >
+
+                                No existen datos para los filtros seleccionados.
+
                             </td>
 
                         </tr>
@@ -1276,207 +457,10 @@
 
             </table>
 
-        </section>
-
-    {% endif %}
-
-
-    <!-- ======================================================
-         SOLUCIÓN / CIERRE
-         ====================================================== -->
-
-    {% if incidencia.solucion or incidencia.causa_raiz %}
-
-        <section class="section">
-
-            <div class="section-heading">
-                <h3 class="section-title">
-                    Solución y cierre
-                </h3>
-            </div>
-
-
-            {% if incidencia.causa_raiz %}
-
-                <div class="solution-box" style="margin-bottom: 10px;">
-                    <span class="solution-label">
-                        Causa raíz
-                    </span>
-
-                    <div class="solution-text">
-                        {{ incidencia.causa_raiz }}
-                    </div>
-                </div>
-
-            {% endif %}
-
-
-            {% if incidencia.solucion %}
-
-                <div class="solution-box">
-                    <span class="solution-label">
-                        Solución / validación final
-                    </span>
-
-                    <div class="solution-text">
-                        {{ incidencia.solucion }}
-                    </div>
-                </div>
-
-            {% endif %}
-
-        </section>
-
-    {% endif %}
-
-
-    <!-- ======================================================
-         BITÁCORA
-         ====================================================== -->
-
-    <section class="section">
-
-        <div class="section-heading">
-
-            <h3 class="section-title">
-                Bitácora completa
-            </h3>
-
-            <span class="section-note">
-                Orden cronológico
-            </span>
-
-        </div>
-
-
-        <div class="timeline">
-
-            {% for evento in historial %}
-
-                <article class="timeline-item">
-
-                    <div class="timeline-dot">
-
-                        {% if evento.accion == "CREACION" %}
-                            +
-                        {% elif evento.accion == "ASIGNACION" %}
-                            A
-                        {% elif evento.accion == "REASIGNACION" %}
-                            R
-                        {% elif evento.accion == "DIAGNOSTICO" %}
-                            D
-                        {% elif evento.accion == "CIERRE" %}
-                            ✓
-                        {% else %}
-                            •
-                        {% endif %}
-
-                    </div>
-
-
-                    <div class="timeline-card">
-
-                        <div class="timeline-head">
-
-                            <span class="timeline-action">
-                                {{ evento.get_accion_display }}
-                            </span>
-
-                            <span class="timeline-date">
-                                {{ evento.fecha_evento|localtime|date:"d/m/Y H:i:s" }}
-                            </span>
-
-                        </div>
-
-
-                        <div class="timeline-body">
-
-                            <div class="timeline-user">
-
-                                Registrado por:
-
-                                <strong>
-                                    {% if evento.usuario %}
-                                        {{ evento.usuario.get_full_name|default:evento.usuario.username }}
-                                    {% else %}
-                                        Sistema
-                                    {% endif %}
-                                </strong>
-
-                            </div>
-
-
-                            {% if evento.descripcion %}
-
-                                <div class="timeline-description">
-                                    {{ evento.descripcion|linebreaksbr }}
-                                </div>
-
-                            {% endif %}
-
-
-                            {% if evento.estado_anterior or evento.estado_nuevo %}
-
-                                <div class="transition">
-
-                                    Cambio de estado:
-
-                                    {% if evento.estado_anterior %}
-                                        <strong>
-                                            {{ evento.get_estado_anterior_display }}
-                                        </strong>
-                                    {% endif %}
-
-                                    {% if evento.estado_anterior and evento.estado_nuevo %}
-                                        →
-                                    {% endif %}
-
-                                    {% if evento.estado_nuevo %}
-                                        <strong>
-                                            {{ evento.get_estado_nuevo_display }}
-                                        </strong>
-                                    {% endif %}
-
-                                </div>
-
-                            {% endif %}
-
-                        </div>
-
-                    </div>
-
-                </article>
-
-            {% empty %}
-
-                <div style="
-                    padding: 20px;
-                    text-align: center;
-                    color: #64748b;
-                ">
-                    No existen movimientos registrados en la bitácora.
-                </div>
-
-            {% endfor %}
-
         </div>
 
     </section>
 
+</div>
 
-    <footer class="report-footer">
-
-        <span>
-            Fiber Z Telecom S.R.L. · Sistema de Gestión de Incidencias
-        </span>
-
-        <span>
-            {{ incidencia.codigo }}
-        </span>
-
-    </footer>
-
-</main>
-
-</body>
-</html>
+{% endblock %}

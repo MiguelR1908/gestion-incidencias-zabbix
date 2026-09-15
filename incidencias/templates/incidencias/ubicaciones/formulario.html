@@ -1,8 +1,12 @@
 {% extends "incidencias/base.html" %}
 
-{% block title %}{{ titulo }} | Fiber Z NOC{% endblock %}
+{% block title %}
+{{ titulo }} | Fiber Z NOC
+{% endblock %}
 
-{% block page_title %}{{ titulo }}{% endblock %}
+{% block page_title %}
+{{ titulo }}
+{% endblock %}
 
 {% block page_subtitle %}
 Complete los datos geográficos y operativos de la ubicación.
@@ -10,103 +14,149 @@ Complete los datos geográficos y operativos de la ubicación.
 
 {% block content %}
 
-<section class="card">
+<div id="location-form-page" class="page-layout">
 
-    <div class="card-header">
-        <div>
-            <h3>{{ titulo }}</h3>
-            <p>Registro de ubicación asociada a la infraestructura de red.</p>
-        </div>
+    <section class="page-card">
 
-        <a href="{% url 'incidencias:ubicaciones_lista' %}" class="btn btn-secondary">
-            Volver
-        </a>
-    </div>
+        <header class="page-card-header">
 
-    <form method="post" class="form-grid">
-        {% csrf_token %}
-
-        <div class="form-section-title">
-            Información general
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.nombre.id_for_label }}">Nombre</label>
-            {{ form.nombre }}
-            {% for error in form.nombre.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.departamento.id_for_label }}">Departamento</label>
-            {{ form.departamento }}
-            {% for error in form.departamento.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.provincia.id_for_label }}">Provincia</label>
-            {{ form.provincia }}
-            {% for error in form.provincia.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.distrito.id_for_label }}">Distrito</label>
-            {{ form.distrito }}
-            {% for error in form.distrito.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-section-title">
-            Información operativa
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.direccion_referencia.id_for_label }}">Dirección o referencia</label>
-            {{ form.direccion_referencia }}
-            {% for error in form.direccion_referencia.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.descripcion.id_for_label }}">Descripción</label>
-            {{ form.descripcion }}
-            {% for error in form.descripcion.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-checks">
-            <label class="check-item">
-                {{ form.activo }}
-                <span>Ubicación activa</span>
-            </label>
-        </div>
-
-        {% if form.non_field_errors %}
-            <div class="alert alert-danger">
-                {{ form.non_field_errors }}
+            <div class="page-card-heading">
+                <h3>{{ titulo }}</h3>
+                <p>
+                    Registro de ubicación asociada a la infraestructura de red.
+                </p>
             </div>
-        {% endif %}
 
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">
-                {{ accion }}
-            </button>
+            <div class="page-card-actions">
+                <a
+                    href="{% url 'incidencias:ubicaciones_lista' %}"
+                    class="btn btn-secondary"
+                >
+                    Volver
+                </a>
+            </div>
 
-            <a href="{% url 'incidencias:ubicaciones_lista' %}" class="btn btn-secondary">
-                Cancelar
-            </a>
+        </header>
+
+        <div class="page-card-body">
+
+            <form method="post" class="form-grid">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger form-full-width">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="form-section-title">
+                    Información general
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.nombre.id_for_label }}">
+                        Nombre
+                    </label>
+
+                    {{ form.nombre }}
+
+                    {% for error in form.nombre.errors %}
+                        <small class="field-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.departamento.id_for_label }}">
+                        Departamento
+                    </label>
+
+                    {{ form.departamento }}
+
+                    {% for error in form.departamento.errors %}
+                        <small class="field-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.provincia.id_for_label }}">
+                        Provincia
+                    </label>
+
+                    {{ form.provincia }}
+
+                    {% for error in form.provincia.errors %}
+                        <small class="field-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.distrito.id_for_label }}">
+                        Distrito
+                    </label>
+
+                    {{ form.distrito }}
+
+                    {% for error in form.distrito.errors %}
+                        <small class="field-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-section-title">
+                    Información operativa
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.direccion_referencia.id_for_label }}">
+                        Dirección o referencia
+                    </label>
+
+                    {{ form.direccion_referencia }}
+
+                    {% for error in form.direccion_referencia.errors %}
+                        <small class="field-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.descripcion.id_for_label }}">
+                        Descripción
+                    </label>
+
+                    {{ form.descripcion }}
+
+                    {% for error in form.descripcion.errors %}
+                        <small class="field-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-checks">
+                    <label class="check-item">
+                        {{ form.activo }}
+                        <span>Ubicación activa</span>
+                    </label>
+                </div>
+
+                <div class="form-actions">
+
+                    <button type="submit" class="btn btn-primary">
+                        {{ accion }}
+                    </button>
+
+                    <a
+                        href="{% url 'incidencias:ubicaciones_lista' %}"
+                        class="btn btn-secondary"
+                    >
+                        Cancelar
+                    </a>
+
+                </div>
+
+            </form>
+
         </div>
 
-    </form>
+    </section>
 
-</section>
+</div>
 
 {% endblock %}

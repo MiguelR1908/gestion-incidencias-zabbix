@@ -1,27 +1,142 @@
 {% extends "incidencias/base.html" %}
 
-{% block title %}Asignaciones | Fiber Z NOC{% endblock %}
+{% block title %}
+Asignar incidencia | Fiber Z NOC
+{% endblock %}
 
-{% block page_title %}Asignaciones{% endblock %}
+{% block page_title %}
+Asignar incidencia
+{% endblock %}
 
 {% block page_subtitle %}
-Asignación y seguimiento de responsables para la atención de incidencias.
+Selección del técnico responsable.
 {% endblock %}
 
 {% block content %}
 
-<section class="card">
-    <div class="card-header">
-        <div>
-            <h3>Asignaciones de incidencias</h3>
-            <p>
-                Aquí se mostrarán las incidencias asignadas a los técnicos
-                y responsables del NOC.
-            </p>
-        </div>
-    </div>
+<div id="incident-assign-page" class="page-layout">
 
-    <p>No hay asignaciones registradas todavía.</p>
-</section>
+    <section class="page-card">
+
+        <header class="page-card-header">
+
+            <div class="page-card-heading">
+                <h3>{{ incidencia.codigo }}</h3>
+                <p>{{ incidencia.titulo }}</p>
+            </div>
+
+            <div class="page-card-actions">
+                <a
+                    href="{% url 'incidencias:incidencias' %}"
+                    class="btn btn-secondary"
+                >
+                    Volver
+                </a>
+            </div>
+
+        </header>
+
+        <div class="page-card-body">
+
+            <div class="form-page-summary">
+
+                <div class="form-page-summary-item">
+                    <small>Estado</small>
+                    <strong>{{ incidencia.get_estado_display }}</strong>
+                </div>
+
+                <div class="form-page-summary-item">
+                    <small>Nodo</small>
+                    <strong>
+                        {% if incidencia.nodo_afectado %}
+                            {{ incidencia.nodo_afectado.codigo }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="form-page-summary-item">
+                    <small>Severidad</small>
+                    <strong>{{ incidencia.get_severidad_display }}</strong>
+                </div>
+
+                <div class="form-page-summary-item">
+                    <small>Incidencia</small>
+                    <strong>{{ incidencia.codigo }}</strong>
+                </div>
+
+            </div>
+
+            <form method="post" class="form-grid">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger form-full-width">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="form-section-title">
+                    Responsable de atención
+                </div>
+
+                <div class="form-group form-full-width">
+                    <label for="{{ form.tecnico.id_for_label }}">
+                        {{ form.tecnico.label }}
+                    </label>
+
+                    {{ form.tecnico }}
+
+                    {% for error in form.tecnico.errors %}
+                        <small class="field-error">
+                            {{ error }}
+                        </small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-section-title">
+                    Observación
+                </div>
+
+                <div class="form-group form-full-width">
+                    <label for="{{ form.comentario.id_for_label }}">
+                        {{ form.comentario.label }}
+                    </label>
+
+                    {{ form.comentario }}
+
+                    {% for error in form.comentario.errors %}
+                        <small class="field-error">
+                            {{ error }}
+                        </small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-actions form-actions--end">
+
+                    <a
+                        href="{% url 'incidencias:incidencias' %}"
+                        class="btn btn-secondary"
+                    >
+                        Cancelar
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        Asignar incidencia
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </section>
+
+</div>
 
 {% endblock %}

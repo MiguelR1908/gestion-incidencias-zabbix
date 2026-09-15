@@ -4,20 +4,17 @@
 Notificaciones | Fiber Z NOC
 {% endblock %}
 
-
 {% block page_title %}
 Notificaciones
 {% endblock %}
-
 
 {% block page_subtitle %}
 Avisos internos relacionados con incidencias y eventos operativos.
 {% endblock %}
 
-
 {% block content %}
 
-<div id="notifications-page">
+<div id="notifications-page" class="page-layout">
 
     <!-- ======================================================
          RESUMEN
@@ -26,7 +23,6 @@ Avisos internos relacionados con incidencias y eventos operativos.
     <section class="notifications-summary-grid">
 
         <article class="notifications-summary-card">
-
             <span class="notifications-summary-label">
                 Total
             </span>
@@ -38,12 +34,9 @@ Avisos internos relacionados con incidencias y eventos operativos.
             <small>
                 Notificaciones registradas
             </small>
-
         </article>
 
-
         <article class="notifications-summary-card notifications-summary-pending">
-
             <span class="notifications-summary-label">
                 No leídas
             </span>
@@ -55,7 +48,6 @@ Avisos internos relacionados con incidencias y eventos operativos.
             <small>
                 Pendientes de revisar
             </small>
-
         </article>
 
     </section>
@@ -65,64 +57,84 @@ Avisos internos relacionados con incidencias y eventos operativos.
          LISTADO
          ====================================================== -->
 
-    <section class="card notifications-card">
+    <section class="page-card notifications-card">
 
-        <div class="notifications-header">
+        <header class="page-card-header notifications-header">
 
-            <div>
-                <h3>
-                    Bandeja de notificaciones
-                </h3>
-
+            <div class="page-card-heading">
+                <h3>Bandeja de notificaciones</h3>
                 <p>
                     Avisos del sistema asociados a incidencias.
                 </p>
             </div>
 
             {% if notificaciones_no_leidas > 0 %}
-                <form
-                    method="post"
-                    action="{% url 'incidencias:notificaciones_marcar_todas_leidas' %}"
-                >
-                    {% csrf_token %}
 
-                    <button
-                        type="submit"
-                        class="btn-mark-all-read"
+                <div class="page-card-actions">
+
+                    <form
+                        method="post"
+                        action="{% url 'incidencias:notificaciones_marcar_todas_leidas' %}"
+                        class="page-inline-form"
                     >
-                        ✓ Marcar todas como leídas
-                    </button>
-                </form>
+                        {% csrf_token %}
+
+                        <button
+                            type="submit"
+                            class="btn-mark-all-read"
+                        >
+                            ✓ Marcar todas como leídas
+                        </button>
+                    </form>
+
+                </div>
+
             {% endif %}
 
+        </header>
+
+
+        <!-- ==================================================
+             FILTROS
+             ================================================== -->
+
+        <div class="page-card-body notifications-toolbar">
+
+            <nav class="notifications-filters" aria-label="Filtros de notificaciones">
+
+                <a
+                    href="{% url 'incidencias:notificaciones_lista' %}?filtro=todas"
+                    class="notification-filter {% if filtro == 'todas' %}active{% endif %}"
+                >
+                    Todas
+                    <span>{{ total_notificaciones }}</span>
+                </a>
+
+                <a
+                    href="{% url 'incidencias:notificaciones_lista' %}?filtro=no_leidas"
+                    class="notification-filter {% if filtro == 'no_leidas' %}active{% endif %}"
+                >
+                    No leídas
+                    <span>{{ notificaciones_no_leidas }}</span>
+                </a>
+
+                <a
+                    href="{% url 'incidencias:notificaciones_lista' %}?filtro=leidas"
+                    class="notification-filter {% if filtro == 'leidas' %}active{% endif %}"
+                >
+                    Leídas
+                    <span>{{ notificaciones_leidas }}</span>
+                </a>
+
+            </nav>
+
         </div>
-        <div class="notifications-filters">
 
-            <a
-                href="{% url 'incidencias:notificaciones_lista' %}?filtro=todas"
-                class="notification-filter {% if filtro == 'todas' %}active{% endif %}"
-            >
-                Todas
-                <span>{{ total_notificaciones }}</span>
-            </a>
 
-            <a
-                href="{% url 'incidencias:notificaciones_lista' %}?filtro=no_leidas"
-                class="notification-filter {% if filtro == 'no_leidas' %}active{% endif %}"
-            >
-                No leídas
-                <span>{{ notificaciones_no_leidas }}</span>
-            </a>
+        <!-- ==================================================
+             NOTIFICACIONES
+             ================================================== -->
 
-            <a
-                href="{% url 'incidencias:notificaciones_lista' %}?filtro=leidas"
-                class="notification-filter {% if filtro == 'leidas' %}active{% endif %}"
-            >
-                Leídas
-                <span>{{ notificaciones_leidas }}</span>
-            </a>
-
-        </div>
         <div class="notifications-list">
 
             {% for notificacion in notificaciones %}
@@ -147,7 +159,7 @@ Avisos internos relacionados con incidencias y eventos operativos.
 
                     <!-- ICONO -->
 
-                    <div class="notification-icon">
+                    <div class="notification-icon" aria-hidden="true">
 
                         {% if notificacion.estado == 'PENDIENTE' %}
                             !
@@ -177,17 +189,14 @@ Avisos internos relacionados con incidencias y eventos operativos.
                                     </a>
                                 {% endif %}
 
-
                                 <span
                                     class="
                                         notification-status
 
                                         {% if notificacion.estado == 'PENDIENTE' %}
                                             notification-status-pending
-
                                         {% elif notificacion.estado == 'FALLIDA' %}
                                             notification-status-failed
-
                                         {% else %}
                                             notification-status-sent
                                         {% endif %}
@@ -195,6 +204,7 @@ Avisos internos relacionados con incidencias y eventos operativos.
                                 >
                                     {{ notificacion.get_estado_display }}
                                 </span>
+
                                 {% if notificacion.leida %}
                                     <span class="notification-read-status notification-read-status-read">
                                         ✓ Leída
@@ -204,10 +214,13 @@ Avisos internos relacionados con incidencias y eventos operativos.
                                         • Nueva
                                     </span>
                                 {% endif %}
+
                             </div>
 
-
-                            <time class="notification-date">
+                            <time
+                                class="notification-date"
+                                datetime="{{ notificacion.creado_en|date:'c' }}"
+                            >
                                 {{ notificacion.creado_en|date:"d/m/Y H:i" }}
                             </time>
 
@@ -228,7 +241,6 @@ Avisos internos relacionados con incidencias y eventos operativos.
                                 </strong>
                             </span>
 
-
                             {% if notificacion.destinatario %}
 
                                 <span>
@@ -239,7 +251,6 @@ Avisos internos relacionados con incidencias y eventos operativos.
                                 </span>
 
                             {% endif %}
-
 
                             {% if notificacion.fecha_envio %}
 
@@ -267,12 +278,11 @@ Avisos internos relacionados con incidencias y eventos operativos.
 
                 </article>
 
-
             {% empty %}
 
-                <div class="notifications-empty">
+                <div class="page-empty-state notifications-empty">
 
-                    <div class="notifications-empty-icon">
+                    <div class="page-empty-state-icon notifications-empty-icon" aria-hidden="true">
                         🔔
                     </div>
 

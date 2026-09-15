@@ -13,498 +13,126 @@ Dashboard Operativo NOC
 Monitoreo operativo de incidencias, SLA, responsables y eventos de Zabbix.
 {% endblock %}
 
-
 {% block content %}
 
-<style>
-
-    .noc-dashboard {
-        display: flex;
-        flex-direction: column;
-        gap: 22px;
-    }
-
-
-    /* ==========================================================
-       KPI
-       ========================================================== */
-
-    .noc-kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 14px;
-    }
-
-
-    .noc-kpi {
-        position: relative;
-        overflow: hidden;
-
-        min-height: 115px;
-        padding: 18px;
-
-        border-radius: 16px;
-        border: 1px solid rgba(96, 165, 250, 0.23);
-
-        background:
-            linear-gradient(
-                145deg,
-                rgba(20, 55, 130, 0.96),
-                rgba(6, 24, 72, 0.96)
-            );
-    }
-
-
-    .noc-kpi-label {
-        display: block;
-
-        color: #a9bce8;
-
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: .5px;
-
-        text-transform: uppercase;
-    }
-
-
-    .noc-kpi-value {
-        display: block;
-
-        margin-top: 7px;
-
-        color: #ffffff;
-
-        font-size: 29px;
-        font-weight: 900;
-    }
-
-
-    .noc-kpi-note {
-        display: block;
-
-        margin-top: 5px;
-
-        color: #91a9dc;
-
-        font-size: 11px;
-    }
-
-
-    .noc-kpi--critical {
-        border-color: rgba(248, 113, 113, .35);
-    }
-
-
-    .noc-kpi--warning {
-        border-color: rgba(250, 204, 21, .35);
-    }
-
-
-    .noc-kpi--success {
-        border-color: rgba(74, 222, 128, .30);
-    }
-
-
-    /* ==========================================================
-       BLOQUES
-       ========================================================== */
-
-    .noc-panel {
-        overflow: hidden;
-
-        border-radius: 17px;
-        border: 1px solid rgba(96, 165, 250, 0.21);
-
-        background:
-            linear-gradient(
-                145deg,
-                rgba(14, 42, 103, .92),
-                rgba(5, 20, 61, .94)
-            );
-    }
-
-
-    .noc-panel-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-
-        padding: 18px 20px;
-
-        border-bottom: 1px solid rgba(148, 163, 184, .14);
-    }
-
-
-    .noc-panel-header h3 {
-        margin: 0;
-
-        color: #ffffff;
-
-        font-size: 16px;
-    }
-
-
-    .noc-panel-header p {
-        margin: 4px 0 0;
-
-        color: #91a7d8;
-
-        font-size: 11px;
-    }
-
-
-    .noc-panel-body {
-        padding: 18px 20px;
-    }
-
-
-    /* ==========================================================
-       TABLAS
-       ========================================================== */
-
-    .noc-table-wrapper {
-        overflow-x: auto;
-    }
-
-
-    .noc-table {
-        width: 100%;
-
-        border-collapse: collapse;
-    }
-
-
-    .noc-table th {
-        padding: 11px 10px;
-
-        border-bottom: 1px solid rgba(255,255,255,.12);
-
-        color: #fff34f;
-
-        font-size: 10px;
-        font-weight: 900;
-        text-align: left;
-        text-transform: uppercase;
-    }
-
-
-    .noc-table td {
-        padding: 12px 10px;
-
-        border-bottom: 1px solid rgba(255,255,255,.07);
-
-        color: #e7eeff;
-
-        font-size: 12px;
-        vertical-align: middle;
-    }
-
-
-    .noc-table tr:last-child td {
-        border-bottom: none;
-    }
-
-
-    .noc-code {
-        color: #68b6ff;
-        font-weight: 800;
-        text-decoration: none;
-    }
-
-
-    .noc-code:hover {
-        text-decoration: underline;
-    }
-
-
-    /* ==========================================================
-       BADGES
-       ========================================================== */
-
-    .noc-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-
-        padding: 5px 9px;
-
-        border-radius: 999px;
-
-        font-size: 10px;
-        font-weight: 800;
-    }
-
-
-    .noc-badge-critical {
-        background: rgba(248, 113, 113, .14);
-        border: 1px solid rgba(248, 113, 113, .30);
-        color: #fecaca;
-    }
-
-
-    .noc-badge-high {
-        background: rgba(251, 146, 60, .13);
-        border: 1px solid rgba(251, 146, 60, .30);
-        color: #fed7aa;
-    }
-
-
-    .noc-badge-medium {
-        background: rgba(250, 204, 21, .12);
-        border: 1px solid rgba(250, 204, 21, .27);
-        color: #fef08a;
-    }
-
-
-    .noc-badge-low {
-        background: rgba(74, 222, 128, .11);
-        border: 1px solid rgba(74, 222, 128, .24);
-        color: #bbf7d0;
-    }
-
-
-    .noc-badge-status {
-        background: rgba(96, 165, 250, .12);
-        border: 1px solid rgba(96, 165, 250, .25);
-        color: #bfdbfe;
-    }
-
-
-    /* ==========================================================
-       DOS COLUMNAS
-       ========================================================== */
-
-    .noc-dashboard-grid {
-        display: grid;
-        grid-template-columns: 1.35fr .65fr;
-        gap: 22px;
-    }
-
-
-    .noc-empty {
-        padding: 28px;
-
-        color: #8fa7d8;
-
-        text-align: center;
-
-        font-size: 12px;
-    }
-
-
-    @media (max-width: 1200px) {
-
-        .noc-kpi-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .noc-dashboard-grid {
-            grid-template-columns: 1fr;
-        }
-
-    }
-
-
-    @media (max-width: 650px) {
-
-        .noc-kpi-grid {
-            grid-template-columns: 1fr;
-        }
-
-    }
-
-</style>
-
-
-<div class="noc-dashboard">
-
+<div id="dashboard-page" class="dashboard-page page-layout">
 
     <!-- ========================================================
          KPIs
          ======================================================== -->
 
-    <section class="noc-kpi-grid">
+    <section class="dashboard-kpi-grid">
 
-
-        <article class="noc-kpi">
-
-            <span class="noc-kpi-label">
-                Incidencias abiertas
-            </span>
-
-            <strong class="noc-kpi-value">
+        <article class="dashboard-kpi">
+            <span class="dashboard-kpi-label">Incidencias abiertas</span>
+            <strong class="dashboard-kpi-value">
                 {{ incidencias_abiertas|default:"0" }}
             </strong>
-
-            <small class="noc-kpi-note">
-                Pendientes de cierre
-            </small>
-
+            <small class="dashboard-kpi-note">Pendientes de cierre</small>
         </article>
 
-
-        <article class="noc-kpi noc-kpi--critical">
-
-            <span class="noc-kpi-label">
-                Críticas abiertas
-            </span>
-
-            <strong class="noc-kpi-value">
+        <article class="dashboard-kpi dashboard-kpi--critical">
+            <span class="dashboard-kpi-label">Críticas abiertas</span>
+            <strong class="dashboard-kpi-value">
                 {{ incidencias_criticas|default:"0" }}
             </strong>
-
-            <small class="noc-kpi-note">
+            <small class="dashboard-kpi-note">
                 Requieren atención prioritaria
             </small>
-
         </article>
 
-
-        <article class="noc-kpi noc-kpi--warning">
-
-            <span class="noc-kpi-label">
-                Sin asignar
-            </span>
-
-            <strong class="noc-kpi-value">
+        <article class="dashboard-kpi dashboard-kpi--warning">
+            <span class="dashboard-kpi-label">Sin asignar</span>
+            <strong class="dashboard-kpi-value">
                 {{ incidencias_sin_asignar|default:"0" }}
             </strong>
-
-            <small class="noc-kpi-note">
+            <small class="dashboard-kpi-note">
                 Pendientes de responsable
             </small>
-
         </article>
 
-
-        <article class="noc-kpi">
-
-            <span class="noc-kpi-label">
-                En atención
-            </span>
-
-            <strong class="noc-kpi-value">
+        <article class="dashboard-kpi">
+            <span class="dashboard-kpi-label">En atención</span>
+            <strong class="dashboard-kpi-value">
                 {{ incidencias_en_atencion|default:"0" }}
             </strong>
-
-            <small class="noc-kpi-note">
-                Con atención en curso
-            </small>
-
+            <small class="dashboard-kpi-note">Con atención en curso</small>
         </article>
 
-
-        <article class="noc-kpi noc-kpi--critical">
-
-            <span class="noc-kpi-label">
-                SLA incumplido
-            </span>
-
-            <strong class="noc-kpi-value">
+        <article class="dashboard-kpi dashboard-kpi--critical">
+            <span class="dashboard-kpi-label">SLA incumplido</span>
+            <strong class="dashboard-kpi-value">
                 {{ incidencias_sla_incumplido|default:"0" }}
             </strong>
-
-            <small class="noc-kpi-note">
+            <small class="dashboard-kpi-note">
                 Incidencias con algún SLA incumplido
             </small>
-
         </article>
 
-
-        <article class="noc-kpi noc-kpi--success">
-
-            <span class="noc-kpi-label">
-                Cerradas hoy
-            </span>
-
-            <strong class="noc-kpi-value">
+        <article class="dashboard-kpi dashboard-kpi--success">
+            <span class="dashboard-kpi-label">Cerradas hoy</span>
+            <strong class="dashboard-kpi-value">
                 {{ incidencias_cerradas_hoy|default:"0" }}
             </strong>
-
-            <small class="noc-kpi-note">
+            <small class="dashboard-kpi-note">
                 Finalizadas durante el día
             </small>
-
         </article>
 
-
-        <article class="noc-kpi noc-kpi--success">
-
-            <span class="noc-kpi-label">
-                Cumplimiento SLA
-            </span>
-
-            <strong class="noc-kpi-value">
+        <article class="dashboard-kpi dashboard-kpi--success">
+            <span class="dashboard-kpi-label">Cumplimiento SLA</span>
+            <strong class="dashboard-kpi-value">
                 {{ cumplimiento_sla|default:"0" }}%
             </strong>
-
-            <small class="noc-kpi-note">
-                SLA de resolución
-            </small>
-
+            <small class="dashboard-kpi-note">SLA de resolución</small>
         </article>
 
-
-        <article class="noc-kpi">
-
-            <span class="noc-kpi-label">
-                Alertas Zabbix
-            </span>
-
-            <strong class="noc-kpi-value">
+        <article class="dashboard-kpi">
+            <span class="dashboard-kpi-label">Alertas Zabbix</span>
+            <strong class="dashboard-kpi-value">
                 {{ total_alertas_zabbix|default:"0" }}
             </strong>
-
-            <small class="noc-kpi-note">
+            <small class="dashboard-kpi-note">
                 Alertas registradas en el sistema
             </small>
-
         </article>
 
     </section>
-
 
 
     <!-- ========================================================
          INCIDENCIAS PRIORITARIAS
          ======================================================== -->
 
-    <section class="noc-panel">
+    <section class="page-card">
 
-        <div class="noc-panel-header">
+        <header class="page-card-header">
 
-            <div>
-
-                <h3>
-                    Incidencias prioritarias
-                </h3>
-
+            <div class="page-card-heading">
+                <h3>Incidencias prioritarias</h3>
                 <p>
                     Incidencias abiertas que requieren seguimiento operativo.
                 </p>
-
             </div>
 
-            <a
-                href="{% url 'incidencias:incidencias' %}"
-                class="btn btn-secondary"
-            >
-                Ver incidencias
-            </a>
+            <div class="page-card-actions">
+                <a
+                    href="{% url 'incidencias:incidencias' %}"
+                    class="btn btn-secondary"
+                >
+                    Ver incidencias
+                </a>
+            </div>
 
-        </div>
+        </header>
 
+        <div class="page-card-body page-card-body--flush">
 
-        <div class="noc-panel-body">
+            <div class="table-wrapper">
 
-            <div class="noc-table-wrapper">
-
-                <table class="noc-table">
+                <table class="table data-table">
 
                     <thead>
-
                         <tr>
                             <th>Código</th>
                             <th>Incidencia</th>
@@ -514,9 +142,7 @@ Monitoreo operativo de incidencias, SLA, responsables y eventos de Zabbix.
                             <th>Técnico</th>
                             <th>Detección</th>
                         </tr>
-
                     </thead>
-
 
                     <tbody>
 
@@ -525,112 +151,79 @@ Monitoreo operativo de incidencias, SLA, responsables y eventos de Zabbix.
                             <tr>
 
                                 <td>
-
                                     <a
                                         href="{% url 'incidencias:incidencia_detalle' incidencia.id %}"
-                                        class="noc-code"
+                                        class="table-link"
                                     >
                                         {{ incidencia.codigo }}
                                     </a>
-
                                 </td>
-
 
                                 <td>
                                     {{ incidencia.titulo|truncatechars:42 }}
                                 </td>
 
-
                                 <td>
-
                                     {% if incidencia.nodo_afectado %}
                                         {{ incidencia.nodo_afectado.codigo }}
                                     {% else %}
                                         —
                                     {% endif %}
-
                                 </td>
 
-
                                 <td>
-
                                     {% if incidencia.severidad == "CRITICA" %}
-
-                                        <span class="noc-badge noc-badge-critical">
-                                            Crítica
-                                        </span>
-
+                                        <span class="badge badge-danger">Crítica</span>
                                     {% elif incidencia.severidad == "ALTA" %}
-
-                                        <span class="noc-badge noc-badge-high">
-                                            Alta
-                                        </span>
-
+                                        <span class="badge badge-warning">Alta</span>
                                     {% elif incidencia.severidad == "MEDIA" %}
-
-                                        <span class="noc-badge noc-badge-medium">
-                                            Media
-                                        </span>
-
+                                        <span class="badge badge-info">Media</span>
                                     {% else %}
-
-                                        <span class="noc-badge noc-badge-low">
+                                        <span class="badge badge-success">
                                             {{ incidencia.get_severidad_display }}
                                         </span>
-
                                     {% endif %}
-
                                 </td>
 
-
                                 <td>
-
-                                    <span class="noc-badge noc-badge-status">
+                                    <span class="badge badge-neutral">
                                         {{ incidencia.get_estado_display }}
                                     </span>
-
                                 </td>
 
-
                                 <td>
-
                                     {% if incidencia.tecnico_asignado %}
 
                                         {% if incidencia.tecnico_asignado.get_full_name %}
-
                                             {{ incidencia.tecnico_asignado.get_full_name }}
-
                                         {% else %}
-
                                             {{ incidencia.tecnico_asignado.username }}
-
                                         {% endif %}
 
                                     {% else %}
-
-                                        <span style="color:#fde68a;">
+                                        <span class="text-warning">
                                             Sin asignar
                                         </span>
-
                                     {% endif %}
-
                                 </td>
 
-
                                 <td>
-
                                     {{ incidencia.fecha_deteccion|localtime|date:"d/m/Y H:i" }}
-
                                 </td>
 
                             </tr>
 
-
                         {% empty %}
 
                             <tr>
-                                <td colspan="7" class="noc-empty">
-                                    No existen incidencias abiertas.
+                                <td colspan="7" class="table-empty">
+                                    <div class="page-empty-state">
+                                        <strong>No existen incidencias abiertas</strong>
+                                        <p>
+                                            No hay incidencias prioritarias pendientes
+                                            de seguimiento.
+                                        </p>
+                                    </div>
                                 </td>
                             </tr>
 
@@ -647,43 +240,32 @@ Monitoreo operativo de incidencias, SLA, responsables y eventos de Zabbix.
     </section>
 
 
-
     <!-- ========================================================
          ZABBIX + CARGA TÉCNICOS
          ======================================================== -->
 
-    <section class="noc-dashboard-grid">
-
+    <section class="dashboard-grid">
 
         <!-- ALERTAS ZABBIX -->
 
-        <article class="noc-panel">
+        <article class="page-card">
 
-            <div class="noc-panel-header">
+            <header class="page-card-header">
 
-                <div>
-
-                    <h3>
-                        Últimas alertas Zabbix
-                    </h3>
-
-                    <p>
-                        Eventos más recientes sincronizados.
-                    </p>
-
+                <div class="page-card-heading">
+                    <h3>Últimas alertas Zabbix</h3>
+                    <p>Eventos más recientes sincronizados.</p>
                 </div>
 
-            </div>
+            </header>
 
+            <div class="page-card-body page-card-body--flush">
 
-            <div class="noc-panel-body">
+                <div class="table-wrapper">
 
-                <div class="noc-table-wrapper">
-
-                    <table class="noc-table">
+                    <table class="table data-table">
 
                         <thead>
-
                             <tr>
                                 <th>Event ID</th>
                                 <th>Alerta</th>
@@ -691,9 +273,7 @@ Monitoreo operativo de incidencias, SLA, responsables y eventos de Zabbix.
                                 <th>Severidad</th>
                                 <th>Fecha</th>
                             </tr>
-
                         </thead>
-
 
                         <tbody>
 
@@ -701,76 +281,51 @@ Monitoreo operativo de incidencias, SLA, responsables y eventos de Zabbix.
 
                                 <tr>
 
-                                    <td>
-                                        {{ alerta.event_id }}
-                                    </td>
-
+                                    <td>{{ alerta.event_id }}</td>
 
                                     <td>
                                         {{ alerta.nombre_alerta|truncatechars:55 }}
                                     </td>
 
-
                                     <td>
-
                                         {% if alerta.componente_red %}
-
                                             {{ alerta.componente_red.codigo }}
-
                                         {% else %}
-
                                             —
-
                                         {% endif %}
-
                                     </td>
 
-
                                     <td>
-
                                         {% if alerta.severidad == "CRITICA" %}
-
-                                            <span class="noc-badge noc-badge-critical">
-                                                Crítica
-                                            </span>
-
+                                            <span class="badge badge-danger">Crítica</span>
                                         {% elif alerta.severidad == "ALTA" %}
-
-                                            <span class="noc-badge noc-badge-high">
-                                                Alta
-                                            </span>
-
+                                            <span class="badge badge-warning">Alta</span>
                                         {% elif alerta.severidad == "MEDIA" %}
-
-                                            <span class="noc-badge noc-badge-medium">
-                                                Media
-                                            </span>
-
+                                            <span class="badge badge-info">Media</span>
                                         {% else %}
-
-                                            <span class="noc-badge noc-badge-low">
+                                            <span class="badge badge-success">
                                                 {{ alerta.get_severidad_display }}
                                             </span>
-
                                         {% endif %}
-
                                     </td>
 
-
                                     <td>
-
                                         {{ alerta.fecha_evento|localtime|date:"d/m/Y H:i" }}
-
                                     </td>
 
                                 </tr>
 
-
                             {% empty %}
 
                                 <tr>
-                                    <td colspan="5" class="noc-empty">
-                                        No existen alertas sincronizadas.
+                                    <td colspan="5" class="table-empty">
+                                        <div class="page-empty-state">
+                                            <strong>Sin alertas sincronizadas</strong>
+                                            <p>
+                                                No existen eventos recientes registrados
+                                                desde Zabbix.
+                                            </p>
+                                        </div>
                                     </td>
                                 </tr>
 
@@ -787,45 +342,33 @@ Monitoreo operativo de incidencias, SLA, responsables y eventos de Zabbix.
         </article>
 
 
-
         <!-- CARGA TÉCNICOS -->
 
         {% if not es_tecnico %}
 
-            <article class="noc-panel">
+            <article class="page-card">
 
-                <div class="noc-panel-header">
+                <header class="page-card-header">
 
-                    <div>
-
-                        <h3>
-                            Carga por técnico
-                        </h3>
-
-                        <p>
-                            Asignaciones actualmente activas.
-                        </p>
-
+                    <div class="page-card-heading">
+                        <h3>Carga por técnico</h3>
+                        <p>Asignaciones actualmente activas.</p>
                     </div>
 
-                </div>
+                </header>
 
+                <div class="page-card-body page-card-body--flush">
 
-                <div class="noc-panel-body">
+                    <div class="table-wrapper">
 
-                    <div class="noc-table-wrapper">
-
-                        <table class="noc-table">
+                        <table class="table data-table">
 
                             <thead>
-
                                 <tr>
                                     <th>Técnico</th>
                                     <th>Activas</th>
                                 </tr>
-
                             </thead>
-
 
                             <tbody>
 
@@ -834,37 +377,33 @@ Monitoreo operativo de incidencias, SLA, responsables y eventos de Zabbix.
                                     <tr>
 
                                         <td>
-
                                             {% if tecnico.tecnico__first_name or tecnico.tecnico__last_name %}
-
                                                 {{ tecnico.tecnico__first_name }}
                                                 {{ tecnico.tecnico__last_name }}
-
                                             {% else %}
-
                                                 {{ tecnico.tecnico__username }}
-
                                             {% endif %}
-
                                         </td>
 
-
                                         <td>
-
-                                            <strong style="color:#fff34f;">
+                                            <strong class="table-highlight-value">
                                                 {{ tecnico.activas }}
                                             </strong>
-
                                         </td>
 
                                     </tr>
 
-
                                 {% empty %}
 
                                     <tr>
-                                        <td colspan="2" class="noc-empty">
-                                            No hay asignaciones activas.
+                                        <td colspan="2" class="table-empty">
+                                            <div class="page-empty-state">
+                                                <strong>Sin asignaciones activas</strong>
+                                                <p>
+                                                    Los técnicos no tienen incidencias
+                                                    asignadas actualmente.
+                                                </p>
+                                            </div>
                                         </td>
                                     </tr>
 
@@ -885,65 +424,39 @@ Monitoreo operativo de incidencias, SLA, responsables y eventos de Zabbix.
     </section>
 
 
-
     <!-- ========================================================
          INFRAESTRUCTURA SECUNDARIA
          ======================================================== -->
 
     {% if not es_tecnico %}
 
-        <section class="noc-panel">
+        <section class="page-card">
 
-            <div class="noc-panel-header">
+            <header class="page-card-header">
 
-                <div>
-
-                    <h3>
-                        Infraestructura registrada
-                    </h3>
-
+                <div class="page-card-heading">
+                    <h3>Infraestructura registrada</h3>
                     <p>
                         Información secundaria del inventario monitoreado.
                     </p>
-
                 </div>
 
-            </div>
+            </header>
 
+            <div class="page-card-body">
 
-            <div class="noc-panel-body">
+                <div class="dashboard-summary">
 
-                <div style="
-                    display:flex;
-                    gap:30px;
-                    flex-wrap:wrap;
-                ">
-
-                    <div>
-                        <small style="color:#91a7d8;">
-                            Nodos
-                        </small>
-
-                        <strong style="
-                            display:block;
-                            font-size:23px;
-                            color:white;
-                        ">
+                    <div class="dashboard-summary-item">
+                        <small>Nodos</small>
+                        <strong>
                             {{ total_nodos|default:"0" }}
                         </strong>
                     </div>
 
-
-                    <div>
-                        <small style="color:#91a7d8;">
-                            Componentes
-                        </small>
-
-                        <strong style="
-                            display:block;
-                            font-size:23px;
-                            color:white;
-                        ">
+                    <div class="dashboard-summary-item">
+                        <small>Componentes</small>
+                        <strong>
                             {{ total_componentes|default:"0" }}
                         </strong>
                     </div>
@@ -955,7 +468,6 @@ Monitoreo operativo de incidencias, SLA, responsables y eventos de Zabbix.
         </section>
 
     {% endif %}
-
 
 </div>
 

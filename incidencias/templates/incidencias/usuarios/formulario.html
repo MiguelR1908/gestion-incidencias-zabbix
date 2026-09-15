@@ -1,8 +1,12 @@
 {% extends "incidencias/base.html" %}
 
-{% block title %}{{ titulo }} | Fiber Z NOC{% endblock %}
+{% block title %}
+{{ titulo }} | Fiber Z NOC
+{% endblock %}
 
-{% block page_title %}{{ titulo }}{% endblock %}
+{% block page_title %}
+{{ titulo }}
+{% endblock %}
 
 {% block page_subtitle %}
 Complete la información del usuario y su perfil de acceso al sistema.
@@ -10,139 +14,227 @@ Complete la información del usuario y su perfil de acceso al sistema.
 
 {% block content %}
 
-<section class="card">
+<div id="user-form-page" class="page-layout">
 
-    <div class="card-header">
-        <div>
-            <h3>{{ titulo }}</h3>
-            <p>Gestión de credenciales, datos personales, rol y disponibilidad operativa.</p>
-        </div>
+    <section class="page-card">
 
-        <a href="{% url 'incidencias:usuarios_lista' %}" class="btn btn-secondary">
-            Volver
-        </a>
-    </div>
+        <header class="page-card-header">
 
-    <form method="post" class="form-grid">
-        {% csrf_token %}
-
-        <div class="form-section-title">
-            Datos de acceso
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.username.id_for_label }}">Usuario</label>
-            {{ form.username }}
-            {% for error in form.username.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.password.id_for_label }}">Contraseña</label>
-            {{ form.password }}
-            {% if form.password.help_text %}
-                <small class="field-help">{{ form.password.help_text }}</small>
-            {% endif %}
-            {% for error in form.password.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-section-title">
-            Datos personales
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.first_name.id_for_label }}">Nombres</label>
-            {{ form.first_name }}
-            {% for error in form.first_name.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.last_name.id_for_label }}">Apellidos</label>
-            {{ form.last_name }}
-            {% for error in form.last_name.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.email.id_for_label }}">Correo electrónico</label>
-            {{ form.email }}
-            {% for error in form.email.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.telefono.id_for_label }}">Teléfono</label>
-            {{ form.telefono }}
-            {% for error in form.telefono.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-section-title">
-            Perfil operativo
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.rol.id_for_label }}">Rol</label>
-            {{ form.rol }}
-            {% for error in form.rol.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.cargo.id_for_label }}">Cargo</label>
-            {{ form.cargo }}
-            {% for error in form.cargo.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.area.id_for_label }}">Área</label>
-            {{ form.area }}
-            {% for error in form.area.errors %}
-                <small class="field-error">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-checks">
-            <label class="check-item">
-                {{ form.is_active }}
-                <span>Usuario activo</span>
-            </label>
-
-            <label class="check-item">
-                {{ form.disponible }}
-                <span>Disponible para atención</span>
-            </label>
-        </div>
-
-        {% if form.non_field_errors %}
-            <div class="alert alert-danger">
-                {{ form.non_field_errors }}
+            <div class="page-card-heading">
+                <h3>{{ titulo }}</h3>
+                <p>
+                    Gestión de credenciales, datos personales, rol
+                    y disponibilidad operativa.
+                </p>
             </div>
-        {% endif %}
 
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">
-                {{ accion }}
-            </button>
+            <div class="page-card-actions">
+                <a
+                    href="{% url 'incidencias:usuarios_lista' %}"
+                    class="btn btn-secondary"
+                >
+                    Volver
+                </a>
+            </div>
 
-            <a href="{% url 'incidencias:usuarios_lista' %}" class="btn btn-secondary">
-                Cancelar
-            </a>
+        </header>
+
+        <div class="page-card-body">
+
+            <form method="post" class="form-grid">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger form-full-width">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="form-section-title">
+                    Datos de acceso
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}">
+                        Usuario
+                    </label>
+
+                    {{ form.username }}
+
+                    {% for error in form.username.errors %}
+                        <small class="field-error">
+                            {{ error }}
+                        </small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.password.id_for_label }}">
+                        Contraseña
+                    </label>
+
+                    {{ form.password }}
+
+                    {% if form.password.help_text %}
+                        <small class="help-text">
+                            {{ form.password.help_text }}
+                        </small>
+                    {% endif %}
+
+                    {% for error in form.password.errors %}
+                        <small class="field-error">
+                            {{ error }}
+                        </small>
+                    {% endfor %}
+                </div>
+
+
+                <div class="form-section-title">
+                    Datos personales
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.first_name.id_for_label }}">
+                        Nombres
+                    </label>
+
+                    {{ form.first_name }}
+
+                    {% for error in form.first_name.errors %}
+                        <small class="field-error">
+                            {{ error }}
+                        </small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.last_name.id_for_label }}">
+                        Apellidos
+                    </label>
+
+                    {{ form.last_name }}
+
+                    {% for error in form.last_name.errors %}
+                        <small class="field-error">
+                            {{ error }}
+                        </small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}">
+                        Correo electrónico
+                    </label>
+
+                    {{ form.email }}
+
+                    {% for error in form.email.errors %}
+                        <small class="field-error">
+                            {{ error }}
+                        </small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.telefono.id_for_label }}">
+                        Teléfono
+                    </label>
+
+                    {{ form.telefono }}
+
+                    {% for error in form.telefono.errors %}
+                        <small class="field-error">
+                            {{ error }}
+                        </small>
+                    {% endfor %}
+                </div>
+
+
+                <div class="form-section-title">
+                    Perfil operativo
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.rol.id_for_label }}">
+                        Rol
+                    </label>
+
+                    {{ form.rol }}
+
+                    {% for error in form.rol.errors %}
+                        <small class="field-error">
+                            {{ error }}
+                        </small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.cargo.id_for_label }}">
+                        Cargo
+                    </label>
+
+                    {{ form.cargo }}
+
+                    {% for error in form.cargo.errors %}
+                        <small class="field-error">
+                            {{ error }}
+                        </small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.area.id_for_label }}">
+                        Área
+                    </label>
+
+                    {{ form.area }}
+
+                    {% for error in form.area.errors %}
+                        <small class="field-error">
+                            {{ error }}
+                        </small>
+                    {% endfor %}
+                </div>
+
+                <div class="form-checks">
+
+                    <label class="check-item">
+                        {{ form.is_active }}
+                        <span>Usuario activo</span>
+                    </label>
+
+                    <label class="check-item">
+                        {{ form.disponible }}
+                        <span>Disponible para atención</span>
+                    </label>
+
+                </div>
+
+
+                <div class="form-actions">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        {{ accion }}
+                    </button>
+
+                    <a
+                        href="{% url 'incidencias:usuarios_lista' %}"
+                        class="btn btn-secondary"
+                    >
+                        Cancelar
+                    </a>
+
+                </div>
+
+            </form>
+
         </div>
 
-    </form>
+    </section>
 
-</section>
+</div>
 
 {% endblock %}

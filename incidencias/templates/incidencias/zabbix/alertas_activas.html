@@ -1,213 +1,184 @@
 {% extends "incidencias/base.html" %}
 
-{% block title %}Alertas Zabbix | Fiber Z NOC{% endblock %}
+{% block title %}
+Hosts Zabbix | Fiber Z NOC
+{% endblock %}
 
-{% block page_title %}Alertas Activas Zabbix{% endblock %}
+{% block page_title %}
+Hosts Zabbix
+{% endblock %}
 
 {% block page_subtitle %}
-Consulta de problemas activos obtenidos desde Zabbix mediante API.
+Consulta y sincronización de hosts registrados en Zabbix mediante API.
 {% endblock %}
 
 {% block content %}
 
-<section class="card">
-    <div class="card-header">
-        <div>
-            <h3>Problemas activos obtenidos desde Zabbix</h3>
-            <p>
-                Esta pantalla consulta alertas activas usando el método problem.get de la API de Zabbix.
-            </p>
+<div id="zabbix-hosts-page" class="page-layout">
+
+    <section class="page-card">
+
+        <header class="page-card-header">
+
+            <div class="page-card-heading">
+                <h3>Hosts obtenidos desde Zabbix</h3>
+
+                <p>
+                    Consulta los hosts registrados en Zabbix y sincronízalos
+                    con el inventario local del sistema.
+                </p>
+            </div>
+
+            <div class="page-card-actions">
+
+                <a
+                    href="{% url 'incidencias:zabbix_hosts_lista' %}"
+                    class="btn btn-secondary"
+                >
+                    <span aria-hidden="true">↻</span>
+                    Actualizar lista
+                </a>
+
+                <form
+                    method="post"
+                    action="{% url 'incidencias:zabbix_hosts_sincronizar' %}"
+                    class="page-inline-form"
+                    onsubmit="return confirm('¿Deseas sincronizar los hosts de Zabbix con el inventario local?');"
+                >
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        <span aria-hidden="true">⇄</span>
+                        Sincronizar hosts
+                    </button>
+                </form>
+
+            </div>
+
+        </header>
+
+        {% if configuracion or error %}
+
+            <div class="page-card-body">
+
+                {% if configuracion %}
+                    <p class="zabbix-config-used">
+                        Configuración usada:
+                        <strong>{{ configuracion.nombre }}</strong>
+                    </p>
+                {% endif %}
+
+                {% if error %}
+                    <div class="alert alert-danger">
+                        {{ error }}
+                    </div>
+                {% endif %}
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <section class="page-card">
+
+        <div class="page-card-body page-card-body--flush">
+
+            <div class="table-wrapper">
+
+                <table class="table data-table">
+
+                    <thead>
+                        <tr>
+                            <th>Host ID</th>
+                            <th>Host técnico</th>
+                            <th>Nombre visible</th>
+                            <th>IP principal</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for host in hosts %}
+
+                            <tr>
+
+                                <td>
+                                    <span class="table-mono">
+                                        {{ host.hostid }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <strong class="table-primary-value">
+                                        {{ host.host }}
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    {{ host.name }}
+                                </td>
+
+                                <td>
+                                    {% if host.interfaces %}
+                                        <span class="table-mono">
+                                            {{ host.interfaces.0.ip|default:"-" }}
+                                        </span>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if host.status == "0" %}
+                                        <span class="badge badge-success">
+                                            Monitoreado
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-danger">
+                                            Deshabilitado
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                            </tr>
+
+                        {% empty %}
+
+                            <tr>
+                                <td colspan="5" class="table-empty">
+
+                                    <div class="page-empty-state">
+                                        <strong>
+                                            No se encontraron hosts en Zabbix
+                                        </strong>
+
+                                        <p>
+                                            Verifique la configuración de conexión
+                                            y vuelva a actualizar la lista.
+                                        </p>
+                                    </div>
+
+                                </td>
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
         </div>
 
-        <div class="action-buttons">
-            <a href="{% url 'incidencias:zabbix_alertas_activas' %}" class="btn btn-secondary">
-                Actualizar
-            </a>
+    </section>
 
-            <form method="post" action="{% url 'incidencias:zabbix_alertas_sincronizar' %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-primary">
-                    Sincronizar alertas
-                </button>
-            </form>
-        </div>
-    </div>
-
-    {% if configuracion %}
-        <p>
-            Configuración usada:
-            <strong>{{ configuracion.nombre }}</strong>
-        </p>
-    {% endif %}
-
-    {% if error %}
-        <div class="alert alert-danger">
-            {{ error }}
-        </div>
-    {% endif %}
-</section>
-
-<section class="card">
-    <div class="card-header">
-        <div>
-            <h3>Alertas activas</h3>
-            <p>Total encontrado: {{ problemas|length }}</p>
-        </div>
-    </div>
-
-    <div class="table-wrapper">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Event ID</th>
-                    <th>Host</th>
-                    <th>IP</th>
-                    <th>Nodo / componente</th>
-                    <th>Alerta</th>
-                    <th>Severidad</th>
-                    <th>Inicio</th>
-                    <th>Tiempo activo</th>
-                    <th>ACK</th>
-                    <th>Incidencia</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for problema in problemas %}
-                    <tr>
-                        <td>
-                            <strong>{{ problema.eventid }}</strong>
-                        </td>
-
-                        <td>
-                            {% if problema.hosts %}
-                                <strong>
-                                    {{ problema.hosts.0.name|default:problema.hosts.0.host }}
-                                </strong>
-
-                                <small style="display:block;">
-                                    Host ID: {{ problema.host_id_local|default:"-" }}
-                                </small>
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {{ problema.ip_gestion|default:"-" }}
-                        </td>
-
-                        <td>
-                            {% if problema.componente_codigo %}
-                                <strong>{{ problema.nodo_codigo }}</strong>
-
-                                <small style="display:block;">
-                                    {{ problema.componente_codigo }}
-                                </small>
-                            {% else %}
-                                <span class="badge badge-warning">
-                                    Sin componente
-                                </span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            <strong>{{ problema.name }}</strong>
-
-                            <small style="display:block;">
-                                Trigger ID: {{ problema.objectid|default:"-" }}
-                            </small>
-                        </td>
-
-                        <td>
-                            {% if problema.severity == "5" %}
-                                <span class="badge badge-danger">
-                                    Disaster
-                                </span>
-
-                            {% elif problema.severity == "4" %}
-                                <span class="badge badge-danger">
-                                    High
-                                </span>
-
-                            {% elif problema.severity == "3" %}
-                                <span class="badge badge-warning">
-                                    Average
-                                </span>
-
-                            {% elif problema.severity == "2" %}
-                                <span class="badge badge-warning">
-                                    Warning
-                                </span>
-
-                            {% elif problema.severity == "1" %}
-                                <span class="badge badge-info">
-                                    Information
-                                </span>
-
-                            {% else %}
-                                <span class="badge">
-                                    Not classified
-                                </span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if problema.fecha_evento_local %}
-                                {{ problema.fecha_evento_local|date:"d/m/Y" }}
-
-                                <small style="display:block;">
-                                    {{ problema.fecha_evento_local|date:"H:i:s" }}
-                                </small>
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            <strong>
-                                {{ problema.duracion_texto|default:"-" }}
-                            </strong>
-                        </td>
-
-                        <td>
-                            {% if problema.acknowledged == "1" %}
-                                <span class="badge badge-success">
-                                    Reconocida
-                                </span>
-                            {% else %}
-                                <span class="badge badge-warning">
-                                    No reconocida
-                                </span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if problema.incidencia_codigo %}
-                                <strong>
-                                    {{ problema.incidencia_codigo }}
-                                </strong>
-
-                                <small style="display:block;">
-                                    {{ problema.incidencia_estado }}
-                                </small>
-                            {% else %}
-                                <span class="badge">
-                                    Sin incidencia
-                                </span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="10">
-                            No existen problemas activos en Zabbix.
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</section>
+</div>
 
 {% endblock %}

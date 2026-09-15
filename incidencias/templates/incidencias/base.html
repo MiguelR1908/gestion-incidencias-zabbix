@@ -11,7 +11,7 @@
     <!-- Estilos globales -->
     <link
         rel="stylesheet"
-        href="{% static 'incidencias/css/styles.css' %}?v=20260823-8"
+        href="{% static 'incidencias/css/styles.css' %}?v=20260915-2"
     >
 </head>
 
@@ -26,24 +26,17 @@
          ========================================== -->
     <aside class="sidebar">
 
-        <!-- ==========================================
-             MARCA
-             ========================================== -->
-        <div class="brand">
-
-            <div class="brand-logo-img">
-                <img
-                    src="{% static 'incidencias/images/logo.png' %}"
-                    alt="Fiber Z"
-                >
-            </div>
-
-            <div class="brand-text">
-                <h2>Fiber Z NOC</h2>
-                <span>Internet sin límites</span>
-            </div>
-
-        </div>
+        <a
+            href="{% url 'incidencias:dashboard' %}"
+            class="sidebar-logo"
+            title="Ir al dashboard"
+            aria-label="Ir al dashboard"
+        >
+            <img
+                src="{% static 'incidencias/images/logo.png' %}"
+                alt="Fiber Z"
+            >
+        </a>
 
 
         <!-- ==========================================
@@ -80,7 +73,7 @@
                     <a
                         href="{% url 'incidencias:incidencias' %}"
                         class="
-                            {% if request.resolver_match.url_name == 'incidencias' or request.resolver_match.url_name == 'incidencia_detalle' %}
+                            {% if request.resolver_match.url_name == 'incidencias' or request.resolver_match.url_name == 'incidencia_detalle' or request.resolver_match.url_name == 'incidencia_asignar' or request.resolver_match.url_name == 'incidencia_iniciar_atencion' or request.resolver_match.url_name == 'incidencia_resolver' or request.resolver_match.url_name == 'incidencia_cerrar' %}
                                 active
                             {% endif %}
                         "
@@ -96,7 +89,7 @@
                 <a
                     href="{% url 'incidencias:notificaciones_lista' %}"
                     class="
-                        {% if request.resolver_match.url_name == 'notificaciones_lista' %}
+                        {% if request.resolver_match.url_name == 'notificaciones_lista' or request.resolver_match.url_name == 'notificacion_abrir' %}
                             active
                         {% endif %}
                     "
@@ -220,11 +213,11 @@
                     <details
                         class="
                             menu-group
-                            {% if request.resolver_match.url_name == 'reporte_incidencias' or request.resolver_match.url_name == 'reporte_nodos_componentes' or request.resolver_match.url_name == 'reporte_sla_tiempos' %}
+                            {% if request.resolver_match.url_name == 'reporte_incidencias' or request.resolver_match.url_name == 'reporte_nodos_componentes' or request.resolver_match.url_name == 'reporte_sla_tiempos' or request.resolver_match.url_name == 'reporte_tecnicos' %}
                                 current
                             {% endif %}
                         "
-                        {% if request.resolver_match.url_name == 'reporte_incidencias' or request.resolver_match.url_name == 'reporte_nodos_componentes' or request.resolver_match.url_name == 'reporte_sla_tiempos' %}
+                        {% if request.resolver_match.url_name == 'reporte_incidencias' or request.resolver_match.url_name == 'reporte_nodos_componentes' or request.resolver_match.url_name == 'reporte_sla_tiempos' or request.resolver_match.url_name == 'reporte_tecnicos' %}
                             open
                         {% endif %}
                     >
@@ -335,7 +328,7 @@
                     <a
                         href="{% url 'incidencias:zabbix_hosts_lista' %}"
                         class="
-                            {% if request.resolver_match.url_name == 'zabbix_hosts_lista' %}
+                            {% if request.resolver_match.url_name == 'zabbix_hosts_lista' or request.resolver_match.url_name == 'zabbix_hosts_sincronizar' %}
                                 active
                             {% endif %}
                         "
@@ -565,8 +558,7 @@
 
             setTimeout(function () {
 
-                toast.style.opacity = "0";
-                toast.style.transform = "translateX(25px)";
+                toast.classList.add("system-toast--closing");
 
                 setTimeout(function () {
                     toast.remove();
@@ -749,9 +741,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         setTimeout(function () {
 
-            toast.style.opacity = "0";
-            toast.style.transform =
-                "translateX(25px)";
+            toast.classList.add("system-toast--closing");
 
             setTimeout(function () {
                 toast.remove();

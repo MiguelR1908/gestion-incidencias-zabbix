@@ -1,8 +1,12 @@
 {% extends "incidencias/base.html" %}
 
-{% block title %}Componentes | Fiber Z NOC{% endblock %}
+{% block title %}
+Componentes | Fiber Z NOC
+{% endblock %}
 
-{% block page_title %}Gestión de Componentes de Red{% endblock %}
+{% block page_title %}
+Gestión de Componentes de Red
+{% endblock %}
 
 {% block page_subtitle %}
 Administración de routers, radios AP, switches, UPS y demás equipos asociados a los nodos.
@@ -10,147 +14,245 @@ Administración de routers, radios AP, switches, UPS y demás equipos asociados 
 
 {% block content %}
 
-<section class="card">
-    <div class="card-header">
-        <div>
-            <h3>Componentes registrados</h3>
-            <p>Inventario técnico de componentes asociados a la infraestructura de red.</p>
+<div id="components-page" class="page-layout">
+
+    <section class="page-card">
+
+        <header class="page-card-header">
+
+            <div class="page-card-heading">
+                <h3>Componentes registrados</h3>
+                <p>
+                    Inventario técnico de componentes asociados a la infraestructura de red.
+                </p>
+            </div>
+
+            <div class="page-card-actions">
+                <a
+                    href="{% url 'incidencias:componente_crear' %}"
+                    class="btn btn-primary"
+                >
+                    <span aria-hidden="true">+</span>
+                    Nuevo componente
+                </a>
+            </div>
+
+        </header>
+
+        <div class="page-card-body">
+
+            <form method="get" class="search-toolbar">
+
+                <div class="search-toolbar-field">
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ query }}"
+                        placeholder="Buscar por código, nombre, nodo, IP, fabricante, modelo, Zabbix o estado..."
+                    >
+                </div>
+
+                <div class="search-toolbar-actions">
+
+                    <button type="submit" class="btn btn-secondary">
+                        Buscar
+                    </button>
+
+                    {% if query %}
+                        <a
+                            href="{% url 'incidencias:componentes_lista' %}"
+                            class="btn btn-danger"
+                        >
+                            Limpiar
+                        </a>
+                    {% endif %}
+
+                </div>
+
+            </form>
+
         </div>
 
-        <a href="{% url 'incidencias:componente_crear' %}" class="btn btn-primary">
-            + Nuevo componente
-        </a>
-    </div>
+    </section>
 
-    <form method="get" class="search-box">
-        <input
-            type="text"
-            name="q"
-            value="{{ query }}"
-            placeholder="Buscar por código, nombre, nodo, IP, fabricante, modelo, Zabbix o estado..."
-        >
 
-        <button type="submit" class="btn btn-secondary">
-            Buscar
-        </button>
+    <section class="page-card">
 
-        {% if query %}
-            <a href="{% url 'incidencias:componentes_lista' %}" class="btn btn-danger">
-                Limpiar
-            </a>
-        {% endif %}
-    </form>
-</section>
+        <div class="page-card-body page-card-body--flush">
 
-<section class="card">
-    <div class="table-wrapper">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Nodo</th>
-                    <th>Tipo</th>
-                    <th>Función</th>
-                    <th>IP</th>
-                    <th>Zabbix</th>
-                    <th>Estado</th>
-                    <th>Criticidad</th>
-                    <th>Impacto</th>
-                    <th>Activo</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
+            <div class="table-wrapper">
 
-            <tbody>
-                {% for componente in componentes %}
-                    <tr>
-                        <td><strong>{{ componente.codigo }}</strong></td>
+                <table class="table data-table">
 
-                        <td>{{ componente.nombre }}</td>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Nodo</th>
+                            <th>Tipo</th>
+                            <th>Función</th>
+                            <th>IP</th>
+                            <th>Zabbix</th>
+                            <th>Estado</th>
+                            <th>Criticidad</th>
+                            <th>Impacto</th>
+                            <th>Activo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
 
-                        <td>
-                            {% if componente.nodo %}
-                                {{ componente.nodo.codigo }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
+                    <tbody>
 
-                        <td>{{ componente.get_tipo_display }}</td>
+                        {% for componente in componentes %}
 
-                        <td>{{ componente.get_funcion_display }}</td>
+                            <tr>
 
-                        <td>{{ componente.ip_gestion|default:"-" }}</td>
+                                <td>
+                                    <strong class="table-primary-value">
+                                        {{ componente.codigo }}
+                                    </strong>
+                                </td>
 
-                        <td>
-                            {% if componente.es_monitoreado_zabbix %}
-                                <span class="badge badge-success">Sí</span>
-                                <small>{{ componente.host_id_zabbix|default:"-" }}</small>
-                            {% else %}
-                                <span class="badge badge-warning">No</span>
-                            {% endif %}
-                        </td>
+                                <td>{{ componente.nombre }}</td>
 
-                        <td>
-                            {% if componente.estado_operativo == "OPERATIVO" %}
-                                <span class="badge badge-success">{{ componente.get_estado_operativo_display }}</span>
-                            {% elif componente.estado_operativo == "MANTENIMIENTO" %}
-                                <span class="badge badge-warning">{{ componente.get_estado_operativo_display }}</span>
-                            {% else %}
-                                <span class="badge badge-danger">{{ componente.get_estado_operativo_display }}</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if componente.criticidad == "CRITICA" %}
-                                <span class="badge badge-danger">{{ componente.get_criticidad_display }}</span>
-                            {% elif componente.criticidad == "ALTA" %}
-                                <span class="badge badge-warning">{{ componente.get_criticidad_display }}</span>
-                            {% elif componente.criticidad == "MEDIA" %}
-                                <span class="badge badge-info">{{ componente.get_criticidad_display }}</span>
-                            {% else %}
-                                <span class="badge badge-success">{{ componente.get_criticidad_display }}</span>
-                            {% endif %}
-                        </td>
-
-                        <td>{{ componente.get_impacto_por_caida_display }}</td>
-
-                        <td>
-                            {% if componente.activo %}
-                                <span class="badge badge-success">Sí</span>
-                            {% else %}
-                                <span class="badge badge-danger">No</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            <div class="action-buttons">
-                                <a href="{% url 'incidencias:componente_editar' componente.id %}" class="btn btn-secondary">
-                                    Editar
-                                </a>
-
-                                <a href="{% url 'incidencias:componente_cambiar_estado' componente.id %}"
-                                   class="btn {% if componente.activo %}btn-danger{% else %}btn-primary{% endif %}">
-                                    {% if componente.activo %}
-                                        Desactivar
+                                <td>
+                                    {% if componente.nodo %}
+                                        {{ componente.nodo.codigo }}
                                     {% else %}
-                                        Activar
+                                        —
                                     {% endif %}
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="12">
-                            No se encontraron componentes registrados.
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</section>
+                                </td>
+
+                                <td>{{ componente.get_tipo_display }}</td>
+
+                                <td>{{ componente.get_funcion_display }}</td>
+
+                                <td>
+                                    {% if componente.ip_gestion %}
+                                        <span class="table-mono">
+                                            {{ componente.ip_gestion }}
+                                        </span>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if componente.es_monitoreado_zabbix %}
+                                        <div class="table-status-stack">
+                                            <span class="badge badge-success">Sí</span>
+
+                                            {% if componente.host_id_zabbix %}
+                                                <small class="table-secondary-value">
+                                                    {{ componente.host_id_zabbix }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="badge badge-warning">No</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if componente.estado_operativo == "OPERATIVO" %}
+                                        <span class="badge badge-success">
+                                            {{ componente.get_estado_operativo_display }}
+                                        </span>
+                                    {% elif componente.estado_operativo == "MANTENIMIENTO" %}
+                                        <span class="badge badge-warning">
+                                            {{ componente.get_estado_operativo_display }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-danger">
+                                            {{ componente.get_estado_operativo_display }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if componente.criticidad == "CRITICA" %}
+                                        <span class="badge badge-danger">
+                                            {{ componente.get_criticidad_display }}
+                                        </span>
+                                    {% elif componente.criticidad == "ALTA" %}
+                                        <span class="badge badge-warning">
+                                            {{ componente.get_criticidad_display }}
+                                        </span>
+                                    {% elif componente.criticidad == "MEDIA" %}
+                                        <span class="badge badge-info">
+                                            {{ componente.get_criticidad_display }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-success">
+                                            {{ componente.get_criticidad_display }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>{{ componente.get_impacto_por_caida_display }}</td>
+
+                                <td>
+                                    {% if componente.activo %}
+                                        <span class="badge badge-success">Sí</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">No</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <div class="table-actions">
+
+                                        <a
+                                            href="{% url 'incidencias:componente_editar' componente.id %}"
+                                            class="btn btn-secondary btn-sm"
+                                        >
+                                            Editar
+                                        </a>
+
+                                        <a
+                                            href="{% url 'incidencias:componente_cambiar_estado' componente.id %}"
+                                            class="btn btn-sm {% if componente.activo %}btn-danger{% else %}btn-primary{% endif %}"
+                                        >
+                                            {% if componente.activo %}
+                                                Desactivar
+                                            {% else %}
+                                                Activar
+                                            {% endif %}
+                                        </a>
+
+                                    </div>
+                                </td>
+
+                            </tr>
+
+                        {% empty %}
+
+                            <tr>
+                                <td colspan="12" class="table-empty">
+
+                                    <div class="page-empty-state">
+                                        <strong>No se encontraron componentes</strong>
+                                        <p>
+                                            No existen componentes que coincidan
+                                            con los criterios actuales.
+                                        </p>
+                                    </div>
+
+                                </td>
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
 
 {% endblock %}

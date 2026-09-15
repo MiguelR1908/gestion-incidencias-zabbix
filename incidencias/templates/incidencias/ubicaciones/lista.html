@@ -1,8 +1,12 @@
 {% extends "incidencias/base.html" %}
 
-{% block title %}Ubicaciones | Fiber Z NOC{% endblock %}
+{% block title %}
+Ubicaciones | Fiber Z NOC
+{% endblock %}
 
-{% block page_title %}Gestión de Ubicaciones{% endblock %}
+{% block page_title %}
+Gestión de Ubicaciones
+{% endblock %}
 
 {% block page_subtitle %}
 Administración de las ubicaciones donde opera la infraestructura de red.
@@ -10,97 +14,175 @@ Administración de las ubicaciones donde opera la infraestructura de red.
 
 {% block content %}
 
-<section class="card">
-    <div class="card-header">
-        <div>
-            <h3>Ubicaciones registradas</h3>
-            <p>Listado de zonas, sedes o puntos geográficos donde se encuentran los nodos de red.</p>
+<div id="locations-page" class="page-layout">
+
+    <section class="page-card">
+
+        <header class="page-card-header">
+
+            <div class="page-card-heading">
+                <h3>Ubicaciones registradas</h3>
+                <p>
+                    Listado de zonas, sedes o puntos geográficos
+                    donde se encuentran los nodos de red.
+                </p>
+            </div>
+
+            <div class="page-card-actions">
+                <a
+                    href="{% url 'incidencias:ubicacion_crear' %}"
+                    class="btn btn-primary"
+                >
+                    <span aria-hidden="true">+</span>
+                    Nueva ubicación
+                </a>
+            </div>
+
+        </header>
+
+        <div class="page-card-body">
+
+            <form method="get" class="search-toolbar">
+
+                <div class="search-toolbar-field">
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ query }}"
+                        placeholder="Buscar por nombre, departamento, provincia, distrito o referencia..."
+                    >
+                </div>
+
+                <div class="search-toolbar-actions">
+
+                    <button type="submit" class="btn btn-secondary">
+                        Buscar
+                    </button>
+
+                    {% if query %}
+                        <a
+                            href="{% url 'incidencias:ubicaciones_lista' %}"
+                            class="btn btn-danger"
+                        >
+                            Limpiar
+                        </a>
+                    {% endif %}
+
+                </div>
+
+            </form>
+
         </div>
 
-        <a href="{% url 'incidencias:ubicacion_crear' %}" class="btn btn-primary">
-            + Nueva ubicación
-        </a>
-    </div>
+    </section>
 
-    <form method="get" class="search-box">
-        <input
-            type="text"
-            name="q"
-            value="{{ query }}"
-            placeholder="Buscar por nombre, departamento, provincia, distrito o referencia..."
-        >
 
-        <button type="submit" class="btn btn-secondary">
-            Buscar
-        </button>
+    <section class="page-card">
 
-        {% if query %}
-            <a href="{% url 'incidencias:ubicaciones_lista' %}" class="btn btn-danger">
-                Limpiar
-            </a>
-        {% endif %}
-    </form>
-</section>
+        <div class="page-card-body page-card-body--flush">
 
-<section class="card">
-    <div class="table-wrapper">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Departamento</th>
-                    <th>Provincia</th>
-                    <th>Distrito</th>
-                    <th>Referencia</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
+            <div class="table-wrapper">
 
-            <tbody>
-                {% for ubicacion in ubicaciones %}
-                    <tr>
-                        <td><strong>{{ ubicacion.nombre }}</strong></td>
-                        <td>{{ ubicacion.departamento|default:"-" }}</td>
-                        <td>{{ ubicacion.provincia|default:"-" }}</td>
-                        <td>{{ ubicacion.distrito|default:"-" }}</td>
-                        <td>{{ ubicacion.direccion_referencia|default:"-" }}</td>
+                <table class="table data-table">
 
-                        <td>
-                            {% if ubicacion.activo %}
-                                <span class="badge badge-success">Activa</span>
-                            {% else %}
-                                <span class="badge badge-danger">Inactiva</span>
-                            {% endif %}
-                        </td>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Departamento</th>
+                            <th>Provincia</th>
+                            <th>Distrito</th>
+                            <th>Referencia</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
 
-                        <td>
-                            <div class="action-buttons">
-                                <a href="{% url 'incidencias:ubicacion_editar' ubicacion.id %}" class="btn btn-secondary">
-                                    Editar
-                                </a>
+                    <tbody>
 
-                                <a href="{% url 'incidencias:ubicacion_cambiar_estado' ubicacion.id %}"
-                                   class="btn {% if ubicacion.activo %}btn-danger{% else %}btn-primary{% endif %}">
+                        {% for ubicacion in ubicaciones %}
+
+                            <tr>
+
+                                <td>
+                                    <strong class="table-primary-value">
+                                        {{ ubicacion.nombre }}
+                                    </strong>
+                                </td>
+
+                                <td>{{ ubicacion.departamento|default:"-" }}</td>
+
+                                <td>{{ ubicacion.provincia|default:"-" }}</td>
+
+                                <td>{{ ubicacion.distrito|default:"-" }}</td>
+
+                                <td>{{ ubicacion.direccion_referencia|default:"-" }}</td>
+
+                                <td>
                                     {% if ubicacion.activo %}
-                                        Desactivar
+                                        <span class="badge badge-success">
+                                            Activa
+                                        </span>
                                     {% else %}
-                                        Activar
+                                        <span class="badge badge-danger">
+                                            Inactiva
+                                        </span>
                                     {% endif %}
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="7">
-                            No se encontraron ubicaciones registradas.
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</section>
+                                </td>
+
+                                <td>
+                                    <div class="table-actions">
+
+                                        <a
+                                            href="{% url 'incidencias:ubicacion_editar' ubicacion.id %}"
+                                            class="btn btn-secondary btn-sm"
+                                        >
+                                            Editar
+                                        </a>
+
+                                        <a
+                                            href="{% url 'incidencias:ubicacion_cambiar_estado' ubicacion.id %}"
+                                            class="btn btn-sm {% if ubicacion.activo %}btn-danger{% else %}btn-primary{% endif %}"
+                                        >
+                                            {% if ubicacion.activo %}
+                                                Desactivar
+                                            {% else %}
+                                                Activar
+                                            {% endif %}
+                                        </a>
+
+                                    </div>
+                                </td>
+
+                            </tr>
+
+                        {% empty %}
+
+                            <tr>
+                                <td colspan="7" class="table-empty">
+
+                                    <div class="page-empty-state">
+                                        <strong>No se encontraron ubicaciones</strong>
+                                        <p>
+                                            No existen ubicaciones que coincidan
+                                            con los criterios actuales.
+                                        </p>
+                                    </div>
+
+                                </td>
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
 
 {% endblock %}

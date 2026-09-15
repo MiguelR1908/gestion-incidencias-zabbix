@@ -8,7 +8,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet" href="{% static 'incidencias/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'incidencias/css/styles.css' %}?v=20260915-1">
 </head>
 <body>
 
@@ -17,7 +17,12 @@
     <div class="error-card">
 
         <div class="brand error-brand">
-            <div class="brand-logo">FZ</div>
+            <div class="brand-logo-img">
+                <img
+                    src="{% static 'incidencias/images/logo.png' %}"
+                    alt="Fiber Z"
+                >
+            </div>
 
             <div class="brand-text">
                 <h2>Fiber Z NOC</h2>

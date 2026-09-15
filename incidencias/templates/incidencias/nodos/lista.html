@@ -1,8 +1,12 @@
 {% extends "incidencias/base.html" %}
 
-{% block title %}Nodos | Fiber Z NOC{% endblock %}
+{% block title %}
+Nodos | Fiber Z NOC
+{% endblock %}
 
-{% block page_title %}Gestión de Nodos{% endblock %}
+{% block page_title %}
+Gestión de Nodos
+{% endblock %}
 
 {% block page_subtitle %}
 Administración de nodos principales de la infraestructura de red.
@@ -10,128 +14,211 @@ Administración de nodos principales de la infraestructura de red.
 
 {% block content %}
 
-<section class="card">
-    <div class="card-header">
-        <div>
-            <h3>Nodos registrados</h3>
-            <p>Listado de nodos asociados a las ubicaciones registradas en la operación.</p>
+<div id="nodes-page" class="page-layout">
+
+    <section class="page-card">
+
+        <header class="page-card-header">
+
+            <div class="page-card-heading">
+                <h3>Nodos registrados</h3>
+                <p>
+                    Listado de nodos asociados a las ubicaciones registradas en la operación.
+                </p>
+            </div>
+
+            <div class="page-card-actions">
+                <a
+                    href="{% url 'incidencias:nodo_crear' %}"
+                    class="btn btn-primary"
+                >
+                    <span aria-hidden="true">+</span>
+                    Nuevo nodo
+                </a>
+            </div>
+
+        </header>
+
+        <div class="page-card-body">
+
+            <form method="get" class="search-toolbar">
+
+                <div class="search-toolbar-field">
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ query }}"
+                        placeholder="Buscar por código, nombre, ubicación, estado o criticidad..."
+                    >
+                </div>
+
+                <div class="search-toolbar-actions">
+
+                    <button type="submit" class="btn btn-secondary">
+                        Buscar
+                    </button>
+
+                    {% if query %}
+                        <a
+                            href="{% url 'incidencias:nodos_lista' %}"
+                            class="btn btn-danger"
+                        >
+                            Limpiar
+                        </a>
+                    {% endif %}
+
+                </div>
+
+            </form>
+
         </div>
 
-        <a href="{% url 'incidencias:nodo_crear' %}" class="btn btn-primary">
-            + Nuevo nodo
-        </a>
-    </div>
+    </section>
 
-    <form method="get" class="search-box">
-        <input
-            type="text"
-            name="q"
-            value="{{ query }}"
-            placeholder="Buscar por código, nombre, ubicación, estado o criticidad..."
-        >
 
-        <button type="submit" class="btn btn-secondary">
-            Buscar
-        </button>
+    <section class="page-card">
 
-        {% if query %}
-            <a href="{% url 'incidencias:nodos_lista' %}" class="btn btn-danger">
-                Limpiar
-            </a>
-        {% endif %}
-    </form>
-</section>
+        <div class="page-card-body page-card-body--flush">
 
-<section class="card">
-    <div class="table-wrapper">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Ubicación</th>
-                    <th>Estado</th>
-                    <th>Criticidad</th>
-                    <th>Clientes</th>
-                    <th>Activo</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
+            <div class="table-wrapper">
 
-            <tbody>
-                {% for nodo in nodos %}
-                    <tr>
-                        <td><strong>{{ nodo.codigo }}</strong></td>
+                <table class="table data-table">
 
-                        <td>{{ nodo.nombre }}</td>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Ubicación</th>
+                            <th>Estado</th>
+                            <th>Criticidad</th>
+                            <th>Clientes</th>
+                            <th>Activo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
 
-                        <td>
-                            {% if nodo.ubicacion %}
-                                {{ nodo.ubicacion.nombre }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
+                    <tbody>
 
-                        <td>
-                            {% if nodo.estado == "ACTIVO" %}
-                                <span class="badge badge-success">{{ nodo.get_estado_display }}</span>
-                            {% elif nodo.estado == "MANTENIMIENTO" %}
-                                <span class="badge badge-warning">{{ nodo.get_estado_display }}</span>
-                            {% else %}
-                                <span class="badge badge-danger">{{ nodo.get_estado_display }}</span>
-                            {% endif %}
-                        </td>
+                        {% for nodo in nodos %}
 
-                        <td>
-                            {% if nodo.criticidad == "CRITICA" %}
-                                <span class="badge badge-danger">{{ nodo.get_criticidad_display }}</span>
-                            {% elif nodo.criticidad == "ALTA" %}
-                                <span class="badge badge-warning">{{ nodo.get_criticidad_display }}</span>
-                            {% elif nodo.criticidad == "MEDIA" %}
-                                <span class="badge badge-info">{{ nodo.get_criticidad_display }}</span>
-                            {% else %}
-                                <span class="badge badge-success">{{ nodo.get_criticidad_display }}</span>
-                            {% endif %}
-                        </td>
+                            <tr>
 
-                        <td>{{ nodo.clientes_estimados }}</td>
+                                <td>
+                                    <strong class="table-primary-value">
+                                        {{ nodo.codigo }}
+                                    </strong>
+                                </td>
 
-                        <td>
-                            {% if nodo.activo %}
-                                <span class="badge badge-success">Sí</span>
-                            {% else %}
-                                <span class="badge badge-danger">No</span>
-                            {% endif %}
-                        </td>
+                                <td>{{ nodo.nombre }}</td>
 
-                        <td>
-                            <div class="action-buttons">
-                                <a href="{% url 'incidencias:nodo_editar' nodo.id %}" class="btn btn-secondary">
-                                    Editar
-                                </a>
-
-                                <a href="{% url 'incidencias:nodo_cambiar_estado' nodo.id %}"
-                                   class="btn {% if nodo.activo %}btn-danger{% else %}btn-primary{% endif %}">
-                                    {% if nodo.activo %}
-                                        Desactivar
+                                <td>
+                                    {% if nodo.ubicacion %}
+                                        {{ nodo.ubicacion.nombre }}
                                     {% else %}
-                                        Activar
+                                        —
                                     {% endif %}
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="8">
-                            No se encontraron nodos registrados.
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</section>
+                                </td>
+
+                                <td>
+                                    {% if nodo.estado == "ACTIVO" %}
+                                        <span class="badge badge-success">
+                                            {{ nodo.get_estado_display }}
+                                        </span>
+                                    {% elif nodo.estado == "MANTENIMIENTO" %}
+                                        <span class="badge badge-warning">
+                                            {{ nodo.get_estado_display }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-danger">
+                                            {{ nodo.get_estado_display }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if nodo.criticidad == "CRITICA" %}
+                                        <span class="badge badge-danger">
+                                            {{ nodo.get_criticidad_display }}
+                                        </span>
+                                    {% elif nodo.criticidad == "ALTA" %}
+                                        <span class="badge badge-warning">
+                                            {{ nodo.get_criticidad_display }}
+                                        </span>
+                                    {% elif nodo.criticidad == "MEDIA" %}
+                                        <span class="badge badge-info">
+                                            {{ nodo.get_criticidad_display }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-success">
+                                            {{ nodo.get_criticidad_display }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>{{ nodo.clientes_estimados }}</td>
+
+                                <td>
+                                    {% if nodo.activo %}
+                                        <span class="badge badge-success">Sí</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">No</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <div class="table-actions">
+
+                                        <a
+                                            href="{% url 'incidencias:nodo_editar' nodo.id %}"
+                                            class="btn btn-secondary btn-sm"
+                                        >
+                                            Editar
+                                        </a>
+
+                                        <a
+                                            href="{% url 'incidencias:nodo_cambiar_estado' nodo.id %}"
+                                            class="btn btn-sm {% if nodo.activo %}btn-danger{% else %}btn-primary{% endif %}"
+                                        >
+                                            {% if nodo.activo %}
+                                                Desactivar
+                                            {% else %}
+                                                Activar
+                                            {% endif %}
+                                        </a>
+
+                                    </div>
+                                </td>
+
+                            </tr>
+
+                        {% empty %}
+
+                            <tr>
+                                <td colspan="8" class="table-empty">
+
+                                    <div class="page-empty-state">
+                                        <strong>No se encontraron nodos</strong>
+                                        <p>
+                                            No existen nodos que coincidan
+                                            con los criterios actuales.
+                                        </p>
+                                    </div>
+
+                                </td>
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
 
 {% endblock %}
