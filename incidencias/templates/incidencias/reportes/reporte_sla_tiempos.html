@@ -1,4 +1,5 @@
 {% extends "incidencias/base.html" %}
+{% load tz %}
 
 {% block title %}
 SLA y tiempos | Fiber Z NOC
@@ -651,17 +652,27 @@ Indicadores de atención y cumplimiento de niveles de servicio.
                             <td>
                                 {% if incidencia.tiempo_registro_min is not None %}
                                     <div class="sla-time-limit-cell">
+
                                         <strong class="sla-time-table-value">
                                             {{ incidencia.tiempo_registro_texto }}
                                         </strong>
+
+                                        {% if incidencia.fecha_registro %}
+                                            <small class="sla-event-date">
+                                                {{ incidencia.fecha_registro|localtime|date:"d/m/Y H:i:s" }}
+                                            </small>
+                                        {% endif %}
 
                                         {% if incidencia.sla_registro_max is not None %}
                                             <small class="sla-limit-text">
                                                 Límite: {{ incidencia.sla_registro_max }} min
                                             </small>
                                         {% else %}
-                                            <small class="sla-limit-text">Sin SLA</small>
+                                            <small class="sla-limit-text">
+                                                Sin SLA
+                                            </small>
                                         {% endif %}
+
                                     </div>
                                 {% else %}
                                     <span class="sla-not-evaluated">-</span>
@@ -682,17 +693,27 @@ Indicadores de atención y cumplimiento de niveles de servicio.
                             <td>
                                 {% if incidencia.tiempo_asignacion_min is not None %}
                                     <div class="sla-time-limit-cell">
+
                                         <strong class="sla-time-table-value">
                                             {{ incidencia.tiempo_asignacion_texto }}
                                         </strong>
+
+                                        {% if incidencia.fecha_asignacion %}
+                                            <small class="sla-event-date">
+                                                {{ incidencia.fecha_asignacion|localtime|date:"d/m/Y H:i:s" }}
+                                            </small>
+                                        {% endif %}
 
                                         {% if incidencia.sla_asignacion_max is not None %}
                                             <small class="sla-limit-text">
                                                 Límite: {{ incidencia.sla_asignacion_max }} min
                                             </small>
                                         {% else %}
-                                            <small class="sla-limit-text">Sin SLA</small>
+                                            <small class="sla-limit-text">
+                                                Sin SLA
+                                            </small>
                                         {% endif %}
+
                                     </div>
                                 {% else %}
                                     <span class="sla-not-evaluated">-</span>
@@ -713,17 +734,27 @@ Indicadores de atención y cumplimiento de niveles de servicio.
                             <td>
                                 {% if incidencia.tiempo_inicio_atencion_min is not None %}
                                     <div class="sla-time-limit-cell">
+
                                         <strong class="sla-time-table-value">
                                             {{ incidencia.tiempo_inicio_atencion_texto }}
                                         </strong>
+
+                                        {% if incidencia.fecha_inicio_atencion %}
+                                            <small class="sla-event-date">
+                                                {{ incidencia.fecha_inicio_atencion|localtime|date:"d/m/Y H:i:s" }}
+                                            </small>
+                                        {% endif %}
 
                                         {% if incidencia.sla_inicio_max is not None %}
                                             <small class="sla-limit-text">
                                                 Límite: {{ incidencia.sla_inicio_max }} min
                                             </small>
                                         {% else %}
-                                            <small class="sla-limit-text">Sin SLA</small>
+                                            <small class="sla-limit-text">
+                                                Sin SLA
+                                            </small>
                                         {% endif %}
+
                                     </div>
                                 {% else %}
                                     <span class="sla-not-evaluated">-</span>
@@ -744,17 +775,27 @@ Indicadores de atención y cumplimiento de niveles de servicio.
                             <td>
                                 {% if incidencia.tiempo_resolucion_min is not None %}
                                     <div class="sla-time-limit-cell">
+
                                         <strong class="sla-time-table-value">
                                             {{ incidencia.tiempo_resolucion_texto }}
                                         </strong>
+
+                                        {% if incidencia.fecha_resolucion %}
+                                            <small class="sla-event-date">
+                                                {{ incidencia.fecha_resolucion|localtime|date:"d/m/Y H:i:s" }}
+                                            </small>
+                                        {% endif %}
 
                                         {% if incidencia.sla_resolucion_max is not None %}
                                             <small class="sla-limit-text">
                                                 Límite: {{ incidencia.sla_resolucion_max }} min
                                             </small>
                                         {% else %}
-                                            <small class="sla-limit-text">Sin SLA</small>
+                                            <small class="sla-limit-text">
+                                                Sin SLA
+                                            </small>
                                         {% endif %}
+
                                     </div>
                                 {% else %}
                                     <span class="sla-not-evaluated">-</span>
