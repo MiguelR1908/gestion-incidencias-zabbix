@@ -12,9 +12,15 @@ Alertas Zabbix
 Consulta de problemas activos detectados en Zabbix mediante API.
 {% endblock %}
 
+
 {% block content %}
 
 <div id="zabbix-alertas-page" class="page-layout">
+
+
+    <!-- =========================================================
+         CABECERA
+    ========================================================== -->
 
     <section class="page-card">
 
@@ -31,6 +37,7 @@ Consulta de problemas activos detectados en Zabbix mediante API.
 
             </div>
 
+
             <div class="page-card-actions">
 
                 <a
@@ -40,6 +47,7 @@ Consulta de problemas activos detectados en Zabbix mediante API.
                     <span aria-hidden="true">↻</span>
                     Actualizar lista
                 </a>
+
 
                 <form
                     method="post"
@@ -69,16 +77,21 @@ Consulta de problemas activos detectados en Zabbix mediante API.
             <div class="page-card-body">
 
                 {% if configuracion %}
+
                     <p class="zabbix-config-used">
                         Configuración usada:
                         <strong>{{ configuracion.nombre }}</strong>
                     </p>
+
                 {% endif %}
 
+
                 {% if error %}
+
                     <div class="alert alert-danger">
                         {{ error }}
                     </div>
+
                 {% endif %}
 
             </div>
@@ -88,26 +101,197 @@ Consulta de problemas activos detectados en Zabbix mediante API.
     </section>
 
 
+
+    <!-- =========================================================
+         FILTROS
+    ========================================================== -->
+
+    <section class="page-card">
+
+        <div class="page-card-body">
+
+            <div class="alert-filters">
+
+
+                <!-- BUSCADOR -->
+
+                <div class="alert-filter alert-filter--search">
+
+                    <label for="buscar-alerta">
+                        Buscar
+                    </label>
+
+                    <input
+                        type="search"
+                        id="buscar-alerta"
+                        class="form-control"
+                        placeholder="Evento, host, problema, nodo, IP o incidencia..."
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <!-- FILTRO SEVERIDAD -->
+
+                <div class="alert-filter">
+
+                    <label for="filtro-severidad">
+                        Severidad
+                    </label>
+
+                    <select
+                        id="filtro-severidad"
+                        class="form-control"
+                    >
+
+                        <option value="">
+                            Todas
+                        </option>
+
+                        <option value="5">
+                            Desastre
+                        </option>
+
+                        <option value="4">
+                            Alta
+                        </option>
+
+                        <option value="3">
+                            Promedio
+                        </option>
+
+                        <option value="2">
+                            Advertencia
+                        </option>
+
+                        <option value="1">
+                            Información
+                        </option>
+
+                        <option value="0">
+                            No clasificada
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+
+                <!-- FILTRO INCIDENCIA -->
+
+                <div class="alert-filter">
+
+                    <label for="filtro-incidencia">
+                        Incidencia
+                    </label>
+
+                    <select
+                        id="filtro-incidencia"
+                        class="form-control"
+                    >
+
+                        <option value="">
+                            Todas
+                        </option>
+
+                        <option value="si">
+                            Con incidencia
+                        </option>
+
+                        <option value="no">
+                            Sin incidencia
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+
+                <!-- BOTÓN LIMPIAR -->
+
+                <div class="alert-filter alert-filter--button">
+
+                    <button
+                        type="button"
+                        id="limpiar-filtros"
+                        class="btn btn-secondary"
+                    >
+                        Limpiar filtros
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- CONTADOR -->
+
+            <div class="alert-filter-summary">
+
+                Mostrando
+
+                <strong id="alertas-visibles">
+                    0
+                </strong>
+
+                de
+
+                <strong id="alertas-total">
+                    0
+                </strong>
+
+                alertas
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================================================
+         TABLA
+    ========================================================== -->
+
     <section class="page-card">
 
         <div class="page-card-body page-card-body--flush">
 
             <div class="table-wrapper">
 
-                <table class="table data-table">
+                <table
+                    class="table data-table"
+                    id="tabla-alertas-zabbix"
+                >
 
                     <thead>
 
                         <tr>
+
                             <th>Evento</th>
+
                             <th>Fecha</th>
+
                             <th>Duración</th>
+
                             <th>Host</th>
+
                             <th>Problema</th>
+
                             <th>Severidad</th>
+
                             <th>Nodo</th>
+
                             <th>IP</th>
+
                             <th>Incidencia</th>
+
                         </tr>
 
                     </thead>
@@ -115,173 +299,272 @@ Consulta de problemas activos detectados en Zabbix mediante API.
 
                     <tbody>
 
+
                         {% for problema in problemas %}
 
-                            <tr>
+                            <tr
+                                class="js-alert-row"
+                                data-severity="{{ problema.severity }}"
+                                data-incidencia="{% if problema.incidencia_codigo %}si{% else %}no{% endif %}"
+                            >
+
+
+                                <!-- EVENTO -->
 
                                 <td>
+
                                     <span class="table-mono">
                                         {{ problema.eventid }}
                                     </span>
+
                                 </td>
 
 
+
+                                <!-- FECHA -->
+
                                 <td>
+
                                     {% if problema.fecha_evento_local %}
 
                                         <span class="table-mono">
+
                                             {{ problema.fecha_evento_local|date:"d/m/Y H:i:s" }}
+
                                         </span>
 
                                     {% else %}
+
                                         —
+
                                     {% endif %}
+
                                 </td>
 
+
+
+                                <!-- DURACIÓN -->
 
                                 <td>
+
                                     {{ problema.duracion_texto|default:"-" }}
+
                                 </td>
 
+
+
+                                <!-- HOST -->
 
                                 <td>
 
                                     {% if problema.hosts %}
 
                                         <strong class="table-primary-value">
+
                                             {{ problema.hosts.0.name|default:problema.hosts.0.host }}
+
                                         </strong>
 
                                     {% else %}
+
                                         —
+
                                     {% endif %}
 
                                 </td>
 
 
+
+                                <!-- PROBLEMA -->
+
                                 <td>
+
                                     <strong class="table-primary-value">
+
                                         {{ problema.name }}
+
                                     </strong>
+
                                 </td>
 
 
+
+                                <!-- SEVERIDAD -->
+
                                 <td>
+
 
                                     {% if problema.severity == "5" %}
 
                                         <span class="badge badge-danger">
+
                                             Desastre
+
                                         </span>
+
 
                                     {% elif problema.severity == "4" %}
 
                                         <span class="badge badge-danger">
+
                                             Alta
+
                                         </span>
+
 
                                     {% elif problema.severity == "3" %}
 
                                         <span class="badge badge-warning">
+
                                             Promedio
+
                                         </span>
+
 
                                     {% elif problema.severity == "2" %}
 
                                         <span class="badge badge-warning">
+
                                             Advertencia
+
                                         </span>
+
 
                                     {% elif problema.severity == "1" %}
 
                                         <span class="badge">
+
                                             Información
+
                                         </span>
+
 
                                     {% else %}
 
                                         <span class="badge">
+
                                             No clasificada
+
                                         </span>
 
                                     {% endif %}
 
+
                                 </td>
 
+
+
+                                <!-- NODO -->
 
                                 <td>
 
                                     {% if problema.nodo_codigo %}
 
                                         <span class="table-mono">
+
                                             {{ problema.nodo_codigo }}
+
                                         </span>
 
                                     {% else %}
+
                                         —
+
                                     {% endif %}
 
                                 </td>
 
+
+
+                                <!-- IP -->
 
                                 <td>
 
                                     {% if problema.ip_gestion %}
 
                                         <span class="table-mono">
+
                                             {{ problema.ip_gestion }}
+
                                         </span>
 
                                     {% else %}
+
                                         —
+
                                     {% endif %}
 
                                 </td>
 
+
+
+                                <!-- INCIDENCIA -->
 
                                 <td>
 
                                     {% if problema.incidencia_codigo %}
 
                                         <strong>
+
                                             {{ problema.incidencia_codigo }}
+
                                         </strong>
 
+
                                         {% if problema.incidencia_estado %}
+
                                             <br>
+
                                             <small>
+
                                                 {{ problema.incidencia_estado }}
+
                                             </small>
+
                                         {% endif %}
+
 
                                     {% else %}
 
                                         <span class="badge">
+
                                             Sin incidencia
+
                                         </span>
 
                                     {% endif %}
 
                                 </td>
 
+
                             </tr>
 
 
                         {% empty %}
 
+
+                            <!-- SIN ALERTAS EN ZABBIX -->
+
                             <tr>
 
-                                <td colspan="9" class="table-empty">
+                                <td
+                                    colspan="9"
+                                    class="table-empty"
+                                >
 
                                     <div class="page-empty-state">
 
                                         <strong>
+
                                             No se encontraron alertas activas en Zabbix
+
                                         </strong>
 
                                         <p>
+
                                             Actualmente no existen problemas activos
                                             o no fue posible obtenerlos desde la API.
+
                                         </p>
 
                                     </div>
@@ -290,7 +573,48 @@ Consulta de problemas activos detectados en Zabbix mediante API.
 
                             </tr>
 
+
                         {% endfor %}
+
+
+
+                        <!-- SIN RESULTADOS POR FILTRO -->
+
+                        {% if problemas %}
+
+                            <tr
+                                id="filtro-sin-resultados"
+                                style="display: none;"
+                            >
+
+                                <td
+                                    colspan="9"
+                                    class="table-empty"
+                                >
+
+                                    <div class="page-empty-state">
+
+                                        <strong>
+
+                                            No se encontraron coincidencias
+
+                                        </strong>
+
+                                        <p>
+
+                                            Cambia los criterios de búsqueda
+                                            o limpia los filtros.
+
+                                        </p>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+                        {% endif %}
+
 
                     </tbody>
 
@@ -302,6 +626,291 @@ Consulta de problemas activos detectados en Zabbix mediante API.
 
     </section>
 
+
 </div>
+
+
+
+
+
+<!-- =========================================================
+     JAVASCRIPT DE BÚSQUEDA Y FILTROS
+========================================================== -->
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+
+    /*
+     * ELEMENTOS
+     */
+
+    const buscador =
+        document.getElementById("buscar-alerta");
+
+    const filtroSeveridad =
+        document.getElementById("filtro-severidad");
+
+    const filtroIncidencia =
+        document.getElementById("filtro-incidencia");
+
+    const botonLimpiar =
+        document.getElementById("limpiar-filtros");
+
+    const contadorVisibles =
+        document.getElementById("alertas-visibles");
+
+    const contadorTotal =
+        document.getElementById("alertas-total");
+
+    const filaSinResultados =
+        document.getElementById("filtro-sin-resultados");
+
+
+    /*
+     * FILAS DE ALERTAS
+     */
+
+    const filas = Array.from(
+        document.querySelectorAll(".js-alert-row")
+    );
+
+
+    /*
+     * NORMALIZAR TEXTO
+     *
+     * Permite buscar:
+     *
+     * PALIAN
+     * Palián
+     * palian
+     *
+     * y obtener el mismo resultado.
+     */
+
+    function normalizarTexto(texto) {
+
+        return (texto || "")
+            .toString()
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim();
+
+    }
+
+
+    /*
+     * APLICAR FILTROS
+     */
+
+    function aplicarFiltros() {
+
+
+        const busqueda =
+            normalizarTexto(buscador.value);
+
+
+        const severidad =
+            filtroSeveridad.value;
+
+
+        const incidencia =
+            filtroIncidencia.value;
+
+
+        let visibles = 0;
+
+
+        filas.forEach(function (fila) {
+
+
+            /*
+             * TEXTO COMPLETO DE LA FILA
+             *
+             * Esto permite buscar por:
+             *
+             * - Evento
+             * - Fecha
+             * - Host
+             * - Problema
+             * - Nodo
+             * - IP
+             * - Incidencia
+             */
+
+            const textoFila =
+                normalizarTexto(fila.textContent);
+
+
+            const severidadFila =
+                fila.dataset.severity || "";
+
+
+            const incidenciaFila =
+                fila.dataset.incidencia || "";
+
+
+            /*
+             * BÚSQUEDA
+             */
+
+            const coincideBusqueda =
+                !busqueda ||
+                textoFila.includes(busqueda);
+
+
+            /*
+             * SEVERIDAD
+             */
+
+            const coincideSeveridad =
+                !severidad ||
+                severidadFila === severidad;
+
+
+            /*
+             * INCIDENCIA
+             */
+
+            const coincideIncidencia =
+                !incidencia ||
+                incidenciaFila === incidencia;
+
+
+            /*
+             * RESULTADO FINAL
+             */
+
+            const mostrar =
+                coincideBusqueda &&
+                coincideSeveridad &&
+                coincideIncidencia;
+
+
+            if (mostrar) {
+
+                fila.style.display = "";
+
+                visibles++;
+
+            } else {
+
+                fila.style.display = "none";
+
+            }
+
+
+        });
+
+
+        /*
+         * ACTUALIZAR CONTADORES
+         */
+
+        contadorVisibles.textContent =
+            visibles;
+
+        contadorTotal.textContent =
+            filas.length;
+
+
+        /*
+         * MOSTRAR MENSAJE SI LOS FILTROS
+         * NO ENCUENTRAN RESULTADOS
+         */
+
+        if (filaSinResultados) {
+
+            if (
+                filas.length > 0 &&
+                visibles === 0
+            ) {
+
+                filaSinResultados.style.display = "";
+
+            } else {
+
+                filaSinResultados.style.display = "none";
+
+            }
+
+        }
+
+    }
+
+
+
+    /*
+     * BUSCADOR EN TIEMPO REAL
+     */
+
+    buscador.addEventListener(
+        "input",
+        aplicarFiltros
+    );
+
+
+
+    /*
+     * FILTRO POR SEVERIDAD
+     */
+
+    filtroSeveridad.addEventListener(
+        "change",
+        aplicarFiltros
+    );
+
+
+
+    /*
+     * FILTRO POR INCIDENCIA
+     */
+
+    filtroIncidencia.addEventListener(
+        "change",
+        aplicarFiltros
+    );
+
+
+
+    /*
+     * LIMPIAR FILTROS
+     */
+
+    botonLimpiar.addEventListener(
+        "click",
+        function () {
+
+
+            buscador.value = "";
+
+            filtroSeveridad.value = "";
+
+            filtroIncidencia.value = "";
+
+
+            aplicarFiltros();
+
+
+            buscador.focus();
+
+        }
+    );
+
+
+
+    /*
+     * EJECUTAR AL CARGAR
+     */
+
+    aplicarFiltros();
+
+
+});
+
+</script>
+
 
 {% endblock %}
