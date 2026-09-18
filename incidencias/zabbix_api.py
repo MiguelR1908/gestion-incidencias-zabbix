@@ -22,14 +22,19 @@ class ZabbixClient:
             "id": 1,
         }
 
+        headers = {
+            "Content-Type": "application/json-rpc",
+        }
+
         if auth and self.auth_token:
-            payload["auth"] = self.auth_token
+            headers["Authorization"] = f"Bearer {self.auth_token}"
 
         try:
             response = requests.post(
                 self.url_api,
                 json=payload,
-                timeout=10
+                timeout=10,
+                headers=headers,
             )
             response.raise_for_status()
         except requests.RequestException as exc:
