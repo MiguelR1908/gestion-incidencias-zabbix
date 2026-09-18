@@ -214,13 +214,23 @@ def evaluar_alerta_para_incidencia(alerta, usuario=None):
                 "minutos_activa": None,
                 "minutos_requeridos": None,
             }
-        ###
         # ============================================================
-        # 4.1. VERIFICAR INCIDENCIA ACTIVA EN EL MISMO COMPONENTE
+        # 4.1. VERIFICAR REINCIDENCIA DE LA MISMA FALLA ZABBIX
         # ============================================================
-        # Evita duplicar tickets si el componente ya tiene un problema
-        # en curso. Registra la alerta como reincidencia en el historial.
-        
+        #
+        # Una alerta nueva solo se considera reincidencia cuando:
+        #
+        # - pertenece al mismo componente;
+        # - corresponde al mismo trigger_id de Zabbix;
+        # - existe una incidencia todavía no cerrada/cancelada.
+        #
+        # El event_id puede ser diferente, porque Zabbix genera un
+        # nuevo evento cuando un problema se recupera y vuelve a ocurrir.
+        #
+        # NO se agrupan alertas distintas únicamente por pertenecer
+        # al mismo host o componente.
+        # ============================================================
+
         estados_activos = [
             EstadoIncidencia.DETECTADA,
             EstadoIncidencia.REGISTRADA,
@@ -229,38 +239,67 @@ def evaluar_alerta_para_incidencia(alerta, usuario=None):
             EstadoIncidencia.RESUELTA,
         ]
 
-        incidencia_activa = (
-            Incidencia.objects
-            .filter(
-                componente_principal=componente,
-                estado__in=estados_activos,
+        incidencia_activa = None
+
+        # Solo podemos reconocer una reincidencia de forma segura
+        # cuando Zabbix entregó un trigger_id.
+        if alerta.trigger_id:
+
+            incidencia_activa = (
+                Incidencia.objects
+                .select_for_update()
+                .filter(
+                    componente_principal=componente,
+                    alerta_zabbix__trigger_id=alerta.trigger_id,
+                    alerta_zabbix__host_id=alerta.host_id,
+                    estado__in=estados_activos,
+                )
+                .order_by("-fecha_deteccion")
+                .first()
             )
-            .first()
-        )
 
         if incidencia_activa:
-            # Si el ticket estaba en RESUELTA pero el problema persiste/reincide
+
+            estado_anterior = incidencia_activa.estado
+
+            # Si la incidencia ya había sido resuelta, pero todavía
+            # no cerrada, una nueva ocurrencia de la misma falla
+            # vuelve a colocarla en atención.
             if incidencia_activa.estado == EstadoIncidencia.RESUELTA:
-                incidencia_activa.estado = EstadoIncidencia.EN_ATENCION
+
+                incidencia_activa.estado = (
+                    EstadoIncidencia.EN_ATENCION
+                )
+
                 if usuario_valido:
-                    incidencia_activa.actualizado_por = usuario_valido
+                    incidencia_activa.actualizado_por = (
+                        usuario_valido
+                    )
+
                 incidencia_activa.save()
 
-            # Marcar la nueva alerta como procesada
+            # La nueva alerta queda procesada para que una siguiente
+            # sincronización no vuelva a registrar la misma recurrencia.
             alerta.procesada = True
+
             if usuario_valido:
                 alerta.actualizado_por = usuario_valido
+
             alerta.save()
 
-            # Registrar la reincidencia en el historial
+            # Registrar la nueva ocurrencia dentro del historial
+            # de la incidencia original.
             HistorialIncidencia.objects.create(
                 incidencia=incidencia_activa,
                 usuario=usuario_valido,
-                accion=AccionHistorial.REINCIDENCIA_ALERTA, # Ajustar a tu Choice (ej. REINCIDENCIA)
+                accion=AccionHistorial.REINCIDENCIA_ALERTA,
+                estado_anterior=estado_anterior,
                 estado_nuevo=incidencia_activa.estado,
                 descripcion=(
-                    f"Alerta reincidente o adicional recibida desde Zabbix: '{alerta.nombre_alerta}' "
-                    f"(Event ID: {alerta.event_id}). Registrada en el ticket activo."
+                    f"Reincidencia de la misma falla detectada por Zabbix. "
+                    f"Trigger ID: {alerta.trigger_id}. "
+                    f"Nuevo Event ID: {alerta.event_id}. "
+                    f"Alerta: '{alerta.nombre_alerta}'."
                 ),
                 creado_por=usuario_valido,
                 actualizado_por=usuario_valido,
@@ -270,15 +309,16 @@ def evaluar_alerta_para_incidencia(alerta, usuario=None):
                 "creada": False,
                 "estado": "REINCIDENCIA_REGISTRADA",
                 "motivo": (
-                    f"El componente {componente.codigo} ya posee la incidencia activa "
-                    f"{incidencia_activa.codigo}. Se registró el evento como reincidencia."
+                    f"La alerta corresponde al mismo trigger "
+                    f"{alerta.trigger_id} del componente "
+                    f"{componente.codigo}. "
+                    f"Se registró como reincidencia en "
+                    f"{incidencia_activa.codigo}."
                 ),
                 "incidencia": incidencia_activa,
                 "minutos_activa": None,
                 "minutos_requeridos": None,
             }
-
-
         # ============================================================
         # 5. OBTENER CONFIGURACIÓN DE CREACIÓN AUTOMÁTICA
         # ============================================================
