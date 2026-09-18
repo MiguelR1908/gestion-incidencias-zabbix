@@ -1,38 +1,40 @@
 {% extends "incidencias/base.html" %}
 
 {% block title %}
-Hosts Zabbix | Fiber Z NOC
+Alertas Zabbix | Fiber Z NOC
 {% endblock %}
 
 {% block page_title %}
-Hosts Zabbix
+Alertas Zabbix
 {% endblock %}
 
 {% block page_subtitle %}
-Consulta y sincronización de hosts registrados en Zabbix mediante API.
+Consulta de problemas activos detectados en Zabbix mediante API.
 {% endblock %}
 
 {% block content %}
 
-<div id="zabbix-hosts-page" class="page-layout">
+<div id="zabbix-alertas-page" class="page-layout">
 
     <section class="page-card">
 
         <header class="page-card-header">
 
             <div class="page-card-heading">
-                <h3>Hosts obtenidos desde Zabbix</h3>
+
+                <h3>Alertas activas de Zabbix</h3>
 
                 <p>
-                    Consulta los hosts registrados en Zabbix y sincronízalos
-                    con el inventario local del sistema.
+                    Consulta los problemas activos detectados por Zabbix
+                    y su relación con el inventario e incidencias del sistema.
                 </p>
+
             </div>
 
             <div class="page-card-actions">
 
                 <a
-                    href="{% url 'incidencias:zabbix_hosts_lista' %}"
+                    href="{% url 'incidencias:zabbix_alertas_activas' %}"
                     class="btn btn-secondary"
                 >
                     <span aria-hidden="true">↻</span>
@@ -41,9 +43,9 @@ Consulta y sincronización de hosts registrados en Zabbix mediante API.
 
                 <form
                     method="post"
-                    action="{% url 'incidencias:zabbix_hosts_sincronizar' %}"
+                    action="{% url 'incidencias:zabbix_alertas_sincronizar' %}"
                     class="page-inline-form"
-                    onsubmit="return confirm('¿Deseas sincronizar los hosts de Zabbix con el inventario local?');"
+                    onsubmit="return confirm('¿Deseas sincronizar las alertas activas de Zabbix?');"
                 >
                     {% csrf_token %}
 
@@ -52,13 +54,15 @@ Consulta y sincronización de hosts registrados en Zabbix mediante API.
                         class="btn btn-primary"
                     >
                         <span aria-hidden="true">⇄</span>
-                        Sincronizar hosts
+                        Sincronizar alertas
                     </button>
+
                 </form>
 
             </div>
 
         </header>
+
 
         {% if configuracion or error %}
 
@@ -93,78 +97,197 @@ Consulta y sincronización de hosts registrados en Zabbix mediante API.
                 <table class="table data-table">
 
                     <thead>
+
                         <tr>
-                            <th>Host ID</th>
-                            <th>Host técnico</th>
-                            <th>Nombre visible</th>
-                            <th>IP principal</th>
-                            <th>Estado</th>
+                            <th>Evento</th>
+                            <th>Fecha</th>
+                            <th>Duración</th>
+                            <th>Host</th>
+                            <th>Problema</th>
+                            <th>Severidad</th>
+                            <th>Nodo</th>
+                            <th>IP</th>
+                            <th>Incidencia</th>
                         </tr>
+
                     </thead>
+
 
                     <tbody>
 
-                        {% for host in hosts %}
+                        {% for problema in problemas %}
 
                             <tr>
 
                                 <td>
                                     <span class="table-mono">
-                                        {{ host.hostid }}
+                                        {{ problema.eventid }}
                                     </span>
                                 </td>
 
-                                <td>
-                                    <strong class="table-primary-value">
-                                        {{ host.host }}
-                                    </strong>
-                                </td>
 
                                 <td>
-                                    {{ host.name }}
-                                </td>
+                                    {% if problema.fecha_evento_local %}
 
-                                <td>
-                                    {% if host.interfaces %}
                                         <span class="table-mono">
-                                            {{ host.interfaces.0.ip|default:"-" }}
+                                            {{ problema.fecha_evento_local|date:"d/m/Y H:i:s" }}
                                         </span>
+
                                     {% else %}
                                         —
                                     {% endif %}
                                 </td>
 
+
                                 <td>
-                                    {% if host.status == "0" %}
-                                        <span class="badge badge-success">
-                                            Monitoreado
-                                        </span>
+                                    {{ problema.duracion_texto|default:"-" }}
+                                </td>
+
+
+                                <td>
+
+                                    {% if problema.hosts %}
+
+                                        <strong class="table-primary-value">
+                                            {{ problema.hosts.0.name|default:problema.hosts.0.host }}
+                                        </strong>
+
                                     {% else %}
-                                        <span class="badge badge-danger">
-                                            Deshabilitado
-                                        </span>
+                                        —
                                     {% endif %}
+
+                                </td>
+
+
+                                <td>
+                                    <strong class="table-primary-value">
+                                        {{ problema.name }}
+                                    </strong>
+                                </td>
+
+
+                                <td>
+
+                                    {% if problema.severity == "5" %}
+
+                                        <span class="badge badge-danger">
+                                            Desastre
+                                        </span>
+
+                                    {% elif problema.severity == "4" %}
+
+                                        <span class="badge badge-danger">
+                                            Alta
+                                        </span>
+
+                                    {% elif problema.severity == "3" %}
+
+                                        <span class="badge badge-warning">
+                                            Promedio
+                                        </span>
+
+                                    {% elif problema.severity == "2" %}
+
+                                        <span class="badge badge-warning">
+                                            Advertencia
+                                        </span>
+
+                                    {% elif problema.severity == "1" %}
+
+                                        <span class="badge">
+                                            Información
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="badge">
+                                            No clasificada
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
+                                    {% if problema.nodo_codigo %}
+
+                                        <span class="table-mono">
+                                            {{ problema.nodo_codigo }}
+                                        </span>
+
+                                    {% else %}
+                                        —
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
+                                    {% if problema.ip_gestion %}
+
+                                        <span class="table-mono">
+                                            {{ problema.ip_gestion }}
+                                        </span>
+
+                                    {% else %}
+                                        —
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
+                                    {% if problema.incidencia_codigo %}
+
+                                        <strong>
+                                            {{ problema.incidencia_codigo }}
+                                        </strong>
+
+                                        {% if problema.incidencia_estado %}
+                                            <br>
+                                            <small>
+                                                {{ problema.incidencia_estado }}
+                                            </small>
+                                        {% endif %}
+
+                                    {% else %}
+
+                                        <span class="badge">
+                                            Sin incidencia
+                                        </span>
+
+                                    {% endif %}
+
                                 </td>
 
                             </tr>
 
+
                         {% empty %}
 
                             <tr>
-                                <td colspan="5" class="table-empty">
+
+                                <td colspan="9" class="table-empty">
 
                                     <div class="page-empty-state">
+
                                         <strong>
-                                            No se encontraron hosts en Zabbix
+                                            No se encontraron alertas activas en Zabbix
                                         </strong>
 
                                         <p>
-                                            Verifique la configuración de conexión
-                                            y vuelva a actualizar la lista.
+                                            Actualmente no existen problemas activos
+                                            o no fue posible obtenerlos desde la API.
                                         </p>
+
                                     </div>
 
                                 </td>
+
                             </tr>
 
                         {% endfor %}
